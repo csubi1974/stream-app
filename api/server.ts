@@ -11,6 +11,7 @@ import { WebSocketHandler } from './websocket/handler.js';
 import { setupRoutes } from './routes/index.js';
 import { setupDatabase } from './database/setup.js';
 import { initializeDb } from './database/sqlite.js';
+import { initializePostgres } from './database/postgres.js';
 import { DataRecorderService } from './services/dataRecorderService.js';
 
 dotenv.config();
@@ -30,8 +31,8 @@ const wsHandler = new WebSocketHandler(wss, marketDataService);
 
 // Setup database (Redis & Mocks)
 await setupDatabase();
-// Setup Historical DB (SQLite)
-// await initializeDb();
+// Setup Historical DB (PostgreSQL)
+await initializePostgres();
 
 // Start Recorder
 // const recorderService = new DataRecorderService(schwabService);
