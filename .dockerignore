@@ -1,0 +1,16 @@
+node_modules
+npm-debug.log
+.env
+.env.local
+.git
+.gitignore
+*.md
+.vscode
+dist
+.cache
+tokens.json
+*.db
+*.sqlite
+*.sqlite3
+certs/*.pem
+certs/*.pfx
