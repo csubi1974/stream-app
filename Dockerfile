@@ -27,7 +27,7 @@ RUN npm ci --only=production
 # Copy built files from builder
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/api ./api
-COPY --from=builder /app/certs ./certs
+
 
 # Expose ports
 EXPOSE 3002 8001
