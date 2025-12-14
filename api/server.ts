@@ -46,7 +46,7 @@ app.use(express.json());
 // Initialize services
 const schwabService = new SchwabService();
 const marketDataService = new MarketDataService();
-const wsHandler = new WebSocketHandler(wss, marketDataService);
+const wsHandler = new WebSocketHandler(wss, marketDataService, schwabService);
 
 // Setup routes and start server
 async function startServer() {

@@ -16,10 +16,11 @@ export class WebSocketHandler {
 
   constructor(
     private wss: WebSocketServer,
-    marketDataService: MarketDataService
+    marketDataService: MarketDataService,
+    schwabService: SchwabService
   ) {
     this.marketDataService = marketDataService;
-    this.schwabService = new SchwabService();
+    this.schwabService = schwabService;
   }
 
   initialize() {
@@ -63,6 +64,11 @@ export class WebSocketHandler {
 
     // Start broadcasting market data
     this.startMarketDataBroadcast();
+
+    // Start Heartbeat to prevent timeouts
+    setInterval(() => {
+      this.broadcastToAll({ type: 'heartbeat', timestamp: Date.now() });
+    }, 10000); // 10 seconds
   }
 
   private async handleMessage(clientId: string, message: any) {
