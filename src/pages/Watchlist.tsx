@@ -22,14 +22,13 @@ export function Watchlist() {
   const [error, setError] = useState<string | null>(null);
 
   const { subscribedSymbols, addSubscribedSymbol, removeSubscribedSymbol } = useMarketStore();
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002';
 
   const fetchQuotes = async (items: WatchlistItem[]) => {
     if (items.length === 0) return;
 
     try {
       const symbols = items.map(i => i.symbol).join(',');
-      const res = await fetch(`${API_URL}/api/quotes?symbols=${symbols}`);
+      const res = await fetch(`/api/quotes?symbols=${symbols}`);
       if (!res.ok) throw new Error('Failed to fetch quotes');
 
       const data = await res.json();
@@ -114,7 +113,7 @@ export function Watchlist() {
         return;
       }
 
-      const res = await fetch(`${API_URL}/api/quotes?symbols=${symbol}`);
+      const res = await fetch(`/api/quotes?symbols=${symbol}`);
       if (!res.ok) throw new Error('Failed to fetch symbol data');
 
       const data = await res.json();
