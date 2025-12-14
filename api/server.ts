@@ -20,6 +20,25 @@ const app = express();
 const server = createServer(app);
 const wss = new WebSocketServer({ server });
 
+// Setup paths
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const distPath = path.join(__dirname, '../dist');
+
+// Serve static files from dist FIRST
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+  console.log('📂 Serving static files from ' + distPath);
+} else {
+  console.log('⚠️  Dist folder not found at ' + distPath);
+}
+
+const wssInstance = wss; // Helper just in case
+
+
 // Middleware
 app.use(cors());
 app.use(express.json());
