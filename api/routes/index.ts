@@ -179,8 +179,8 @@ export function setupRoutes(
     }
   });
 
-  // Catch-all for 404
-  app.use('*', (req, res) => {
-    res.status(404).json({ error: 'Route not found' });
+  // Catch-all for API 404
+  app.use('/api/*', (req, res) => {
+    res.status(404).json({ error: 'API endpoint not found' });
   });
 }
