@@ -6,7 +6,7 @@
   "scripts": {
     "client:dev": "vite",
     "build": "tsc -b && vite build",
-    "start": "node --import tsx api/server.ts",
+    "start": "node --import tsx api/server.ts || sleep 3600",
     "lint": "eslint .",
     "preview": "vite preview",
     "check": "tsc --noEmit",
