@@ -61,13 +61,17 @@ export function createSchwabAuthRouter(schwabService: SchwabService): Router {
         try {
             const code = String(req.query.code || '');
             if (!code) {
-                res.status(400).json({ error: 'Missing code' });
+                // Redirect to frontend with error
+                res.redirect('/?auth=error&message=missing_code');
                 return;
             }
             await schwabService.exchangeCode(code);
-            res.json({ connected: schwabService.isConnected() });
+            // Redirect to frontend with success
+            res.redirect('/?auth=success');
         } catch (error) {
-            res.status(500).json({ error: 'Auth callback failed' });
+            console.error('Auth callback failed:', error);
+            // Redirect to frontend with error
+            res.redirect('/?auth=error&message=exchange_failed');
         }
     });
 
