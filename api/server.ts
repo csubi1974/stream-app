@@ -39,14 +39,36 @@ await initializePostgres();
 // Start recording every 5 minutes (300000ms) to avoid blocking too much for now
 // recorderService.startRecording(300000);
 
+// Serve static files from dist
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const distPath = path.join(__dirname, '../dist');
+
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+  console.log('📂 Serving static files from ' + distPath);
+} else {
+  console.log('⚠️  Dist folder not found at ' + distPath);
+}
+
 // Setup routes
 setupRoutes(app, schwabService, marketDataService);
+
+// SPA Fallback: For any route not handled by API, serve index.html
+if (fs.existsSync(distPath)) {
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
 
 // WebSocket connection handling
 wsHandler.initialize();
 
-const PORT = process.env.PORT || 3002;
-server.listen(PORT, () => {
+const PORT = Number(process.env.PORT) || 3002;
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Tape Reading Server running on port ${PORT}`);
   console.log(`📡 WebSocket server ready`);
   console.log(`📼 Data Recording active (SPX Snapshots)`);
