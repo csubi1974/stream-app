@@ -22,6 +22,18 @@ export function useWebSocket({
   onDisconnect,
   reconnectInterval = 3000
 }: UseWebSocketProps) {
+  // Auto-correct URL for production
+  // If we are on HTTPS (production) but URL is localhost (default fallback),
+  // switch to using WSS on the current host.
+  const effectiveUrl = (() => {
+    if (typeof window !== 'undefined' && window.location.protocol === 'https:' && url.includes('localhost')) {
+      const protocol = 'wss:';
+      const host = window.location.host;
+      return `${protocol}//${host}`;
+    }
+    return url;
+  })();
+
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -34,7 +46,7 @@ export function useWebSocket({
     }
 
     try {
-      const ws = new WebSocket(url);
+      const ws = new WebSocket(effectiveUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {
