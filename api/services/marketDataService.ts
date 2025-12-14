@@ -171,21 +171,10 @@ export class MarketDataService {
         opt.expirationDate && opt.expirationDate.startsWith(today)
       );
 
-      return {
-        options: zeroDte
-          .sort((a, b) => (b.volume || 0) - (a.volume || 0))
-          .filter(o => o.volume > 100) // Filter noise
-          .slice(0, 50),
-        stats: {
-          callWall: callWall.strike,
-          putWall: putWall.strike,
-          totalVolume: zeroDte.reduce((acc, c) => acc + (c.volume || 0), 0),
-          currentPrice: currentPrice,
-          strikes: Array.from(strikes.entries()).map(([k, v]) => ({
-            strike: k, ...v
-          })).sort((a, b) => a.strike - b.strike)
-        }
-      };
+      return zeroDte
+        .sort((a, b) => (b.volume || 0) - (a.volume || 0))
+        .filter(o => o.volume > 100) // Filter noise
+        .slice(0, 50);
 
 
     } catch (error) {

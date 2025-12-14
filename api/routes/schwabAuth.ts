@@ -73,3 +73,7 @@ export function createSchwabAuthRouter(schwabService: SchwabService): Router {
 
     return router;
 }
+
+// Create default instance for direct import
+const schwabService = new SchwabService();
+export default createSchwabAuthRouter(schwabService);
