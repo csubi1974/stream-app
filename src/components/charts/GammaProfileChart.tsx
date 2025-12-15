@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface GammaProfileChartProps {
     data: { strike: number; callGex: number; putGex: number }[];
@@ -6,6 +7,7 @@ interface GammaProfileChartProps {
 }
 
 export function GammaProfileChart({ data, currentPrice }: GammaProfileChartProps) {
+    const { t } = useTranslation();
     // SVG Dimensions
     const width = 800;
     const height = 400;
@@ -50,7 +52,7 @@ export function GammaProfileChart({ data, currentPrice }: GammaProfileChartProps
     return (
         <div className="w-full h-[300px] overflow-hidden bg-gray-900 rounded-lg border border-gray-700 shadow-inner flex items-center justify-center">
             {chartData.length === 0 ? (
-                <div className="text-gray-500 text-sm">Waiting for profile data...</div>
+                <div className="text-gray-500 text-sm">{t('Waiting for profile data')}</div>
             ) : (
                 <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full">
                     {/* Gradients */}
@@ -90,7 +92,7 @@ export function GammaProfileChart({ data, currentPrice }: GammaProfileChartProps
                                         fill="url(#greenGradient)"
                                         className="hover:opacity-100 opacity-90 transition-opacity"
                                     >
-                                        <title>Strike: {d.strike} | Call GEX: {d.callGex.toLocaleString()}</title>
+                                        <title>{t('Strike')}: {d.strike} | {t('Call GEX')}: {d.callGex.toLocaleString()}</title>
                                     </rect>
 
                                     {/* Put Bar (Down) */}
@@ -102,7 +104,7 @@ export function GammaProfileChart({ data, currentPrice }: GammaProfileChartProps
                                         fill="url(#redGradient)"
                                         className="hover:opacity-100 opacity-90 transition-opacity"
                                     >
-                                        <title>Strike: {d.strike} | Put GEX: {d.putGex.toLocaleString()}</title>
+                                        <title>{t('Strike')}: {d.strike} | {t('Put GEX')}: {d.putGex.toLocaleString()}</title>
                                     </rect>
                                 </g>
                             );
@@ -138,11 +140,11 @@ export function GammaProfileChart({ data, currentPrice }: GammaProfileChartProps
                     </g>
 
                     {/* Title/Legend */}
-                    <text x={20} y={20} fill="#fff" fontSize="14" fontWeight="bold">Strikes GEX Put/Call</text>
+                    <text x={20} y={20} fill="#fff" fontSize="14" fontWeight="bold">{t('Strikes GEX Put/Call')}</text>
                     <rect x={160} y={10} width={10} height={10} fill="#22c55e" />
-                    <text x={180} y={20} fill="#9ca3af" fontSize="12">GEX Call (+)</text>
+                    <text x={180} y={20} fill="#9ca3af" fontSize="12">{t('GEX Call (+)')}</text>
                     <rect x={260} y={10} width={10} height={10} fill="#ef4444" />
-                    <text x={280} y={20} fill="#9ca3af" fontSize="12">GEX Put (-)</text>
+                    <text x={280} y={20} fill="#9ca3af" fontSize="12">{t('GEX Put (-)')}</text>
                 </svg>
             )}
         </div>

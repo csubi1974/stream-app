@@ -220,5 +220,11 @@
     "Total Trades": "Total Trades",
     "Sell Pressure": "Sell Pressure",
     "BUY": "BUY",
-    "SELL": "SELL"
+    "SELL": "SELL",
+    "Waiting for profile data": "Waiting for profile data...",
+    "Strikes GEX Put/Call": "Strikes GEX Put/Call",
+    "GEX Call (+)": "GEX Call (+)",
+    "GEX Put (-)": "GEX Put (-)",
+    "Call GEX": "Call GEX",
+    "Put GEX": "Put GEX"
 }

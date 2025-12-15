@@ -220,5 +220,11 @@
     "Total Trades": "Operaciones Totales",
     "Sell Pressure": "Presión de Venta",
     "BUY": "COMPRA",
-    "SELL": "VENTA"
+    "SELL": "VENTA",
+    "Waiting for profile data": "Esperando datos del perfil...",
+    "Strikes GEX Put/Call": "GEX Strikes Put/Call",
+    "GEX Call (+)": "GEX Call (+)",
+    "GEX Put (-)": "GEX Put (-)",
+    "Call GEX": "GEX Call",
+    "Put GEX": "GEX Put"
 }
