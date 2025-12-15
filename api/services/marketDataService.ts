@@ -17,9 +17,9 @@ export class MarketDataService {
   private redis: ReturnType<typeof createClient>;
   private schwabService: SchwabService;
 
-  constructor() {
+  constructor(schwabService: SchwabService) {
     this.redis = createClient({ url: process.env.REDIS_URL });
-    this.schwabService = new SchwabService();
+    this.schwabService = schwabService;
     this.initializeRedis();
   }
 
