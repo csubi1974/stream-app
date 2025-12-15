@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Header } from '../components/layout/Header';
 import { ZeroDTEScanner } from '../components/dashboard/ZeroDTEScanner';
 import { VolumeScanner } from '../components/dashboard/VolumeScanner';
@@ -9,6 +10,7 @@ import { useMarketStore } from '../stores/marketStore';
 import { useWebSocket } from '../hooks/useWebSocket';
 
 export function Dashboard() {
+  const { t } = useTranslation();
   const {
     subscribedSymbols,
     addSubscribedSymbol,
@@ -51,22 +53,22 @@ export function Dashboard() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">
-            Tape Reading Platform
+            {t('TapeReading Platform')}
           </h1>
           <p className="text-gray-400">
-            Real-time market flow analysis for 0DTE options and swing trading
+            {t('Real-time analysis')}
           </p>
         </div>
 
         {/* Connection Status */}
         <div className="mb-6">
           <div className={`inline-flex items-center space-x-2 px-3 py-1 rounded-full text-sm ${isConnected
-              ? 'bg-green-900 text-green-300'
-              : 'bg-red-900 text-red-300'
+            ? 'bg-green-900 text-green-300'
+            : 'bg-red-900 text-red-300'
             }`}>
             <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
               }`}></div>
-            <span>{isConnected ? 'Connected to market data' : 'Disconnected'}</span>
+            <span>{isConnected ? t('Connected to market data') : t('Disconnected from market data')}</span>
           </div>
         </div>
 
@@ -84,21 +86,21 @@ export function Dashboard() {
 
             {/* Quick Stats */}
             <div className="bg-gray-800 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Market Stats</h3>
+              <h3 className="text-lg font-semibold text-white mb-4">{t('Market Stats')}</h3>
               <div className="space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Active Symbols</span>
+                  <span className="text-gray-400">{t('Active Symbols')}</span>
                   <span className="text-white font-bold">{subscribedSymbols.length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Connection</span>
+                  <span className="text-gray-400">{t('Connection')}</span>
                   <span className={`font-bold ${isConnected ? 'text-green-500' : 'text-red-500'
                     }`}>
-                    {isConnected ? 'Live' : 'Offline'}
+                    {isConnected ? t('Live') : t('Offline')}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Update Speed</span>
+                  <span className="text-gray-400">{t('Update Speed')}</span>
                   <span className="text-white font-bold">100ms</span>
                 </div>
               </div>
@@ -106,25 +108,25 @@ export function Dashboard() {
 
             {/* Quick Actions */}
             <div className="bg-gray-800 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Quick Actions</h3>
+              <h3 className="text-lg font-semibold text-white mb-4">{t('Quick Actions')}</h3>
               <div className="space-y-2">
                 <button
                   onClick={() => setSelectedSymbol('SPXW251213C6900')}
                   className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-medium transition-colors"
                 >
-                  Open SPXW Call Ladder
+                  {t('Open Call Ladder')}
                 </button>
                 <button
                   onClick={() => setSelectedSymbol('SPXW251213P6900')}
                   className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-medium transition-colors"
                 >
-                  Open SPXW Put Ladder
+                  {t('Open Put Ladder')}
                 </button>
                 <Link
                   to="/scanner"
                   className="block w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-medium transition-colors text-center"
                 >
-                  Full Scanner View
+                  {t('Full Scanner View')}
                 </Link>
               </div>
             </div>

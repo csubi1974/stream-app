@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { Clock, TrendingUp, TrendingDown } from 'lucide-react';
 import { useMarketStore, TradeData } from '../../stores/marketStore';
 import { useWebSocket } from '../../hooks/useWebSocket';
+import { useTranslation } from 'react-i18next';
 
 interface TimeSalesProps {
   symbol: string;
 }
 
 export function TimeSales({ symbol }: TimeSalesProps) {
+  const { t } = useTranslation();
   const { timeSales, setTimeSales, addTrade } = useMarketStore();
   const [loading, setLoading] = useState(true);
 
@@ -60,15 +62,15 @@ export function TimeSales({ symbol }: TimeSalesProps) {
 
   const getTradeStyle = (trade: TradeData) => {
     const isBuy = trade.side === 'BUY';
-    const isAtAsk = trade.side === 'BUY'; // Simplified logic
-    const isAtBid = trade.side === 'SELL'; // Simplified logic
+    // const isAtAsk = trade.side === 'BUY'; // Simplified logic - removed unused vars
+    // const isAtBid = trade.side === 'SELL'; // Simplified logic
 
     return {
       bgColor: isBuy ? 'bg-green-900' : 'bg-red-900',
       borderColor: isBuy ? 'border-green-700' : 'border-red-700',
       textColor: isBuy ? 'text-green-300' : 'text-red-300',
       icon: isBuy ? TrendingUp : TrendingDown,
-      label: isBuy ? 'BUY' : 'SELL'
+      label: isBuy ? t('BUY') : t('SELL')
     };
   };
 
@@ -78,13 +80,13 @@ export function TimeSales({ symbol }: TimeSalesProps) {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-white flex items-center">
             <Clock className="h-5 w-5 mr-2 text-yellow-500" />
-            Time & Sales - {symbol}
+            {t('Time & Sales Title')} {symbol}
           </h3>
           <div className="flex items-center space-x-2">
             <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
               }`}></div>
             <span className="text-sm text-gray-400">
-              {isConnected ? 'Live' : 'Offline'}
+              {isConnected ? t('Live') : t('Offline')}
             </span>
           </div>
         </div>
@@ -102,13 +104,13 @@ export function TimeSales({ symbol }: TimeSalesProps) {
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-white flex items-center">
           <Clock className="h-5 w-5 mr-2 text-yellow-500" />
-          Time & Sales - {symbol}
+          {t('Time & Sales Title')} {symbol}
         </h3>
         <div className="flex items-center space-x-2">
           <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
             }`}></div>
           <span className="text-sm text-gray-400">
-            {isConnected ? 'Live' : 'Offline'}
+            {isConnected ? t('Live') : t('Offline')}
           </span>
         </div>
       </div>
@@ -133,7 +135,7 @@ export function TimeSales({ symbol }: TimeSalesProps) {
                     ${trade.price.toFixed(2)}
                   </div>
                   <div className="text-gray-400 text-xs">
-                    {trade.size} contratos
+                    {trade.size} {t('contracts')}
                   </div>
                 </div>
               </div>
@@ -157,9 +159,9 @@ export function TimeSales({ symbol }: TimeSalesProps) {
       {trades.length === 0 && (
         <div className="text-center py-8">
           <Clock className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-400">No trades available</p>
+          <p className="text-gray-400">{t('No trades')}</p>
           <p className="text-xs text-gray-500 mt-1">
-            Trades will appear when market data is received
+            {t('Trades will appear')}
           </p>
         </div>
       )}
@@ -169,17 +171,17 @@ export function TimeSales({ symbol }: TimeSalesProps) {
         <div className="mt-4 pt-4 border-t border-gray-700">
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
-              <div className="text-gray-400 text-xs">Total Trades</div>
+              <div className="text-gray-400 text-xs">{t('Total Trades')}</div>
               <div className="text-white font-bold">{trades.length}</div>
             </div>
             <div>
-              <div className="text-gray-400 text-xs">Buy Pressure</div>
+              <div className="text-gray-400 text-xs">{t('Buy Pressure')}</div>
               <div className="text-green-400 font-bold">
                 {((trades.filter(t => t.side === 'BUY').length / trades.length) * 100).toFixed(0)}%
               </div>
             </div>
             <div>
-              <div className="text-gray-400 text-xs">Sell Pressure</div>
+              <div className="text-gray-400 text-xs">{t('Sell Pressure')}</div>
               <div className="text-red-400 font-bold">
                 {((trades.filter(t => t.side === 'SELL').length / trades.length) * 100).toFixed(0)}%
               </div>

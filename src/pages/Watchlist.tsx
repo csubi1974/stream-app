@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Header } from '../components/layout/Header';
 import { Star, TrendingUp, TrendingDown, Plus, Trash2, Bell } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useMarketStore } from '../stores/marketStore';
 import { Link } from 'react-router-dom';
 
@@ -16,6 +17,7 @@ interface WatchlistItem {
 }
 
 export function Watchlist() {
+  const { t } = useTranslation();
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
   const [newSymbol, setNewSymbol] = useState('');
   const [loading, setLoading] = useState(false);
@@ -173,22 +175,22 @@ export function Watchlist() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Watchlist</h1>
-          <p className="text-gray-400">Track your favorite symbols and set price alerts</p>
+          <h1 className="text-3xl font-bold text-white mb-2">{t('Watchlist')}</h1>
+          <p className="text-gray-400">{t('Track your favorite symbols')}</p>
         </div>
 
         {/* Add Symbol */}
         <div className="bg-gray-800 rounded-lg p-6 mb-6">
           <h2 className="text-lg font-semibold text-white mb-4 flex items-center">
             <Plus className="h-5 w-5 mr-2 text-green-500" />
-            Add Symbol to Watchlist
+            {t('Add Symbol to Watchlist')}
           </h2>
           <div className="flex space-x-4">
             <input
               type="text"
               value={newSymbol}
               onChange={(e) => setNewSymbol(e.target.value)}
-              placeholder="Enter symbol (e.g., AAPL, TSLA)"
+              placeholder={t('Enter symbol')}
               className="flex-1 bg-gray-700 text-white px-4 py-2 rounded border border-gray-600 focus:border-blue-500 focus:outline-none"
               onKeyPress={(e) => e.key === 'Enter' && addToWatchlist()}
             />
@@ -200,12 +202,12 @@ export function Watchlist() {
               {loading ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Adding...
+                  {t('Adding...')}
                 </>
               ) : (
                 <>
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Symbol
+                  {t('Add Symbol')}
                 </>
               )}
             </button>
@@ -216,27 +218,27 @@ export function Watchlist() {
         <div className="bg-gray-800 rounded-lg p-6">
           <h2 className="text-lg font-semibold text-white mb-4 flex items-center">
             <Star className="h-5 w-5 mr-2 text-yellow-500" />
-            My Watchlist ({watchlist.length} symbols)
+            {t('My Watchlist')} ({watchlist.length})
           </h2>
 
           {watchlist.length === 0 ? (
             <div className="text-center py-12">
               <Star className="h-16 w-16 text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-400 text-lg mb-2">Your watchlist is empty</p>
-              <p className="text-gray-500 text-sm">Add some symbols to start tracking them</p>
+              <p className="text-gray-400 text-lg mb-2">{t('Your watchlist is empty')}</p>
+              <p className="text-gray-500 text-sm">{t('Add some symbols')}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-700">
-                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Symbol</th>
-                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Name</th>
-                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Price</th>
-                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Change</th>
-                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Volume</th>
-                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Alert</th>
-                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Actions</th>
+                    <th className="text-left py-3 px-4 text-gray-400 font-medium">{t('Symbol')}</th>
+                    <th className="text-left py-3 px-4 text-gray-400 font-medium">{t('Name')}</th>
+                    <th className="text-left py-3 px-4 text-gray-400 font-medium">{t('Price')}</th>
+                    <th className="text-left py-3 px-4 text-gray-400 font-medium">{t('Change')}</th>
+                    <th className="text-left py-3 px-4 text-gray-400 font-medium">{t('Volume')}</th>
+                    <th className="text-left py-3 px-4 text-gray-400 font-medium">{t('Alert')}</th>
+                    <th className="text-left py-3 px-4 text-gray-400 font-medium">{t('Actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -276,14 +278,14 @@ export function Watchlist() {
                         ) : (
                           <button
                             onClick={() => {
-                              const alertPrice = prompt(`Set alert price for ${item.symbol} (current: ${formatPrice(item.price)}):`);
+                              const alertPrice = prompt(`${t('Set alert price')} ${item.symbol} (${t('current')}: ${formatPrice(item.price)}):`);
                               if (alertPrice) {
                                 setAlert(item.symbol, parseFloat(alertPrice));
                               }
                             }}
                             className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
                           >
-                            Set Alert
+                            {t('Set Alert')}
                           </button>
                         )}
                       </td>
@@ -293,7 +295,7 @@ export function Watchlist() {
                             to={`/scanner/${item.symbol}`}
                             className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
                           >
-                            Scanner
+                            {t('Scanner')}
                           </Link>
                           <button
                             onClick={() => removeFromWatchlist(item.symbol)}
@@ -315,19 +317,19 @@ export function Watchlist() {
         {watchlist.length > 0 && (
           <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="bg-gray-800 rounded-lg p-4">
-              <div className="text-gray-400 text-sm mb-1">Gainers</div>
+              <div className="text-gray-400 text-sm mb-1">{t('Gainers')}</div>
               <div className="text-green-400 font-bold text-lg">
                 {watchlist.filter(item => item.change > 0).length}
               </div>
             </div>
             <div className="bg-gray-800 rounded-lg p-4">
-              <div className="text-gray-400 text-sm mb-1">Losers</div>
+              <div className="text-gray-400 text-sm mb-1">{t('Losers')}</div>
               <div className="text-red-400 font-bold text-lg">
                 {watchlist.filter(item => item.change < 0).length}
               </div>
             </div>
             <div className="bg-gray-800 rounded-lg p-4">
-              <div className="text-gray-400 text-sm mb-1">Avg Change</div>
+              <div className="text-gray-400 text-sm mb-1">{t('Avg Change')}</div>
               <div className={`font-bold text-lg ${watchlist.reduce((sum, item) => sum + item.changePercent, 0) / watchlist.length >= 0
                 ? 'text-green-400' : 'text-red-400'
                 }`}>
@@ -335,7 +337,7 @@ export function Watchlist() {
               </div>
             </div>
             <div className="bg-gray-800 rounded-lg p-4">
-              <div className="text-gray-400 text-sm mb-1">Total Volume</div>
+              <div className="text-gray-400 text-sm mb-1">{t('Total Volume')}</div>
               <div className="text-white font-bold text-lg">
                 {formatVolume(watchlist.reduce((sum, item) => sum + item.volume, 0))}
               </div>

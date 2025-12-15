@@ -39,9 +39,9 @@ export function Header() {
       const isMarketHours = currentTimeVals >= marketOpen && currentTimeVals < marketClose;
 
       if (!isWeekend && isMarketHours) {
-        setMarketStatus({ isOpen: true, text: t('MARKET OPEN'), next: 'Closes at 4:00 PM ET' });
+        setMarketStatus({ isOpen: true, text: t('MARKET OPEN'), next: t('Closes at 4:00 PM ET') });
       } else {
-        setMarketStatus({ isOpen: false, text: t('MARKET CLOSED'), next: 'Opens 9:30 AM ET' });
+        setMarketStatus({ isOpen: false, text: t('MARKET CLOSED'), next: t('Opens 9:30 AM ET') });
       }
     };
 
@@ -65,7 +65,7 @@ export function Header() {
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-2">
               <BarChart3 className="h-8 w-8 text-green-500" />
-              <span className="text-xl font-bold text-white">TapeReading</span>
+              <span className="text-xl font-bold text-white">{t('TapeReading Logo')}</span>
             </Link>
           </div>
 
@@ -104,20 +104,26 @@ export function Header() {
             </div>
 
             {/* Language Selector */}
-            <div className="flex items-center space-x-2">
-              <Languages className="h-4 w-4 text-gray-400" />
-              <select
-                value={i18n.language}
-                onChange={(e) => i18n.changeLanguage(e.target.value)}
-                className="bg-gray-800 text-gray-300 text-sm border border-gray-700 rounded px-2 py-1 focus:outline-none focus:border-blue-500"
+            <div className="relative">
+              <button
+                onClick={() => {
+                  const newLang = i18n.language === 'en' ? 'es' : 'en';
+                  i18n.changeLanguage(newLang);
+                }}
+                className="flex items-center space-x-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-md transition-colors group"
+                title={i18n.language === 'en' ? t('Switch to Spanish') : t('Switch to English')}
               >
-                <option value="en">English</option>
-                <option value="es">Español</option>
-              </select>
+                <span className="text-lg">
+                  {i18n.language === 'en' ? '🇺🇸' : '🇪🇸'}
+                </span>
+                <span className="text-xs font-medium text-gray-300 group-hover:text-white">
+                  {i18n.language === 'en' ? 'EN' : 'ES'}
+                </span>
+              </button>
             </div>
 
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-400">v1.2</span>
+              <span className="text-sm text-gray-400">{t('Version')}</span>
             </div>
           </div>
         </div>

@@ -4,8 +4,10 @@ import { OptionsLadder } from '../components/options/OptionsLadder';
 import { TimeSales } from '../components/options/TimeSales';
 import { ArrowLeft, Settings, AlertTriangle } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export function OptionsLadderPage() {
+  const { t } = useTranslation();
   const { symbol } = useParams<{ symbol: string }>();
   const [showSettings, setShowSettings] = useState(false);
   const [sweepThreshold, setSweepThreshold] = useState(50);
@@ -15,12 +17,12 @@ export function OptionsLadderPage() {
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-white mb-2">Symbol not found</h1>
+          <h1 className="text-2xl font-bold text-white mb-2">{t('Symbol not found')}</h1>
           <Link
             to="/"
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-medium transition-colors"
           >
-            Back to Dashboard
+            {t('Back to Dashboard')}
           </Link>
         </div>
       </div>
@@ -30,7 +32,7 @@ export function OptionsLadderPage() {
   return (
     <div className="min-h-screen bg-gray-900">
       <Header />
-      
+
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -43,14 +45,14 @@ export function OptionsLadderPage() {
             </Link>
             <div>
               <h1 className="text-2xl font-bold text-white">{symbol}</h1>
-              <p className="text-gray-400">Options Ladder & Time & Sales</p>
+              <p className="text-gray-400">{t('Options Ladder & Time & Sales')}</p>
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-4">
             <div className="bg-gray-800 rounded-lg p-2">
-              <div className="text-xs text-gray-400">Sweep Threshold</div>
-              <div className="text-white font-bold">{sweepThreshold} contracts</div>
+              <div className="text-xs text-gray-400">{t('Sweep Threshold')}</div>
+              <div className="text-white font-bold">{sweepThreshold} {t('contracts')}</div>
             </div>
             <button
               onClick={() => setShowSettings(!showSettings)}
@@ -64,11 +66,11 @@ export function OptionsLadderPage() {
         {/* Settings Panel */}
         {showSettings && (
           <div className="bg-gray-800 rounded-lg p-4 mb-6 border border-gray-700">
-            <h3 className="text-white font-semibold mb-4">Alert Settings</h3>
+            <h3 className="text-white font-semibold mb-4">{t('Alert Settings')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm text-gray-400 mb-2">
-                  Sweep Alert Threshold
+                  {t('Sweep Alert Threshold')}
                 </label>
                 <input
                   type="number"
@@ -81,16 +83,16 @@ export function OptionsLadderPage() {
               </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-2">
-                  Sound Alerts
+                  {t('Sound Alerts')}
                 </label>
                 <select className="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-blue-500 focus:outline-none">
-                  <option value="on">On</option>
-                  <option value="off">Off</option>
+                  <option value="on">{t('On')}</option>
+                  <option value="off">{t('Off')}</option>
                 </select>
               </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-2">
-                  Update Speed
+                  {t('Update Speed')}
                 </label>
                 <select className="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-blue-500 focus:outline-none">
                   <option value="100">100ms</option>
@@ -118,54 +120,54 @@ export function OptionsLadderPage() {
         {/* Additional Info */}
         <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-gray-800 rounded-lg p-4">
-            <h4 className="text-white font-semibold mb-2">Contract Info</h4>
+            <h4 className="text-white font-semibold mb-2">{t('Contract Info')}</h4>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-400">Symbol:</span>
+                <span className="text-gray-400">{t('Symbol')}:</span>
                 <span className="text-white">{symbol}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Type:</span>
-                <span className="text-white">{symbol.includes('C') ? 'Call' : 'Put'}</span>
+                <span className="text-gray-400">{t('Type')}:</span>
+                <span className="text-white">{symbol.includes('C') ? t('Call') : t('Put')}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Expiry:</span>
+                <span className="text-gray-400">{t('Expiry')}:</span>
                 <span className="text-white">2024-12-13</span>
               </div>
             </div>
           </div>
 
           <div className="bg-gray-800 rounded-lg p-4">
-            <h4 className="text-white font-semibold mb-2">Market Stats</h4>
+            <h4 className="text-white font-semibold mb-2">{t('Market Stats')}</h4>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-400">Volume:</span>
+                <span className="text-gray-400">{t('Volume')}:</span>
                 <span className="text-white">1,250</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Open Interest:</span>
+                <span className="text-gray-400">{t('Open Interest')}:</span>
                 <span className="text-white">8,500</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">IV:</span>
+                <span className="text-gray-400">{t('IV')}:</span>
                 <span className="text-white">22.5%</span>
               </div>
             </div>
           </div>
 
           <div className="bg-gray-800 rounded-lg p-4">
-            <h4 className="text-white font-semibold mb-2">Greeks</h4>
+            <h4 className="text-white font-semibold mb-2">{t('Greeks')}</h4>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-400">Delta:</span>
+                <span className="text-gray-400">{t('Delta')}:</span>
                 <span className="text-white">0.45</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Gamma:</span>
+                <span className="text-gray-400">{t('Gamma')}:</span>
                 <span className="text-white">0.0023</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Theta:</span>
+                <span className="text-gray-400">{t('Theta')}:</span>
                 <span className="text-white">-0.15</span>
               </div>
             </div>

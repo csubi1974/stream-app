@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { TrendingUp, TrendingDown, Activity } from 'lucide-react';
 import { useMarketStore, OptionsBookData } from '../../stores/marketStore';
 import { useWebSocket } from '../../hooks/useWebSocket';
+import { useTranslation } from 'react-i18next';
 
 interface OptionsLadderProps {
   symbol: string;
 }
 
 export function OptionsLadder({ symbol }: OptionsLadderProps) {
+  const { t } = useTranslation();
   const { optionsBooks, setOptionsBook } = useMarketStore();
   const [loading, setLoading] = useState(true);
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
@@ -52,12 +54,12 @@ export function OptionsLadder({ symbol }: OptionsLadderProps) {
     return (
       <div className="bg-gray-800 rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-white">Options Ladder - {symbol}</h3>
+          <h3 className="text-lg font-semibold text-white">{t('Options Ladder Title')} {symbol}</h3>
           <div className="flex items-center space-x-2">
             <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
               }`}></div>
             <span className="text-sm text-gray-400">
-              {isConnected ? 'Live' : 'Offline'}
+              {isConnected ? t('Live') : t('Offline')}
             </span>
           </div>
         </div>
@@ -73,12 +75,12 @@ export function OptionsLadder({ symbol }: OptionsLadderProps) {
   return (
     <div className="bg-gray-800 rounded-lg p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-white">Options Ladder - {symbol}</h3>
+        <h3 className="text-lg font-semibold text-white">{t('Options Ladder Title')} {symbol}</h3>
         <div className="flex items-center space-x-2">
           <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
             }`}></div>
           <span className="text-sm text-gray-400">
-            {isConnected ? 'Live' : 'Offline'}
+            {isConnected ? t('Live') : t('Offline')}
           </span>
         </div>
       </div>
@@ -111,7 +113,7 @@ export function OptionsLadder({ symbol }: OptionsLadderProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Activity className="h-4 w-4 text-yellow-500" />
-              <span className="text-yellow-400 font-bold">LAST</span>
+              <span className="text-yellow-400 font-bold">{t('Last Trade')}</span>
             </div>
             <div className="text-center">
               <div className="text-white font-bold text-lg">{bookData.last?.price?.toFixed(2) || '0.00'}</div>
@@ -145,10 +147,10 @@ export function OptionsLadder({ symbol }: OptionsLadderProps) {
       {/* Selected Level Info */}
       {selectedLevel && (
         <div className="mt-4 p-3 bg-blue-900 border border-blue-700 rounded-lg">
-          <div className="text-blue-200 text-sm">Selected Level</div>
+          <div className="text-blue-200 text-sm">{t('Selected Level')}</div>
           <div className="text-white font-bold">${selectedLevel.toFixed(2)}</div>
           <div className="text-blue-300 text-xs mt-1">
-            Click on any level to set alerts or place orders
+            {t('Selected Level Tip')}
           </div>
         </div>
       )}

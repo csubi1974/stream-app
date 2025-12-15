@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Clock, TrendingUp, TrendingDown, AlertTriangle, Layers } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useMarketStore, ZeroDTEOption } from '../../stores/marketStore';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { Link } from 'react-router-dom';
@@ -14,6 +15,7 @@ interface ScanStats {
 }
 
 export function ZeroDTEScanner() {
+  const { t } = useTranslation();
   const { zeroDTEOptions, setZeroDTEOptions } = useMarketStore();
   const [stats, setStats] = useState<ScanStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -111,25 +113,25 @@ export function ZeroDTEScanner() {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-white flex items-center">
           <Clock className="h-5 w-5 mr-2 text-blue-500" />
-          0DTE Options Scanner
+          {t('0DTE Options Scanner')}
         </h2>
 
         {stats && (
           <div className="flex space-x-4 bg-gray-900 px-3 py-1 rounded-lg border border-gray-700">
             <div className="text-center">
-              <span className="block text-[10px] text-red-400 uppercase font-bold">Resis / Call Wall</span>
+              <span className="block text-[10px] text-red-400 uppercase font-bold">{t('Resis / Call Wall')}</span>
               <span className="text-white font-mono">{formatStrike(stats.callWall)}</span>
             </div>
             <div className="w-[1px] bg-gray-700"></div>
             <div className="text-center">
-              <span className="block text-[10px] text-green-400 uppercase font-bold">Supp / Put Wall</span>
+              <span className="block text-[10px] text-green-400 uppercase font-bold">{t('Supp / Put Wall')}</span>
               <span className="text-white font-mono">{formatStrike(stats.putWall)}</span>
             </div>
             {stats.currentPrice && (
               <>
                 <div className="w-[1px] bg-gray-700"></div>
                 <div className="text-center">
-                  <span className="block text-[10px] text-blue-400 uppercase font-bold">Spot</span>
+                  <span className="block text-[10px] text-blue-400 uppercase font-bold">{t('Spot')}</span>
                   <span className="text-white font-mono">${stats.currentPrice.toFixed(2)}</span>
                 </div>
               </>
@@ -141,7 +143,7 @@ export function ZeroDTEScanner() {
           <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
             }`}></div>
           <span className="text-sm text-gray-400">
-            {isConnected ? 'Live' : 'Offline'}
+            {isConnected ? t('Live') : t('Offline')}
           </span>
         </div>
       </div>
@@ -156,29 +158,29 @@ export function ZeroDTEScanner() {
       {/* Filters */}
       <div className="flex flex-wrap gap-4 mb-4">
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Filter</label>
+          <label className="block text-xs text-gray-400 mb-1">{t('Filter')}</label>
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value as 'ALL' | 'CALL' | 'PUT')}
             className="bg-gray-700 text-white px-3 py-1 rounded text-sm border border-gray-600 focus:border-blue-500 focus:outline-none"
           >
-            <option value="ALL">All Options</option>
-            <option value="CALL">Calls Only</option>
-            <option value="PUT">Puts Only</option>
+            <option value="ALL">{t('All Options')}</option>
+            <option value="CALL">{t('Calls Only')}</option>
+            <option value="PUT">{t('Puts Only')}</option>
           </select>
         </div>
 
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Sort By</label>
+          <label className="block text-xs text-gray-400 mb-1">{t('Sort By')}</label>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as 'volume' | 'oi' | 'gamma' | 'delta')}
             className="bg-gray-700 text-white px-3 py-1 rounded text-sm border border-gray-600 focus:border-blue-500 focus:outline-none"
           >
-            <option value="volume">Volume</option>
-            <option value="oi">Open Interest</option>
-            <option value="gamma">Gamma</option>
-            <option value="delta">Delta</option>
+            <option value="volume">{t('Volume')}</option>
+            <option value="oi">{t('Open Interest')}</option>
+            <option value="gamma">{t('Gamma')}</option>
+            <option value="delta">{t('Delta')}</option>
           </select>
         </div>
 
@@ -187,7 +189,7 @@ export function ZeroDTEScanner() {
             onClick={fetchZeroDTEOptions}
             className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition-colors"
           >
-            Refresh
+            {t('Refresh')}
           </button>
         </div>
       </div>
@@ -197,17 +199,17 @@ export function ZeroDTEScanner() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-700">
-              <th className="text-left py-2 px-2 text-gray-400 font-medium">Symbol</th>
-              <th className="text-left py-2 px-2 text-gray-400 font-medium">Type</th>
-              <th className="text-left py-2 px-2 text-gray-400 font-medium">Strike</th>
-              <th className="text-left py-2 px-2 text-gray-400 font-medium">Last</th>
-              <th className="text-left py-2 px-2 text-gray-400 font-medium">Bid</th>
-              <th className="text-left py-2 px-2 text-gray-400 font-medium">Ask</th>
-              <th className="text-left py-2 px-2 text-gray-400 font-medium">Volume</th>
-              <th className="text-left py-2 px-2 text-gray-400 font-medium">OI</th>
+              <th className="text-left py-2 px-2 text-gray-400 font-medium">{t('Symbol')}</th>
+              <th className="text-left py-2 px-2 text-gray-400 font-medium">{t('Type')}</th>
+              <th className="text-left py-2 px-2 text-gray-400 font-medium">{t('Strike')}</th>
+              <th className="text-left py-2 px-2 text-gray-400 font-medium">{t('Last')}</th>
+              <th className="text-left py-2 px-2 text-gray-400 font-medium">{t('Bid')}</th>
+              <th className="text-left py-2 px-2 text-gray-400 font-medium">{t('Ask')}</th>
+              <th className="text-left py-2 px-2 text-gray-400 font-medium">{t('Volume')}</th>
+              <th className="text-left py-2 px-2 text-gray-400 font-medium">{t('OI')}</th>
               <th className="text-left py-2 px-2 text-gray-400 font-medium">Δ</th>
               <th className="text-left py-2 px-2 text-gray-400 font-medium">Γ</th>
-              <th className="text-left py-2 px-2 text-gray-400 font-medium">Action</th>
+              <th className="text-left py-2 px-2 text-gray-400 font-medium">{t('Action')}</th>
             </tr>
           </thead>
           <tbody>
@@ -286,7 +288,7 @@ export function ZeroDTEScanner() {
                     to={`/ladder/${option.symbol}`}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs transition-colors"
                   >
-                    Ladder
+                    {t('Ladder')}
                   </Link>
                 </td>
               </tr>
@@ -298,9 +300,9 @@ export function ZeroDTEScanner() {
       {filteredOptions.length === 0 && (
         <div className="text-center py-8">
           <TrendingUp className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-400">No 0DTE options found for today</p>
+          <p className="text-gray-400">{t('No options found')}</p>
           <p className="text-xs text-gray-500 mt-1">
-            Waiting for market data (SPXW)
+            {t('Waiting for market data')}
           </p>
         </div>
       )}
@@ -310,23 +312,23 @@ export function ZeroDTEScanner() {
         <div className="mt-4 pt-4 border-t border-gray-700">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
             <div>
-              <div className="text-gray-400 text-xs">Total Options</div>
+              <div className="text-gray-400 text-xs">{t('Total Options')}</div>
               <div className="text-white font-bold">{filteredOptions.length}</div>
             </div>
             <div>
-              <div className="text-gray-400 text-xs">{`High Volume (>500)`}</div>
+              <div className="text-gray-400 text-xs">{t('High Volume')}</div>
               <div className="text-orange-400 font-bold">
                 {filteredOptions.filter(o => o.volume > 500).length}
               </div>
             </div>
             <div>
-              <div className="text-gray-400 text-xs">{`High OI (>2K)`}</div>
+              <div className="text-gray-400 text-xs">{t('High OI')}</div>
               <div className="text-green-400 font-bold">
                 {filteredOptions.filter(o => o.openInterest > 2000).length}
               </div>
             </div>
             <div>
-              <div className="text-gray-400 text-xs">Call/Put Ratio</div>
+              <div className="text-gray-400 text-xs">{t('Call/Put Ratio')}</div>
               <div className="text-blue-400 font-bold">
                 {(() => {
                   const calls = filteredOptions.filter(o => o.type === 'CALL').length;

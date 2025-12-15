@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { TrendingUp, DollarSign, Activity } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useMarketStore, VolumeData } from '../../stores/marketStore';
 import { Link } from 'react-router-dom';
 
@@ -8,6 +9,7 @@ interface VolumeScannerProps {
 }
 
 export function VolumeScanner({ onSymbolSelect }: VolumeScannerProps) {
+  const { t } = useTranslation();
   const { volumeData, setVolumeData, setSelectedSymbol } = useMarketStore();
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
@@ -83,7 +85,7 @@ export function VolumeScanner({ onSymbolSelect }: VolumeScannerProps) {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-white flex items-center">
             <TrendingUp className="h-5 w-5 mr-2 text-green-500" />
-            Volume Scanner
+            {t('Volume Scanner')}
           </h2>
         </div>
         <div className="animate-pulse space-y-3">
@@ -100,11 +102,11 @@ export function VolumeScanner({ onSymbolSelect }: VolumeScannerProps) {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-white flex items-center">
           <TrendingUp className="h-5 w-5 mr-2 text-green-500" />
-          Volume Scanner
+          {t('Volume Scanner')}
         </h2>
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
-            <label className="text-sm text-gray-400">Min RVOL:</label>
+            <label className="text-sm text-gray-400">{t('Min RVOL')}:</label>
             <input
               type="number"
               value={filters.minRvol}
@@ -115,7 +117,7 @@ export function VolumeScanner({ onSymbolSelect }: VolumeScannerProps) {
             />
           </div>
           <div className="flex items-center space-x-2">
-            <label className="text-sm text-gray-400">Min $Vol:</label>
+            <label className="text-sm text-gray-400">{t('Min $Vol')}:</label>
             <input
               type="number"
               value={filters.minDollarVol / 1000000}
@@ -137,19 +139,19 @@ export function VolumeScanner({ onSymbolSelect }: VolumeScannerProps) {
                 className="text-left py-3 px-2 text-gray-400 font-medium cursor-pointer hover:text-white"
                 onClick={() => handleSort('symbol')}
               >
-                Symbol {sortConfig.key === 'symbol' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                {t('Symbol')} {sortConfig.key === 'symbol' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
               </th>
               <th
                 className="text-right py-3 px-2 text-gray-400 font-medium cursor-pointer hover:text-white"
                 onClick={() => handleSort('price')}
               >
-                Price {sortConfig.key === 'price' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                {t('Price')} {sortConfig.key === 'price' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
               </th>
               <th
                 className="text-right py-3 px-2 text-gray-400 font-medium cursor-pointer hover:text-white"
                 onClick={() => handleSort('rvol')}
               >
-                RVOL {sortConfig.key === 'rvol' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                {t('Volume')} {sortConfig.key === 'rvol' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
               </th>
               <th
                 className="text-right py-3 px-2 text-gray-400 font-medium cursor-pointer hover:text-white"
@@ -163,9 +165,9 @@ export function VolumeScanner({ onSymbolSelect }: VolumeScannerProps) {
               >
                 %Δ {sortConfig.key === 'changePercent' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
               </th>
-              <th className="text-center py-3 px-2 text-gray-400 font-medium">Pressure</th>
-              <th className="text-left py-3 px-2 text-gray-400 font-medium">Action</th>
-              <th className="text-center py-3 px-2 text-gray-400 font-medium">View</th>
+              <th className="text-center py-3 px-2 text-gray-400 font-medium">{t('Pressure')}</th>
+              <th className="text-left py-3 px-2 text-gray-400 font-medium">{t('Action')}</th>
+              <th className="text-center py-3 px-2 text-gray-400 font-medium">{t('View')}</th>
             </tr>
           </thead>
           <tbody>
@@ -228,7 +230,7 @@ export function VolumeScanner({ onSymbolSelect }: VolumeScannerProps) {
                     className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs font-medium transition-colors"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    Chart
+                    {t('Chart')}
                   </Link>
                 </td>
               </tr>
@@ -240,7 +242,7 @@ export function VolumeScanner({ onSymbolSelect }: VolumeScannerProps) {
       {volumeData.length === 0 && (
         <div className="text-center py-8">
           <TrendingUp className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-400">No stocks match current filters</p>
+          <p className="text-gray-400">{t('No stocks match')}</p>
         </div>
       )}
     </div>
