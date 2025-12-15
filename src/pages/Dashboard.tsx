@@ -9,15 +9,15 @@ import { useMarketStore } from '../stores/marketStore';
 import { useWebSocket } from '../hooks/useWebSocket';
 
 export function Dashboard() {
-  const { 
-    subscribedSymbols, 
-    addSubscribedSymbol, 
+  const {
+    subscribedSymbols,
+    addSubscribedSymbol,
     removeSubscribedSymbol,
-    setSelectedSymbol 
+    setSelectedSymbol
   } = useMarketStore();
 
   const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3002';
-  
+
   const { isConnected, subscribe, unsubscribe } = useWebSocket({
     url: wsUrl,
     onConnect: () => {
@@ -47,7 +47,7 @@ export function Dashboard() {
     <div className="min-h-screen bg-gray-900">
       <Header />
       <AlertContainer position="top-right" />
-      
+
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">
@@ -60,14 +60,12 @@ export function Dashboard() {
 
         {/* Connection Status */}
         <div className="mb-6">
-          <div className={`inline-flex items-center space-x-2 px-3 py-1 rounded-full text-sm ${
-            isConnected 
-              ? 'bg-green-900 text-green-300' 
+          <div className={`inline-flex items-center space-x-2 px-3 py-1 rounded-full text-sm ${isConnected
+              ? 'bg-green-900 text-green-300'
               : 'bg-red-900 text-red-300'
-          }`}>
-            <div className={`w-2 h-2 rounded-full ${
-              isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
-            }`}></div>
+            }`}>
+            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
+              }`}></div>
             <span>{isConnected ? 'Connected to market data' : 'Disconnected'}</span>
           </div>
         </div>
@@ -83,7 +81,7 @@ export function Dashboard() {
           {/* Right Column - Alerts */}
           <div className="space-y-6">
             <SweepAlerts />
-            
+
             {/* Quick Stats */}
             <div className="bg-gray-800 rounded-lg p-6">
               <h3 className="text-lg font-semibold text-white mb-4">Market Stats</h3>
@@ -94,9 +92,8 @@ export function Dashboard() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Connection</span>
-                  <span className={`font-bold ${
-                    isConnected ? 'text-green-500' : 'text-red-500'
-                  }`}>
+                  <span className={`font-bold ${isConnected ? 'text-green-500' : 'text-red-500'
+                    }`}>
                     {isConnected ? 'Live' : 'Offline'}
                   </span>
                 </div>

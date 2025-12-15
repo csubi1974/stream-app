@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, Settings, Bell, Clock } from 'lucide-react';
+import { BarChart3, TrendingUp, Settings, Bell, Clock, Languages } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 export function Header() {
   const location = useLocation();
+  const { t, i18n } = useTranslation();
   const [marketStatus, setMarketStatus] = useState<{ isOpen: boolean; text: string; next: string }>({
     isOpen: false,
-    text: 'CHECKING',
+    text: t('CHECKING'),
     next: ''
   });
 
@@ -37,23 +39,23 @@ export function Header() {
       const isMarketHours = currentTimeVals >= marketOpen && currentTimeVals < marketClose;
 
       if (!isWeekend && isMarketHours) {
-        setMarketStatus({ isOpen: true, text: 'MARKET OPEN', next: 'Closes at 4:00 PM ET' });
+        setMarketStatus({ isOpen: true, text: t('MARKET OPEN'), next: 'Closes at 4:00 PM ET' });
       } else {
-        setMarketStatus({ isOpen: false, text: 'MARKET CLOSED', next: 'Opens 9:30 AM ET' });
+        setMarketStatus({ isOpen: false, text: t('MARKET CLOSED'), next: 'Opens 9:30 AM ET' });
       }
     };
 
     checkMarketStatus();
     const interval = setInterval(checkMarketStatus, 10000); // Update every 10s
     return () => clearInterval(interval);
-  }, []);
+  }, [t]);
 
   const navItems = [
-    { path: '/', label: 'Dashboard', icon: BarChart3 },
-    { path: '/scanner', label: 'Scanner', icon: TrendingUp },
-    { path: '/watchlist', label: 'Watchlist', icon: Bell },
-    { path: '/backtest', label: 'Backtest', icon: Clock },
-    { path: '/settings', label: 'Settings', icon: Settings },
+    { path: '/', label: t('Dashboard'), icon: BarChart3 },
+    { path: '/scanner', label: t('Scanner'), icon: TrendingUp },
+    { path: '/watchlist', label: t('Watchlist'), icon: Bell },
+    { path: '/backtest', label: t('Backtest'), icon: Clock },
+    { path: '/settings', label: t('Settings'), icon: Settings },
   ];
 
   return (
@@ -99,6 +101,19 @@ export function Header() {
                 </span>
               </div>
               <span className="text-[10px] text-gray-500">{marketStatus.next}</span>
+            </div>
+
+            {/* Language Selector */}
+            <div className="flex items-center space-x-2">
+              <Languages className="h-4 w-4 text-gray-400" />
+              <select
+                value={i18n.language}
+                onChange={(e) => i18n.changeLanguage(e.target.value)}
+                className="bg-gray-800 text-gray-300 text-sm border border-gray-700 rounded px-2 py-1 focus:outline-none focus:border-blue-500"
+              >
+                <option value="en">English</option>
+                <option value="es">Español</option>
+              </select>
             </div>
 
             <div className="flex items-center space-x-2">
