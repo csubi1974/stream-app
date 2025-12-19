@@ -115,12 +115,12 @@ export class MarketDataService {
     }
   }
 
-  async getZeroDTEOptions(): Promise<any[]> {
+  async getZeroDTEOptions(): Promise<any> {
     try {
       // Fetch SPX Option Chain
       const chain = await this.schwabService.getOptionsChain('SPX');
 
-      if (!chain || (!chain.calls && !chain.puts)) return [];
+      if (!chain || (!chain.calls && !chain.puts)) return { options: [], stats: null };
 
       // Schwab Chain structure usually groups by ExpDate
       // Get 'YYYY-MM-DD' in local time
@@ -143,7 +143,7 @@ export class MarketDataService {
       allOptions.forEach((opt: any) => {
         if (!opt.expirationDate?.startsWith(today)) return;
 
-        const strike = parseFloat(opt.strikePrice);
+        const strike = parseFloat(opt.strikePrice || opt.strike);
         const oi = opt.openInterest || 0;
         const gamma = opt.gamma || 0;
 
@@ -156,13 +156,11 @@ export class MarketDataService {
 
         if (opt.putCall === 'CALL') {
           stat.callOi += oi;
-          stat.callGex += gexValue; // Positive GEX for Calls (Long Gamma perspective for Holder, Short for Dealer.. convention varies. Chart implies + for Call, - for Put)
-
+          stat.callGex += gexValue;
           if (stat.callOi > callWall.oi) callWall = { strike, oi: stat.callOi };
         } else {
           stat.putOi += oi;
-          stat.putGex -= gexValue; // Negative GEX for Puts for visualization symmetry
-
+          stat.putGex -= gexValue; // Negative GEX for Puts for visualization
           if (stat.putOi > putWall.oi) putWall = { strike, oi: stat.putOi };
         }
       });
@@ -171,15 +169,35 @@ export class MarketDataService {
         opt.expirationDate && opt.expirationDate.startsWith(today)
       );
 
-      return zeroDte
+      const topOptions = zeroDte
         .sort((a, b) => (b.volume || 0) - (a.volume || 0))
-        .filter(o => o.volume > 100) // Filter noise
+        .filter(o => o.volume > 100)
         .slice(0, 50);
 
+      // Convert strikes Map to Array for frontend
+      const strikesArray = Array.from(strikes.entries())
+        .map(([strike, data]) => ({
+          strike,
+          callGex: data.callGex,
+          putGex: data.putGex,
+          callOi: data.callOi,
+          putOi: data.putOi
+        }))
+        .sort((a, b) => a.strike - b.strike);
+
+      return {
+        options: topOptions,
+        stats: {
+          callWall: callWall.strike,
+          putWall: putWall.strike,
+          currentPrice,
+          strikes: strikesArray
+        }
+      };
 
     } catch (error) {
       console.error('Failed to get 0DTE options', error);
-      return [];
+      return { options: [], stats: null };
     }
   }
 
