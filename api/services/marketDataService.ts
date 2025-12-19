@@ -127,11 +127,28 @@ export class MarketDataService {
       const today = new Date().toLocaleDateString('en-CA');
       console.log(`📅 filtering 0DTE for date: ${today}`);
 
-      // Flatten calls and puts
-      const allOptions = [
-        ...(chain.calls || []),
-        ...(chain.puts || [])
-      ];
+      // Flatten calls and puts (Handle both Real API Maps and Mock Arrays)
+      const allOptions: any[] = [];
+
+      if (chain.callExpDateMap) {
+        Object.values(chain.callExpDateMap).forEach((expirationMap: any) => {
+          Object.values(expirationMap).forEach((strikesArray: any) => {
+            allOptions.push(...strikesArray);
+          });
+        });
+      } else if (chain.calls) {
+        allOptions.push(...chain.calls);
+      }
+
+      if (chain.putExpDateMap) {
+        Object.values(chain.putExpDateMap).forEach((expirationMap: any) => {
+          Object.values(expirationMap).forEach((strikesArray: any) => {
+            allOptions.push(...strikesArray);
+          });
+        });
+      } else if (chain.puts) {
+        allOptions.push(...chain.puts);
+      }
 
       // Calculate Walls & GEX
       const strikes = new Map<number, { callOi: number; putOi: number; callGex: number; putGex: number }>();
