@@ -249,12 +249,70 @@ export class SchwabService {
         console.warn(`⚠️ Failed to fetch real Options Chain for ${underlying}, falling back to mock data.`, error);
       }
     }
+    // Generate Mock Data for 0DTE Scanner
+    const today = new Date();
+    // Use local date string YYYY-MM-DD to match startWith(today)
+    const todayStr = today.toLocaleDateString('en-CA');
+    const strikesCount = 20;
+    const basePrice = 5800.00; // SPX approx
+    const strikes = [];
+    const calls = [];
+    const puts = [];
+
+    for (let i = -10; i < 10; i++) {
+      const strike = basePrice + (i * 10);
+      strikes.push(strike);
+
+      const isITMCall = strike < basePrice;
+      const isITMPut = strike > basePrice;
+
+      // Generate realistic-looking Call
+      calls.push({
+        symbol: `SPXW${todayStr.replace(/-/g, '').substring(2)}C${strike}`,
+        description: `SPX ${todayStr} ${strike} Call`,
+        strikePrice: strike,
+        strike: strike, // Added for frontend
+        expirationDate: todayStr, // Critical for 0DTE scanner
+        putCall: 'CALL',
+        openInterest: Math.floor(Math.random() * 5000) + 500,
+        volume: Math.floor(Math.random() * 10000) + 1000,
+        last: Math.max(0.05, (basePrice - strike) + (Math.random() * 5)),
+        bid: Math.max(0.05, (basePrice - strike) + (Math.random() * 5)),
+        ask: Math.max(0.05, (basePrice - strike) + (Math.random() * 5) + 0.5),
+        delta: isITMCall ? 0.6 + (Math.random() * 0.3) : 0.4 - (Math.random() * 0.3),
+        gamma: Math.random() * 0.05,
+        theta: -1 * (Math.random() * 2),
+        vega: Math.random() * 0.5,
+        type: 'CALL' // Helper props for frontend
+      });
+
+      // Generate realistic-looking Put
+      puts.push({
+        symbol: `SPXW${todayStr.replace(/-/g, '').substring(2)}P${strike}`,
+        description: `SPX ${todayStr} ${strike} Put`,
+        strikePrice: strike,
+        strike: strike, // Added for frontend
+        expirationDate: todayStr,
+        putCall: 'PUT',
+        openInterest: Math.floor(Math.random() * 5000) + 500,
+        volume: Math.floor(Math.random() * 10000) + 1000,
+        last: Math.max(0.05, (strike - basePrice) + (Math.random() * 5)),
+        bid: Math.max(0.05, (strike - basePrice) + (Math.random() * 5)),
+        ask: Math.max(0.05, (strike - basePrice) + (Math.random() * 5) + 0.5),
+        delta: isITMPut ? -0.6 - (Math.random() * 0.3) : -0.4 + (Math.random() * 0.3),
+        gamma: Math.random() * 0.05,
+        theta: -1 * (Math.random() * 2),
+        vega: Math.random() * 0.5,
+        type: 'PUT' // Helper props for frontend
+      });
+    }
+
     return {
-      underlying,
-      expiry: new Date().toISOString().split('T')[0],
-      strikes: [],
-      calls: [],
-      puts: []
+      underlying: { symbol: 'SPX', last: basePrice, change: -12.5, percentChange: -0.25 },
+      expiry: todayStr,
+      strikes: strikes,
+      calls: calls,
+      puts: puts
     };
   }
 

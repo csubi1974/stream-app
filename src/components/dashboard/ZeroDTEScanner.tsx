@@ -88,7 +88,7 @@ export function ZeroDTEScanner() {
     .slice(0, 15); // Show top 15
 
   const formatStrike = (strike: number) => {
-    return `$${strike.toFixed(0)}`;
+    return strike ? `$${strike.toFixed(0)}` : '-';
   };
 
   const formatGreek = (value: number) => {
@@ -234,10 +234,10 @@ export function ZeroDTEScanner() {
                 </td>
 
                 <td className="py-2 px-2">
-                  <span className={`font-medium ${stats && Math.abs(option.strike - stats.callWall) < 1 ? 'text-red-400 border border-red-500 px-1 rounded' :
-                    stats && Math.abs(option.strike - stats.putWall) < 1 ? 'text-green-400 border border-green-500 px-1 rounded' : 'text-white'
+                  <span className={`font-medium ${stats && Math.abs((option.strike || (option as any).strikePrice) - stats.callWall) < 1 ? 'text-red-400 border border-red-500 px-1 rounded' :
+                    stats && Math.abs((option.strike || (option as any).strikePrice) - stats.putWall) < 1 ? 'text-green-400 border border-green-500 px-1 rounded' : 'text-white'
                     }`}>
-                    {formatStrike(option.strike)}
+                    {formatStrike(option.strike || (option as any).strikePrice)}
                   </span>
                 </td>
 

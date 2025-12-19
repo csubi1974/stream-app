@@ -18,7 +18,8 @@ dotenv.config();
 
 const app = express();
 const server = createServer(app);
-const wss = new WebSocketServer({ server });
+// Use noServer mode so we can share wss between HTTP and HTTPS
+const wss = new WebSocketServer({ noServer: true });
 
 // Setup paths
 import path from 'path';
@@ -38,10 +39,16 @@ if (fs.existsSync(distPath)) {
 
 const wssInstance = wss; // Helper just in case
 
-
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Handle WebSocket Upgrades for HTTP
+server.on('upgrade', (request, socket, head) => {
+  wss.handleUpgrade(request, socket, head, (ws) => {
+    wss.emit('connection', ws, request);
+  });
+});
 
 // Initialize services
 const schwabService = new SchwabService();
@@ -107,11 +114,20 @@ if (SSL_ENABLED) {
       httpsOptions.cert = fs.readFileSync(certPath);
     }
     const httpsServer = createHttpsServer(httpsOptions, app);
+
+    // Attach WebSocket Upgrade to HTTPS Server too
+    httpsServer.on('upgrade', (request, socket, head) => {
+      wss.handleUpgrade(request, socket, head, (ws) => {
+        wss.emit('connection', ws, request);
+      });
+    });
+
     httpsServer.listen(SSL_PORT, () => {
       console.log(`🔐 HTTPS callback server on port ${SSL_PORT}`);
+      console.log(`📡 Secure WebSocket (WSS) ready on port ${SSL_PORT}`);
     });
   } catch (e) {
-    console.error('❌ HTTPS server failed to start');
+    console.error('❌ HTTPS server failed to start', e);
   }
 }
 
