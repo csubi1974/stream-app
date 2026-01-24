@@ -1,0 +1,13 @@
+{
+  "snapshots": [],
+  "alerts": [
+    {
+      "id": "TEST-BPS-1769284981007",
+      "strategy": "BULL_PUT_SPREAD",
+      "underlying": "SPX",
+      "generated_at": "2026-01-24T20:03:01.007Z",
+      "status": "ACTIVE",
+      "alert_data": "{\"id\":\"TEST-BPS-1769284981007\",\"strategy\":\"BULL_PUT_SPREAD\",\"strategyLabel\":\"TEST: Bull Put Spread\",\"underlying\":\"SPX\",\"expiration\":\"2026-01-26\",\"legs\":[{\"action\":\"SELL\",\"type\":\"PUT\",\"strike\":5950,\"price\":12.5,\"delta\":-0.2},{\"action\":\"BUY\",\"type\":\"PUT\",\"strike\":5945,\"price\":10.2,\"delta\":-0.15}],\"netCredit\":2.3,\"maxLoss\":2.7,\"maxProfit\":2.3,\"probability\":78.5,\"riskReward\":\"1:1.2\",\"rationale\":\"TEST ALERT: Generated manually to verify database persistence and history view.\",\"status\":\"ACTIVE\",\"gexContext\":{\"regime\":\"stable\",\"callWall\":6100,\"putWall\":5900,\"gammaFlip\":5950,\"currentPrice\":6020,\"netDrift\":0.85,\"expectedMove\":45.5},\"generatedAt\":\"2026-01-24T20:03:01.007Z\",\"validUntil\":\"2026-01-24T21:03:01.007Z\"}"
+    }
+  ]
+}

@@ -1,55 +1,133 @@
 
-import sqlite3 from 'sqlite3';
-import { open, Database } from 'sqlite';
+import fs from 'fs';
+import path from 'path';
 
-let db: Database | null = null;
+let db: any = null;
+let isAvailable = false;
+const JSON_DB_PATH = './market_data_fallback.json';
+
+// Simple JSON-based DB Mock for when SQLite fails
+class JsonFallbackDB {
+  private data: any = { snapshots: [], alerts: [] };
+
+  constructor() {
+    this.load();
+  }
+
+  private load() {
+    if (fs.existsSync(JSON_DB_PATH)) {
+      try {
+        this.data = JSON.parse(fs.readFileSync(JSON_DB_PATH, 'utf8'));
+        console.log(`📂 Loaded ${this.data.alerts.length} alerts from JSON fallback`);
+      } catch (e) {
+        console.error('❌ Error loading JSON DB:', e.message);
+        this.data = { snapshots: [], alerts: [] };
+      }
+    }
+  }
+
+  private save() {
+    try {
+      fs.writeFileSync(JSON_DB_PATH, JSON.stringify(this.data, null, 2));
+    } catch (e) {
+      console.error('❌ Error saving JSON DB:', e.message);
+    }
+  }
+
+  async exec(query: string) { return; }
+
+  async run(query: string, params: any[]) {
+    const lowerQuery = query.toLowerCase();
+    if (lowerQuery.includes('insert into trade_alerts') || lowerQuery.includes('insert or ignore into trade_alerts')) {
+      const [id, strategy, underlying, generated_at, status, alert_data] = params;
+      if (!this.data.alerts.find((a: any) => a.id === id)) {
+        this.data.alerts.push({ id, strategy, underlying, generated_at, status, alert_data });
+        this.save();
+        console.log(`✅ Alert ${id} saved to JSON fallback`);
+      } else {
+        console.log(`ℹ️ Alert ${id} already exists in JSON fallback`);
+      }
+    }
+  }
+
+  async all(query: string, params: any[]) {
+    const lowerQuery = query.toLowerCase();
+    if (lowerQuery.includes('from trade_alerts')) {
+      let results = [...this.data.alerts];
+      const symbol = params[0];
+      const date = params[1]?.replace('%', '');
+
+      if (symbol) {
+        results = results.filter(a => a.underlying === symbol);
+      }
+      if (date) {
+        results = results.filter(a => a.generated_at && a.generated_at.startsWith(date));
+      }
+
+      return results.sort((a, b) => b.generated_at.localeCompare(a.generated_at));
+    }
+    return [];
+  }
+
+  async get(query: string, params: any[]) {
+    const lowerQuery = query.toLowerCase();
+    if (lowerQuery.includes('from trade_alerts')) {
+      const id = params[0];
+      const result = this.data.alerts.find((a: any) => a.id === id) || null;
+      return result;
+    }
+    return null;
+  }
+
+  async prepare() {
+    return {
+      run: async () => { },
+      finalize: async () => { }
+    };
+  }
+}
 
 export async function initializeDb() {
-  if (db) return db;
+  if (db && isAvailable) return db;
 
-  db = await open({
-    filename: './market_data.db',
-    driver: sqlite3.Database
-  });
+  try {
+    const sqlite3 = (await import('sqlite3')).default;
+    const { open } = await import('sqlite');
 
-  // Create tables for historical data
-  await db.exec(`
-    CREATE TABLE IF NOT EXISTS options_chain_snapshots (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      symbol TEXT,
-      snapshot_time TEXT,
-      expiration_date TEXT,
-      strike REAL,
-      type TEXT,
-      bid REAL,
-      ask REAL,
-      last REAL,
-      volume INTEGER,
-      open_interest INTEGER,
-      delta REAL,
-      gamma REAL,
-      theta REAL,
-      vega REAL
-    );
+    db = await open({
+      filename: './market_data.db',
+      driver: sqlite3.Database
+    });
 
-    CREATE TABLE IF NOT EXISTS trade_alerts (
-      id TEXT PRIMARY KEY,
-      strategy TEXT,
-      underlying TEXT,
-      generated_at TEXT,
-      status TEXT,
-      alert_data TEXT -- JSON string
-    );
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS options_chain_snapshots (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        symbol TEXT, snapshot_time TEXT, expiration_date TEXT, strike REAL, type TEXT,
+        bid REAL, ask REAL, last REAL, volume INTEGER, open_interest INTEGER,
+        delta REAL, gamma REAL, theta REAL, vega REAL
+      );
+      CREATE TABLE IF NOT EXISTS trade_alerts (
+        id TEXT PRIMARY KEY, strategy TEXT, underlying TEXT, generated_at TEXT, 
+        status TEXT, alert_data TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_symbol_time ON options_chain_snapshots(symbol, snapshot_time);
+      CREATE INDEX IF NOT EXISTS idx_alerts_time ON trade_alerts(generated_at);
+    `);
 
-    CREATE INDEX IF NOT EXISTS idx_symbol_time ON options_chain_snapshots(symbol, snapshot_time);
-    CREATE INDEX IF NOT EXISTS idx_alerts_time ON trade_alerts(generated_at);
-  `);
-
-  console.log('💾 SQLite Database initialized for Backtesting');
-  return db;
+    isAvailable = true;
+    console.log('💾 SQLite Database initialized (Native)');
+    return db;
+  } catch (error) {
+    console.warn('⚠️ Native SQLite failed, using JSON Fallback');
+    db = new JsonFallbackDB();
+    isAvailable = true;
+    return db;
+  }
 }
 
 export function getDb() {
-  if (!db) throw new Error('Database not initialized');
+  if (!db) {
+    db = new JsonFallbackDB();
+  }
   return db;
 }
