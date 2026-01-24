@@ -158,6 +158,7 @@ export function GEXMetricsHUD() {
                     valueColor={getTotalGEXColor()}
                     subtitle={totalGEX > 0 ? t('Dealers absorbing') : t('Dealers amplifying')}
                     trend={totalGEX > 0 ? 'stable' : 'volatile'}
+                    tooltip={t('Exposición total de Gamma de los Market Makers. Positivo (Green) significa que frenan el mercado. Negativo (Red) significa que aceleran el movimiento.')}
                 />
 
                 {/* Gamma Flip */}
@@ -168,6 +169,7 @@ export function GEXMetricsHUD() {
                     valueColor={currentPrice < gammaFlip ? 'text-red-400' : 'text-green-400'}
                     subtitle={currentPrice < gammaFlip ? t('Below - High Vol') : t('Above - Stable')}
                     trend={currentPrice < gammaFlip ? 'volatile' : 'stable'}
+                    tooltip={t('El nivel de precio donde el mercado cambia de régimen estable a volátil. Por debajo de este nivel, los Dealers venden cuando el mercado cae, aumentando la volatilidad.')}
                 />
 
                 {/* Net Institutional Delta */}
@@ -178,6 +180,7 @@ export function GEXMetricsHUD() {
                     valueColor={netInstitutionalDelta > 0 ? 'text-green-400' : 'text-red-400'}
                     subtitle={netInstitutionalDelta > 0 ? t('Bullish Positioning') : t('Bearish Positioning')}
                     trend={netInstitutionalDelta > 0 ? 'up' : 'down'}
+                    tooltip={t('Mide el sesgo direccional de las instituciones según sus posiciones en opciones. Positivo indica presión de compra; negativo indica presión de venta.')}
                 />
 
                 {/* Net Drift */}
@@ -188,6 +191,7 @@ export function GEXMetricsHUD() {
                     valueColor={netDrift > 0 ? 'text-green-400' : 'text-red-400'}
                     subtitle={t('Market Push Direction')}
                     trend={netDrift > 0 ? 'up' : 'down'}
+                    tooltip={t('La fuerza de empuje o "deriva" del mercado. Si es alto y positivo, los Dealers están obligados a comprar para cubrirse mientras el precio sube, creando una tendencia.')}
                 />
 
                 {/* Expected Move */}
@@ -198,6 +202,7 @@ export function GEXMetricsHUD() {
                     valueColor="text-purple-400"
                     subtitle={expectedMove && currentPrice > 0 ? `${((expectedMove / currentPrice) * 100).toFixed(2)}%` : t('Calculating...')}
                     trend="stable"
+                    tooltip={t('El rango máximo de movimiento esperado para hoy basado en el precio de los Straddles ATM. El 68% del tiempo el precio terminará dentro de esta frontera.')}
                 />
 
                 {/* Call Wall */}
@@ -209,6 +214,7 @@ export function GEXMetricsHUD() {
                     subtitle={t('Resistance Level')}
                     trend="resistance"
                     highlight={Math.abs(currentPrice - callWall) / currentPrice < 0.01}
+                    tooltip={t('El Strike con mayor exposición de Gamma en Calls. Actúa como un imán que frena las subidas. Es la resistencia estadística más fuerte del día.')}
                 />
 
                 {/* Put Wall */}
@@ -220,6 +226,7 @@ export function GEXMetricsHUD() {
                     subtitle={t('Support Level')}
                     trend="support"
                     highlight={Math.abs(currentPrice - putWall) / currentPrice < 0.01}
+                    tooltip={t('El Strike con mayor exposición de Gamma en Puts. Actúa como el soporte más sólido. Es donde los Dealers compran agresivamente para frenar la caída.')}
                 />
             </div>
 
@@ -276,9 +283,10 @@ interface MetricCardProps {
     subtitle: string;
     trend?: 'up' | 'down' | 'stable' | 'volatile' | 'resistance' | 'support';
     highlight?: boolean;
+    tooltip?: string;
 }
 
-function MetricCard({ icon, label, value, valueColor, subtitle, trend, highlight }: MetricCardProps) {
+function MetricCard({ icon, label, value, valueColor, subtitle, trend, highlight, tooltip }: MetricCardProps) {
     const getIconColor = () => {
         if (trend === 'up') return 'text-green-500';
         if (trend === 'down') return 'text-red-500';
@@ -290,10 +298,20 @@ function MetricCard({ icon, label, value, valueColor, subtitle, trend, highlight
     };
 
     return (
-        <div className={`bg-gray-900 rounded-lg p-4 border transition-all duration-300 ${highlight
+        <div className={`group relative bg-gray-900 rounded-lg p-4 border transition-all duration-300 ${highlight
             ? 'border-orange-500 shadow-lg shadow-orange-500/20 animate-pulse'
             : 'border-gray-700 hover:border-gray-600'
             }`}>
+            {/* Tooltip */}
+            {tooltip && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-black/95 text-white text-[11px] rounded-xl border border-gray-700 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-2xl backdrop-blur-sm leading-relaxed">
+                    <div className="font-bold text-blue-400 mb-1 border-b border-gray-800 pb-1">{label}</div>
+                    {tooltip}
+                    {/* Arrow */}
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-black/95"></div>
+                </div>
+            )}
+
             <div className="flex items-center justify-between mb-2">
                 <div className={getIconColor()}>
                     {icon}
