@@ -110,6 +110,21 @@ export function ZeroDTEScanner() {
     return 'text-gray-400';
   };
 
+  const isAnomaly = (option: ZeroDTEOption) => {
+    // Unusual Volume Rule 1: Volume > OI (New money entering aggressively)
+    const highVolumeVsOI = option.volume > option.openInterest && option.volume > 500;
+    // Unusual Volume Rule 2: Absolute high volume for the day
+    const absoluteHighVolume = option.volume > 2000;
+
+    return highVolumeVsOI || absoluteHighVolume;
+  };
+
+  const getAnomalyType = (option: ZeroDTEOption) => {
+    if (option.volume > option.openInterest && option.volume > 500) return 'HIGH_RELATIVE_VOLUME';
+    if (option.volume > 2000) return 'HIGH_ABSOLUTE_VOLUME';
+    return null;
+  };
+
   return (
     <div className="bg-gray-800 rounded-lg p-6">
       <div className="flex items-center justify-between mb-4">
@@ -254,86 +269,104 @@ export function ZeroDTEScanner() {
             </tr>
           </thead>
           <tbody>
-            {filteredOptions.map((option) => (
-              <tr
-                key={option.symbol}
-                className="border-b border-gray-700 hover:bg-gray-700 transition-colors"
-              >
-                <td className="py-2 px-2">
-                  <div className="font-semibold text-white text-xs">
-                    {option.symbol}
-                  </div>
-                </td>
+            {filteredOptions.map((option) => {
+              const anomalyType = getAnomalyType(option);
+              return (
+                <tr
+                  key={option.symbol}
+                  className={`border-b border-gray-700 hover:bg-gray-700 transition-colors group relative ${anomalyType ? 'bg-orange-950/20 border-l-2 border-l-orange-500' : ''
+                    }`}
+                >
+                  <td className="py-2 px-2">
+                    <div className="flex items-center space-x-1">
+                      {anomalyType && (
+                        <div className="relative group/tooltip">
+                          <span className="text-orange-500 animate-pulse">🔥</span>
+                          {/* Tooltip */}
+                          <div className="absolute bottom-full left-0 mb-2 w-48 p-2 bg-gray-900 text-[10px] text-white rounded-lg border border-orange-500 opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none z-50">
+                            <span className="font-bold text-orange-400 uppercase block mb-1">Anomalía Detectada</span>
+                            {anomalyType === 'HIGH_RELATIVE_VOLUME'
+                              ? t('El volumen supera al Interés Abierto. Entrada agresiva de dinero nuevo.')
+                              : t('Volumen absoluto muy alto. Nivel de gran interés institucional.')}
+                          </div>
+                        </div>
+                      )}
+                      <div className="font-semibold text-white text-xs">
+                        {option.symbol}
+                      </div>
+                    </div>
+                  </td>
 
-                <td className="py-2 px-2">
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${option.type === 'CALL'
-                    ? 'bg-green-900 text-green-300'
-                    : 'bg-red-900 text-red-300'
-                    }`}>
-                    {option.type}
-                  </span>
-                </td>
+                  <td className="py-2 px-2">
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${option.type === 'CALL'
+                      ? 'bg-green-900 text-green-300'
+                      : 'bg-red-900 text-red-300'
+                      }`}>
+                      {option.type}
+                    </span>
+                  </td>
 
-                <td className="py-2 px-2">
-                  <span className={`font-medium ${stats && Math.abs((option.strike || (option as any).strikePrice) - stats.callWall) < 1 ? 'text-red-400 border border-red-500 px-1 rounded' :
-                    stats && Math.abs((option.strike || (option as any).strikePrice) - stats.putWall) < 1 ? 'text-green-400 border border-green-500 px-1 rounded' : 'text-white'
-                    }`}>
-                    {formatStrike(option.strike || (option as any).strikePrice)}
-                  </span>
-                </td>
+                  <td className="py-2 px-2">
+                    <span className={`font-medium ${stats && Math.abs((option.strike || (option as any).strikePrice) - stats.callWall) < 1 ? 'text-red-400 border border-red-500 px-1 rounded' :
+                      stats && Math.abs((option.strike || (option as any).strikePrice) - stats.putWall) < 1 ? 'text-green-400 border border-green-500 px-1 rounded' : 'text-white'
+                      }`}>
+                      {formatStrike(option.strike || (option as any).strikePrice)}
+                    </span>
+                  </td>
 
-                <td className="py-2 px-2">
-                  <span className="text-white">
-                    ${option.last.toFixed(2)}
-                  </span>
-                </td>
+                  <td className="py-2 px-2">
+                    <span className="text-white">
+                      ${option.last.toFixed(2)}
+                    </span>
+                  </td>
 
-                <td className="py-2 px-2">
-                  <span className="text-gray-400">
-                    ${option.bid.toFixed(2)}
-                  </span>
-                </td>
+                  <td className="py-2 px-2">
+                    <span className="text-gray-400">
+                      ${option.bid.toFixed(2)}
+                    </span>
+                  </td>
 
-                <td className="py-2 px-2">
-                  <span className="text-gray-400">
-                    ${option.ask.toFixed(2)}
-                  </span>
-                </td>
+                  <td className="py-2 px-2">
+                    <span className="text-gray-400">
+                      ${option.ask.toFixed(2)}
+                    </span>
+                  </td>
 
-                <td className="py-2 px-2">
-                  <span className={getVolumeColor(option.volume)}>
-                    {option.volume.toLocaleString()}
-                  </span>
-                </td>
+                  <td className="py-2 px-2">
+                    <span className={getVolumeColor(option.volume)}>
+                      {option.volume.toLocaleString()}
+                    </span>
+                  </td>
 
-                <td className="py-2 px-2">
-                  <span className={getOIColor(option.openInterest)}>
-                    {option.openInterest.toLocaleString()}
-                  </span>
-                </td>
+                  <td className="py-2 px-2">
+                    <span className={getOIColor(option.openInterest)}>
+                      {option.openInterest.toLocaleString()}
+                    </span>
+                  </td>
 
-                <td className="py-2 px-2">
-                  <span className="text-gray-300 text-xs">
-                    {formatGreek(option.delta)}
-                  </span>
-                </td>
+                  <td className="py-2 px-2">
+                    <span className="text-gray-300 text-xs">
+                      {formatGreek(option.delta)}
+                    </span>
+                  </td>
 
-                <td className="py-2 px-2">
-                  <span className="text-gray-300 text-xs">
-                    {formatGreek(option.gamma)}
-                  </span>
-                </td>
+                  <td className="py-2 px-2">
+                    <span className="text-gray-300 text-xs">
+                      {formatGreek(option.gamma)}
+                    </span>
+                  </td>
 
-                <td className="py-2 px-2">
-                  <Link
-                    to={`/ladder/${option.symbol}`}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs transition-colors"
-                  >
-                    {t('Ladder')}
-                  </Link>
-                </td>
-              </tr>
-            ))}
+                  <td className="py-2 px-2">
+                    <Link
+                      to={`/ladder/${option.symbol}`}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs transition-colors"
+                    >
+                      {t('Ladder')}
+                    </Link>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
