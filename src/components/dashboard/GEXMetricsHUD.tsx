@@ -17,26 +17,24 @@ interface GEXMetrics {
 
 export function GEXMetricsHUD() {
     const { t } = useTranslation();
-    const { gexMetrics } = useMarketStore();
+    const { gexMetrics, selectedSymbol, setSelectedSymbol } = useMarketStore();
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         // Cargar métricas iniciales
-        fetchGEXMetrics();
+        fetchGEXMetrics(selectedSymbol || 'SPX');
 
         // Actualizar cada 10 segundos
-        const interval = setInterval(fetchGEXMetrics, 10000);
+        const interval = setInterval(() => fetchGEXMetrics(selectedSymbol || 'SPX'), 10000);
         return () => clearInterval(interval);
-    }, []);
+    }, [selectedSymbol]);
 
-    const fetchGEXMetrics = async () => {
+    const fetchGEXMetrics = async (symbol: string) => {
         try {
-            // Solo poner loading en true si no tenemos métricas previas
-            if (!useMarketStore.getState().gexMetrics) {
-                setLoading(true);
-            }
+            // Solo poner loading en true si no tenemos métricas previas para este símbolo
+            setLoading(true);
 
-            const response = await fetch('/api/gex/metrics');
+            const response = await fetch(`/api/gex/metrics?symbol=${symbol}`);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -117,12 +115,31 @@ export function GEXMetricsHUD() {
     return (
         <div className="bg-gradient-to-br from-gray-800 via-gray-900 to-gray-800 rounded-lg p-6 border border-gray-700 shadow-xl">
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-white flex items-center">
-                    <Activity className="h-6 w-6 mr-2 text-blue-500" />
-                    {t('GEX Market Intelligence HUD')}
-                </h2>
-                <div className={`px-3 py-1 rounded-lg border ${getRegimeColor()} font-bold text-sm uppercase`}>
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-bold text-white flex items-center">
+                        <Activity className="h-6 w-6 mr-2 text-blue-500" />
+                        {t('GEX Market Intelligence HUD')}
+                    </h2>
+
+                    {/* Symbol Selector */}
+                    <div className="flex bg-gray-900/50 p-1 rounded-lg border border-gray-700">
+                        {['SPX', 'QQQ', 'IWM'].map((sym) => (
+                            <button
+                                key={sym}
+                                onClick={() => setSelectedSymbol(sym)}
+                                className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${(selectedSymbol === sym || (!selectedSymbol && sym === 'SPX'))
+                                    ? 'bg-blue-600 text-white shadow-lg'
+                                    : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+                                    }`}
+                            >
+                                {sym}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <div className={`px-3 py-1 rounded-lg border ${getRegimeColor()} font-bold text-sm uppercase self-start md:self-auto`}>
                     {regime === 'stable' && '🟢 '}
                     {regime === 'volatile' && '🔴 '}
                     {regime === 'neutral' && '🟡 '}
