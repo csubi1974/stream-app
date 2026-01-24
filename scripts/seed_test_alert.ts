@@ -27,7 +27,7 @@ async function seedTestAlert() {
         maxProfit: 2.3,
         probability: 78.5,
         riskReward: '1:1.2',
-        rationale: 'TEST ALERT: Generated manually to verify database persistence and history view.',
+        rationale: 'El Put Wall en $5900 ofrece un soporte institucional masivo. El strike vendido ($5950) se encuentra protegido fuera del Movimiento Esperado (±45.5 pts), lo que sugiere un perfil de alta probabilidad bajo el actual régimen estable de Gamma Positiva.',
         status: 'ACTIVE',
         gexContext: {
             regime: 'stable',
