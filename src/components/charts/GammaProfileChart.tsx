@@ -4,9 +4,10 @@ import { useTranslation } from 'react-i18next';
 interface GammaProfileChartProps {
     data: { strike: number; callGex: number; putGex: number }[];
     currentPrice?: number;
+    symbol?: string;
 }
 
-export function GammaProfileChart({ data, currentPrice }: GammaProfileChartProps) {
+export function GammaProfileChart({ data, currentPrice, symbol }: GammaProfileChartProps) {
     const { t } = useTranslation();
     // SVG Dimensions
     const width = 800;
@@ -67,7 +68,10 @@ export function GammaProfileChart({ data, currentPrice }: GammaProfileChartProps
             {/* Header Stats */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800 bg-gray-800/50">
                 <div className="flex items-center space-x-2">
-                    <span className="text-sm font-bold text-white">{t('Gamma Exposure (GEX)')}</span>
+                    <span className="text-sm font-bold text-white">
+                        {t('Gamma Exposure (GEX)')}
+                        {symbol && <span className="ml-2 text-blue-400 font-mono tracking-tighter">[{symbol}]</span>}
+                    </span>
                 </div>
                 <div className="flex space-x-6 text-xs">
                     <div className="flex flex-col items-end">

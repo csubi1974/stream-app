@@ -188,7 +188,11 @@ export function ZeroDTEScanner() {
       {/* Gamma Chart */}
       {stats && stats.strikes && stats.strikes.length > 0 && (
         <div className="mb-6">
-          <GammaProfileChart data={stats.strikes} currentPrice={stats.currentPrice} />
+          <GammaProfileChart
+            data={stats.strikes}
+            currentPrice={stats.currentPrice}
+            symbol={selectedSymbol}
+          />
         </div>
       )}
 
