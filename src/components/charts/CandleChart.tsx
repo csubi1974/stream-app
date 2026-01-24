@@ -94,8 +94,8 @@ export const CandleChart = ({
             '1M': 60, '5M': 300, '15M': 900, '30M': 1800, '1H': 3600, '1D': 86400
         };
 
-        // Determine start price: Walls > CurrentPrice > Default(150)
-        let startPrice = currentPrice || 150;
+        // Determine start price from currentPrice or walls
+        let startPrice = currentPrice || 0;
 
         if (walls && walls.callWall && walls.putWall) {
             startPrice = (walls.callWall + walls.putWall) / 2;
@@ -103,8 +103,15 @@ export const CandleChart = ({
             startPrice = walls.callWall * 0.95;
         }
 
-        const initialData = data.length > 0 ? data : generateMockData(timeframeToSeconds[selectedTimeframe] || 60, startPrice);
-        candlestickSeries.setData(initialData);
+        // Only use real data - no mock generation
+        if (data.length > 0) {
+            // Ensure time is always a number (epoch seconds)
+            const formattedData = data.map(candle => ({
+                ...candle,
+                time: typeof candle.time === 'string' ? parseInt(candle.time) : candle.time
+            }));
+            candlestickSeries.setData(formattedData as any);
+        }
 
         window.addEventListener('resize', handleResize);
 
@@ -224,23 +231,3 @@ export const CandleChart = ({
         </div>
     );
 };
-
-// Helper for demo purposes (so the user sees a chart immediately)
-function generateMockData(intervalSeconds: number = 60, startPrice: number = 150) {
-    const data = [];
-    let time = Math.floor(Date.now() / 1000) - (100 * intervalSeconds); // Start 100 periods ago
-    let price = startPrice;
-
-    for (let i = 0; i < 1000; i++) { // Increased range to maybe hit the mock walls?
-        const open = price;
-        const close = price + (Math.random() - 0.5) * 2;
-        const high = Math.max(open, close) + Math.random();
-        const low = Math.min(open, close) - Math.random();
-
-        data.push({ time, open, high, low, close });
-        time += intervalSeconds;
-        price = close;
-    }
-    // Hardcode some data near reasonable strikes if it's mock
-    return data;
-}

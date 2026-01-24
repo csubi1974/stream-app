@@ -37,7 +37,8 @@ export function Settings() {
   const [redirectInput, setRedirectInput] = useState('');
   const [codeInput, setCodeInput] = useState('');
 
-  const apiUrl = import.meta.env.VITE_API_URL || '';
+  // Use relative path for API calls to leverage Vite proxy
+  const apiUrl = '';
 
   const handleSave = () => {
     // Save settings to localStorage or API

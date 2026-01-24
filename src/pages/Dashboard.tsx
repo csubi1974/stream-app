@@ -5,6 +5,8 @@ import { Header } from '../components/layout/Header';
 import { ZeroDTEScanner } from '../components/dashboard/ZeroDTEScanner';
 import { VolumeScanner } from '../components/dashboard/VolumeScanner';
 import { SweepAlerts } from '../components/dashboard/SweepAlerts';
+import { GEXMetricsHUD } from '../components/dashboard/GEXMetricsHUD';
+import { QuickStatsCards } from '../components/dashboard/QuickStatsCards';
 import { AlertContainer } from '../components/alerts/AlertToast';
 import { useMarketStore } from '../stores/marketStore';
 import { useWebSocket } from '../hooks/useWebSocket';
@@ -24,10 +26,7 @@ export function Dashboard() {
     url: wsUrl,
     onConnect: () => {
       console.log('📡 Connected to market data stream');
-      // Subscribe to some default symbols for demo
-      subscribe(['SPXW251213C6900', 'SPXW251213P6900']);
-      addSubscribedSymbol('SPXW251213C6900');
-      addSubscribedSymbol('SPXW251213P6900');
+      // No auto-subscribe - user needs to explicitly add symbols from watchlist or scanner
     },
     onMessage: (message) => {
       console.log('📊 Market data update:', message.type);
@@ -72,6 +71,14 @@ export function Dashboard() {
           </div>
         </div>
 
+        {/* Market Stats Cards */}
+        <QuickStatsCards />
+
+        {/* GEX Metrics HUD */}
+        <div className="mb-6">
+          <GEXMetricsHUD />
+        </div>
+
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Scanners */}
@@ -110,23 +117,23 @@ export function Dashboard() {
             <div className="bg-gray-800 rounded-lg p-6">
               <h3 className="text-lg font-semibold text-white mb-4">{t('Quick Actions')}</h3>
               <div className="space-y-2">
-                <button
-                  onClick={() => setSelectedSymbol('SPXW251213C6900')}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-medium transition-colors"
-                >
-                  {t('Open Call Ladder')}
-                </button>
-                <button
-                  onClick={() => setSelectedSymbol('SPXW251213P6900')}
-                  className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-medium transition-colors"
-                >
-                  {t('Open Put Ladder')}
-                </button>
                 <Link
-                  to="/scanner"
+                  to="/watchlist"
                   className="block w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-medium transition-colors text-center"
                 >
-                  {t('Full Scanner View')}
+                  {t('Watchlist')}
+                </Link>
+                <Link
+                  to="/"
+                  className="block w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded font-medium transition-colors text-center"
+                >
+                  {t('Dashboard Scanner')}
+                </Link>
+                <Link
+                  to="/settings"
+                  className="block w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded font-medium transition-colors text-center"
+                >
+                  {t('Settings')}
                 </Link>
               </div>
             </div>

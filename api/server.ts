@@ -29,6 +29,38 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const distPath = path.join(__dirname, '../dist');
 
+// Initialize services
+const schwabService = new SchwabService();
+const marketDataService = new MarketDataService(schwabService);
+const wsHandler = new WebSocketHandler(wss, marketDataService, schwabService);
+
+// Middleware: Intercept Schwab Auth Code BEFORE static files
+app.use(async (req, res, next) => {
+  if ((req.path === '/' || req.path === '/callback') && req.query.code) {
+    console.log('🔐 Intercepting Schwab Auth Code');
+    try {
+      await schwabService.exchangeCode(req.query.code as string);
+      res.send(`
+        <html>
+          <body style="background:#111827; color:white; font-family:sans-serif; display:flex; align-items:center; justify-content:center; height:100vh;">
+            <div style="text-align:center;">
+              <h1 style="color:#4ade80;">✅ Autenticación Exitosa</h1>
+              <p>Tokens guardados correctamente.</p>
+              <p style="color:#9ca3af;">Puedes cerrar esta ventana.</p>
+              <script>setTimeout(() => window.close(), 2000)</script>
+            </div>
+          </body>
+        </html>
+      `);
+    } catch (e) {
+      console.error('Auth Error:', e);
+      res.status(500).send('Authentication Failed');
+    }
+  } else {
+    next();
+  }
+});
+
 // Serve static files from dist FIRST
 if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));
@@ -51,9 +83,7 @@ server.on('upgrade', (request, socket, head) => {
 });
 
 // Initialize services
-const schwabService = new SchwabService();
-const marketDataService = new MarketDataService(schwabService);
-const wsHandler = new WebSocketHandler(wss, marketDataService, schwabService);
+// Services initialized above
 
 // Setup routes and start server
 async function startServer() {
@@ -64,9 +94,14 @@ async function startServer() {
     console.log('✅ Redis Connected');
 
     // Setup Historical DB (PostgreSQL)
-    console.log('🔄 Connecting to Postgres...');
-    await initializePostgres();
-    console.log('✅ Postgres Connected');
+    try {
+      console.log('🔄 Connecting to Postgres...');
+      await initializePostgres();
+      console.log('✅ Postgres Connected');
+    } catch (dbError) {
+      console.warn('⚠️ Postgres connection failed - Historical Data features will be disabled.');
+      // Do not exit process, allow server to run without DB
+    }
 
     // Setup routes
     setupRoutes(app, schwabService, marketDataService);
@@ -97,6 +132,7 @@ async function startServer() {
 // Start the server
 startServer();
 
+// Force restart
 const SSL_ENABLED = process.env.SSL_ENABLED === 'true';
 if (SSL_ENABLED) {
   const SSL_PORT = Number(process.env.SSL_PORT || 8001);

@@ -48,11 +48,26 @@ export interface ZeroDTEOption {
   delta: number;
 }
 
+export interface GEXMetrics {
+  totalGEX: number;                    // Gamma Exposure Total Neta
+  gammaFlip: number;                   // Precio donde GEX cambia de + a -
+  netInstitutionalDelta: number;       // Delta neto institucional
+  netDrift: number;                    // Dirección del empuje del mercado
+  callWall: number;                    // Resistencia (strike con mayor Call GEX)
+  putWall: number;                     // Soporte (strike con mayor Put GEX)
+  currentPrice: number;                // Precio actual del subyacente
+  regime: 'stable' | 'volatile' | 'neutral'; // Régimen de volatilidad
+  expectedMove?: number;               // Movimiento esperado del día (ATM Straddle)
+}
+
 interface MarketStore {
   // Options data
   optionsBooks: Record<string, OptionsBookData>;
   timeSales: Record<string, TradeData[]>;
   zeroDTEOptions: ZeroDTEOption[];
+
+  // GEX Metrics
+  gexMetrics: GEXMetrics | null;
 
   // Scanner data
   volumeData: VolumeData[];
@@ -72,6 +87,7 @@ interface MarketStore {
   addSweepAlert: (trade: TradeData) => void;
   setVolumeData: (data: VolumeData[]) => void;
   setZeroDTEOptions: (data: ZeroDTEOption[]) => void;
+  setGEXMetrics: (data: GEXMetrics) => void;
   setSelectedSymbol: (symbol: string | null) => void;
   addSubscribedSymbol: (symbol: string) => void;
   removeSubscribedSymbol: (symbol: string) => void;
@@ -83,6 +99,7 @@ export const useMarketStore = create<MarketStore>((set, get) => ({
   optionsBooks: {},
   timeSales: {},
   zeroDTEOptions: [],
+  gexMetrics: null,
   volumeData: [],
   activeTrades: [],
   sweepAlerts: [],
@@ -127,6 +144,8 @@ export const useMarketStore = create<MarketStore>((set, get) => ({
   setVolumeData: (data) => set({ volumeData: data }),
 
   setZeroDTEOptions: (data) => set({ zeroDTEOptions: data }),
+
+  setGEXMetrics: (data) => set({ gexMetrics: data }),
 
   setSelectedSymbol: (symbol) => set({ selectedSymbol: symbol }),
 

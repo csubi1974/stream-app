@@ -115,12 +115,20 @@ export class MarketDataService {
     }
   }
 
-  async getZeroDTEOptions(): Promise<any> {
+  async getZeroDTEOptions(symbol: string = 'SPX'): Promise<any> {
     try {
-      // Fetch SPX Option Chain
-      const chain = await this.schwabService.getOptionsChain('SPX');
+      // Fetch Option Chain
+      let chain = await this.schwabService.getOptionsChain(symbol);
 
-      if (!chain || (!chain.calls && !chain.puts)) return { options: [], stats: null };
+      if (!chain && symbol === 'SPX') {
+        console.log('⚠️ SPX Chain unavailable (502/Error), failing over to SPY for Scanner/GEX');
+        chain = await this.schwabService.getOptionsChain('SPY');
+      }
+
+      if (!chain || (!chain.calls && !chain.puts && !chain.callExpDateMap && !chain.putExpDateMap)) {
+        console.log('⚠️ Chain missing calls/puts and maps');
+        return { options: [], stats: null };
+      }
 
       // Schwab Chain structure usually groups by ExpDate
       // Get 'YYYY-MM-DD' in local time
@@ -152,13 +160,49 @@ export class MarketDataService {
 
       // Calculate Walls & GEX
       const strikes = new Map<number, { callOi: number; putOi: number; callGex: number; putGex: number }>();
-
       let callWall = { strike: 0, oi: 0 };
       let putWall = { strike: 0, oi: 0 };
       const currentPrice = chain.underlying?.last || 0;
 
+      // Extract all available expirations
+      const availableDates = new Set<string>();
       allOptions.forEach((opt: any) => {
-        if (!opt.expirationDate?.startsWith(today)) return;
+        if (opt.expirationDate) availableDates.add(opt.expirationDate);
+      });
+
+      // Determine target date: Today OR Next Available
+      let targetDate = today;
+      const sortedDates = Array.from(availableDates).sort();
+      console.log(`🔎 Found ${sortedDates.length} expiry dates for ${symbol}. First: ${sortedDates[0]}`);
+
+      // Robust Date Selection:
+      // 1. Try exact match for today
+      // 2. Try first date equal or after today
+      // 3. Fallback to the very first available date (nearest expiry) if list not empty
+
+      const hasToday = sortedDates.some(d => d.startsWith(today));
+
+      if (hasToday) {
+        console.log(`📅 Showing 0DTE for ${symbol} today: ${targetDate}`);
+      } else if (sortedDates.length > 0) {
+        // Find first date >= today
+        const nextDate = sortedDates.find(d => d >= today);
+
+        if (nextDate) {
+          targetDate = nextDate.split('T')[0];
+          console.log(`📅 Market closed/No 0DTE today for ${symbol}. Showing next expiry: ${targetDate}`);
+        } else {
+          // Fallback: Just take the first one (e.g. if today is messed up or all dates are weird)
+          targetDate = sortedDates[0].split('T')[0];
+          console.log(`📅 No future dates found relative to ${today}. Defaulting to first available: ${targetDate}`);
+        }
+      } else {
+        console.warn(`⚠️ No expiry dates found for ${symbol}`);
+      }
+
+      allOptions.forEach((opt: any) => {
+        // Filter by our smart target date
+        if (!opt.expirationDate?.startsWith(targetDate)) return;
 
         const strike = parseFloat(opt.strikePrice || opt.strike);
         const oi = opt.openInterest || 0;
@@ -168,7 +212,6 @@ export class MarketDataService {
         const stat = strikes.get(strike)!;
 
         // GEX = Gamma * OI * 100 * Spot Price
-        // Using 1 for Price factor if Spot not strictly available per-option, but we have currentPrice
         const gexValue = gamma * oi * 100 * (currentPrice || strike);
 
         if (opt.putCall === 'CALL') {
@@ -183,7 +226,7 @@ export class MarketDataService {
       });
 
       const zeroDte = allOptions.filter((opt: any) =>
-        opt.expirationDate && opt.expirationDate.startsWith(today)
+        opt.expirationDate && opt.expirationDate.startsWith(targetDate)
       );
 
       const topOptions = zeroDte
@@ -208,7 +251,8 @@ export class MarketDataService {
           callWall: callWall.strike,
           putWall: putWall.strike,
           currentPrice,
-          strikes: strikesArray
+          strikes: strikesArray,
+          targetDate // Send back which date we used
         }
       };
 

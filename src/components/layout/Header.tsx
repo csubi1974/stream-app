@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, Settings, Bell, Clock, Languages } from 'lucide-react';
+import { BarChart3, TrendingUp, Settings, Bell, Clock, Languages, Zap, Target } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -52,7 +52,8 @@ export function Header() {
 
   const navItems = [
     { path: '/', label: t('Dashboard'), icon: BarChart3 },
-    { path: '/scanner', label: t('Scanner'), icon: TrendingUp },
+    { path: '/engine', label: t('Market Engine'), icon: Zap },
+    { path: '/signals', label: t('Signals'), icon: Target },
     { path: '/watchlist', label: t('Watchlist'), icon: Bell },
     { path: '/backtest', label: t('Backtest'), icon: Clock },
     { path: '/settings', label: t('Settings'), icon: Settings },

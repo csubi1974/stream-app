@@ -205,39 +205,34 @@ export class SchwabService {
   }
 
   async getOptionsBook(symbol: string, levels: number = 10): Promise<OptionsBookData> {
-    if (this.accessToken) {
-      try {
-        const data = await this.apiGet(this.bookEndpoint, { symbol, levels });
-        const last = data.last || data.lastTrade || { price: 0, size: 0, time: new Date().toISOString() };
-        return {
-          symbol,
-          bids: data.bids?.map((b: any) => ({ price: Number(b.price), size: Number(b.size || b.quantity || 0), exchange: String(b.exchange || '') })) || [],
-          asks: data.asks?.map((a: any) => ({ price: Number(a.price), size: Number(a.size || a.quantity || 0), exchange: String(a.exchange || '') })) || [],
-          last: { price: Number(last.price || 0), size: Number(last.size || 0), time: String(last.time || new Date().toISOString()) }
-        };
-      } catch (error) {
-        console.warn(`⚠️ Failed to fetch real Options Book for ${symbol}, falling back to mock data.`, error);
-        // Fallthrough to mock return
-      }
+    if (!this.accessToken) {
+      console.warn(`⚠️ No access token available for getOptionsBook(${symbol})`);
+      return {
+        symbol,
+        bids: [],
+        asks: [],
+        last: { price: 0, size: 0, time: new Date().toISOString() }
+      };
     }
-    return {
-      symbol,
-      bids: Array.from({ length: levels }, (_, i) => ({
-        price: 10.20 - i * 0.05,
-        size: Math.floor(Math.random() * 100) + 1,
-        exchange: ['CBOE', 'COMP', 'AMEX'][Math.floor(Math.random() * 3)]
-      })),
-      asks: Array.from({ length: levels }, (_, i) => ({
-        price: 10.30 + i * 0.05,
-        size: Math.floor(Math.random() * 100) + 1,
-        exchange: ['CBOE', 'COMP', 'AMEX'][Math.floor(Math.random() * 3)]
-      })),
-      last: {
-        price: 10.25,
-        size: 50,
-        time: new Date().toLocaleTimeString()
-      }
-    };
+
+    try {
+      const data = await this.apiGet(this.bookEndpoint, { symbol, levels });
+      const last = data.last || data.lastTrade || { price: 0, size: 0, time: new Date().toISOString() };
+      return {
+        symbol,
+        bids: data.bids?.map((b: any) => ({ price: Number(b.price), size: Number(b.size || b.quantity || 0), exchange: String(b.exchange || '') })) || [],
+        asks: data.asks?.map((a: any) => ({ price: Number(a.price), size: Number(a.size || a.quantity || 0), exchange: String(a.exchange || '') })) || [],
+        last: { price: Number(last.price || 0), size: Number(last.size || 0), time: String(last.time || new Date().toISOString()) }
+      };
+    } catch (error) {
+      console.error(`❌ Failed to fetch Options Book for ${symbol}:`, error);
+      return {
+        symbol,
+        bids: [],
+        asks: [],
+        last: { price: 0, size: 0, time: new Date().toISOString() }
+      };
+    }
   }
 
   async getOptionsChain(underlying: string): Promise<any> {
@@ -247,7 +242,7 @@ export class SchwabService {
     }
 
     try {
-      const data = await this.apiGet(this.chainEndpoint, { underlying });
+      const data = await this.apiGet(this.chainEndpoint, { symbol: underlying });
       return data;
     } catch (error) {
       console.error(`❌ Failed to fetch real Options Chain for ${underlying}`, error);
@@ -256,30 +251,25 @@ export class SchwabService {
   }
 
   async getTimeAndSales(symbol: string): Promise<TradeData[]> {
-    if (this.accessToken) {
-      try {
-        const data = await this.apiGet(this.timeSalesEndpoint, { symbol });
-        return (data?.trades || data || []).map((t: any) => ({
-          symbol,
-          price: Number(t.price),
-          size: Number(t.size || t.quantity || 0),
-          side: (String(t.side || '').toUpperCase() === 'SELL' ? 'SELL' : 'BUY'),
-          exchange: String(t.exchange || ''),
-          timestamp: String(t.timestamp || t.time || new Date().toISOString())
-        }));
-      } catch (error) {
-        console.warn(`⚠️ Failed to fetch real Time & Sales for ${symbol}, falling back to mock data.`, error);
-        // Fallthrough
-      }
+    if (!this.accessToken) {
+      console.warn(`⚠️ No access token available for getTimeAndSales(${symbol})`);
+      return [];
     }
-    return Array.from({ length: 20 }, (_, i) => ({
-      symbol,
-      price: 10.25 + (Math.random() - 0.5) * 0.5,
-      size: Math.floor(Math.random() * 200) + 1,
-      side: Math.random() > 0.5 ? 'BUY' : 'SELL',
-      exchange: ['CBOE', 'COMP', 'AMEX'][Math.floor(Math.random() * 3)],
-      timestamp: new Date(Date.now() - i * 1000).toLocaleTimeString()
-    }));
+
+    try {
+      const data = await this.apiGet(this.timeSalesEndpoint, { symbol });
+      return (data?.trades || data || []).map((t: any) => ({
+        symbol,
+        price: Number(t.price),
+        size: Number(t.size || t.quantity || 0),
+        side: (String(t.side || '').toUpperCase() === 'SELL' ? 'SELL' : 'BUY'),
+        exchange: String(t.exchange || ''),
+        timestamp: String(t.timestamp || t.time || new Date().toISOString())
+      }));
+    } catch (error) {
+      console.error(`❌ Failed to fetch Time & Sales for ${symbol}:`, error);
+      return [];
+    }
   }
 
   async detectSweeps(symbol: string): Promise<TradeData[]> {
@@ -302,57 +292,36 @@ export class SchwabService {
   async getPriceHistory(symbol: string, periodType: string = 'day', period: number = 1, frequencyType: string = 'minute', frequency: number = 5): Promise<any[]> {
     const endpoint = '/marketdata/v1/pricehistory';
 
-    if (this.accessToken) {
-      try {
-        const params = {
-          symbol,
-          periodType,
-          period,
-          frequencyType,
-          frequency,
-          needExtendedHoursData: true
-        };
-        const data = await this.apiGet(endpoint, params);
+    if (!this.accessToken) {
+      console.warn(`⚠️ No access token available for getPriceHistory(${symbol})`);
+      return [];
+    }
 
-        if (data && data.candles) {
-          return data.candles.map((c: any) => ({
-            time: Math.floor(c.datetime / 1000), // Epoch seconds
-            open: c.open,
-            high: c.high,
-            low: c.low,
-            close: c.close,
-            volume: c.volume
-          }));
-        }
-      } catch (error) {
-        console.warn(`⚠️ Failed to fetch Price History for ${symbol}`, error);
+    try {
+      const params = {
+        symbol,
+        periodType,
+        period,
+        frequencyType,
+        frequency,
+        needExtendedHoursData: true
+      };
+      const data = await this.apiGet(endpoint, params);
+
+      if (data && data.candles) {
+        return data.candles.map((c: any) => ({
+          time: Math.floor(c.datetime / 1000), // Epoch seconds
+          open: c.open,
+          high: c.high,
+          low: c.low,
+          close: c.close,
+          volume: c.volume
+        }));
       }
+    } catch (error) {
+      console.error(`❌ Failed to fetch Price History for ${symbol}:`, error);
     }
 
-    // Mock Fallback
-    console.log(`⚠️ Returning Mock History for ${symbol}`);
-    const mockCandles = [];
-    let price = 150.0;
-    let time = Math.floor(Date.now() / 1000) - (100 * 300); // 100 5-min bars ago
-
-    for (let i = 0; i < 100; i++) {
-      const open = price;
-      const close = price + (Math.random() - 0.5) * 2;
-      const high = Math.max(open, close) + Math.random();
-      const low = Math.min(open, close) - Math.random();
-
-      mockCandles.push({
-        time,
-        open,
-        high,
-        low,
-        close,
-        volume: Math.floor(Math.random() * 10000)
-      });
-
-      price = close;
-      time += 300; // 5 min
-    }
-    return mockCandles;
+    return [];
   }
 }

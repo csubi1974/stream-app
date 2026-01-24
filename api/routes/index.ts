@@ -2,6 +2,8 @@ import express from 'express';
 import { SchwabService } from '../services/schwabService.js';
 import { MarketDataService } from '../services/marketDataService.js';
 import { createSchwabAuthRouter } from './schwabAuth.js';
+import gexRouter from './gex.js';
+import alertsRouter from './alerts.js';
 
 export function setupRoutes(
   app: express.Application,
@@ -10,6 +12,12 @@ export function setupRoutes(
 ) {
   // Mount Schwab Auth Routes
   app.use('/api/auth/schwab', createSchwabAuthRouter(schwabService));
+
+  // Mount GEX Metrics Routes
+  app.use('/api/gex', gexRouter);
+
+  // Mount Trade Alerts Routes
+  app.use('/api/alerts', alertsRouter);
 
   // Legacy callback support (minimal)
   app.get(['/callback', '/'], async (req, res) => {
@@ -93,7 +101,8 @@ export function setupRoutes(
   // 0DTE options scanner endpoint
   app.get('/api/scanner/0dte', async (req, res) => {
     try {
-      const zeroDTEOptions = await marketDataService.getZeroDTEOptions();
+      const symbol = (req.query.symbol as string) || 'SPX';
+      const zeroDTEOptions = await marketDataService.getZeroDTEOptions(symbol);
       res.json(zeroDTEOptions);
     } catch (error) {
       console.error('❌ 0DTE scanner error:', error);

@@ -21,6 +21,8 @@ export function ZeroDTEScanner() {
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<'volume' | 'oi' | 'gamma' | 'delta'>('volume');
   const [filterType, setFilterType] = useState<'ALL' | 'CALL' | 'PUT'>('ALL');
+  const [selectedSymbol, setSelectedSymbol] = useState('SPX');
+  const commonSymbols = ['SPX', 'SPY', 'QQQ', 'IWM', 'AAPL', 'NVDA', 'TSLA', 'AMD'];
 
   const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3002';
 
@@ -48,12 +50,12 @@ export function ZeroDTEScanner() {
 
   useEffect(() => {
     fetchZeroDTEOptions();
-  }, []);
+  }, [selectedSymbol]);
 
   const fetchZeroDTEOptions = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/scanner/0dte');
+      const response = await fetch(`/api/scanner/0dte?symbol=${selectedSymbol}`);
       const data = await response.json();
 
       if (Array.isArray(data)) {
@@ -111,10 +113,45 @@ export function ZeroDTEScanner() {
   return (
     <div className="bg-gray-800 rounded-lg p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-white flex items-center">
-          <Clock className="h-5 w-5 mr-2 text-blue-500" />
-          {t('0DTE Options Scanner')}
-        </h2>
+        <div className="flex items-center">
+          <h2 className="text-lg font-semibold text-white flex items-center">
+            <Clock className="h-5 w-5 mr-2 text-blue-500" />
+            {t('0DTE Options Scanner')}
+          </h2>
+
+          <div className="ml-4">
+            <select
+              value={selectedSymbol}
+              onChange={(e) => setSelectedSymbol(e.target.value)}
+              className="bg-gray-700 text-white text-xs px-2 py-1 rounded border border-gray-600 focus:outline-none focus:border-blue-500"
+            >
+              {commonSymbols.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+              <option value="custom">Custom...</option>
+            </select>
+          </div>
+
+          {selectedSymbol === 'custom' && (
+            <input
+              type="text"
+              placeholder="Sym"
+              className="ml-2 w-16 bg-gray-700 text-white text-xs px-2 py-1 rounded border border-gray-600 uppercase"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  setSelectedSymbol(e.currentTarget.value.toUpperCase());
+                  setTimeout(fetchZeroDTEOptions, 100);
+                }
+              }}
+            />
+          )}
+          {/* Target Date Indicator */}
+          {stats && (stats as any).targetDate && (
+            <span className="ml-3 px-2 py-0.5 bg-blue-900 border border-blue-500 text-blue-200 text-xs rounded-full font-mono">
+              Exp: {(stats as any).targetDate}
+            </span>
+          )}
+        </div>
 
         {stats && (
           <div className="flex space-x-4 bg-gray-900 px-3 py-1 rounded-lg border border-gray-700">
