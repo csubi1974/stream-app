@@ -1,5 +1,6 @@
 import { SchwabService } from './schwabService.js';
 import { GEXService, GEXMetrics } from './gexService.js';
+import { getDb } from '../database/sqlite.js';
 
 export interface TradeLeg {
     action: 'BUY' | 'SELL';
@@ -158,6 +159,9 @@ export class TradeAlertService {
                 });
             }
 
+            // Save alerts to database for history
+            await this.saveAlertsToDb(alerts);
+
             console.log(`✅ Generated ${alerts.length} trade alerts`);
             return alerts;
 
@@ -204,6 +208,9 @@ export class TradeAlertService {
             const shortStrike = parseFloat(shortPut.strikePrice || shortPut.strike);
             const longStrike = shortStrike - this.SPREAD_WIDTH;
 
+            // Generate unique deterministic ID
+            const alertId = `BPS-${expiration}-${shortStrike}`.replace(/:/g, '-');
+
             // Find long put
             const longPut = puts.find(p => {
                 const strike = parseFloat(p.strikePrice || p.strike);
@@ -231,7 +238,7 @@ export class TradeAlertService {
             }
 
             return {
-                id: `bps-${Date.now()}`,
+                id: alertId,
                 strategy: 'BULL_PUT_SPREAD',
                 strategyLabel: 'Bull Put Spread',
                 underlying: 'SPX',
@@ -306,6 +313,9 @@ export class TradeAlertService {
             const shortStrike = parseFloat(shortCall.strikePrice || shortCall.strike);
             const longStrike = shortStrike + this.SPREAD_WIDTH;
 
+            // Generate unique deterministic ID
+            const alertId = `BCS-${expiration}-${shortStrike}`.replace(/:/g, '-');
+
             // Find long call
             const longCall = calls.find(c => {
                 const strike = parseFloat(c.strikePrice || c.strike);
@@ -331,7 +341,7 @@ export class TradeAlertService {
             }
 
             return {
-                id: `bcs-${Date.now()}`,
+                id: alertId,
                 strategy: 'BEAR_CALL_SPREAD',
                 strategyLabel: 'Bear Call Spread',
                 underlying: 'SPX',
@@ -388,11 +398,14 @@ export class TradeAlertService {
             const totalCredit = bullPut.netCredit + bearCall.netCredit;
             const maxLoss = this.SPREAD_WIDTH - totalCredit;
 
+            // Generate unique deterministic ID
+            const alertId = `IC-${expiration}-${bullPut.legs[0].strike}-${bearCall.legs[0].strike}`.replace(/:/g, '-');
+
             // Combined probability (both sides need to work)
             const probability = Math.min(bullPut.probability, bearCall.probability);
 
             return {
-                id: `ic-${Date.now()}`,
+                id: alertId,
                 strategy: 'IRON_CONDOR',
                 strategyLabel: 'Iron Condor',
                 underlying: 'SPX',
@@ -564,6 +577,64 @@ export class TradeAlertService {
         } catch (error) {
             console.error('Error calculating expected move:', error);
             return 0;
+        }
+    }
+
+    /**
+     * Save generated alerts to SQLite database
+     */
+    private async saveAlertsToDb(alerts: TradeAlert[]) {
+        try {
+            const db = getDb();
+            const now = new Date().toISOString();
+
+            for (const alert of alerts) {
+                // Ignore warning alerts for database storage if needed
+                if (alert.id.startsWith('warning')) continue;
+
+                try {
+                    // Use INSERT OR IGNORE to avoid errors on duplicate IDs (same strike/expiry)
+                    await db.run(`
+                        INSERT OR IGNORE INTO trade_alerts (
+                            id, strategy, underlying, generated_at, status, alert_data
+                        ) VALUES (?, ?, ?, ?, ?, ?)
+                    `, [
+                        alert.id,
+                        alert.strategy,
+                        alert.underlying,
+                        alert.generatedAt,
+                        alert.status,
+                        JSON.stringify(alert)
+                    ]);
+                } catch (saveError) {
+                    console.error(`❌ Error saving alert ${alert.id}:`, saveError);
+                }
+            }
+        } catch (dbError) {
+            console.error('❌ Database access error in saveAlertsToDb:', dbError);
+        }
+    }
+    /**
+     * Get historical alerts from database
+     */
+    async getAlertHistory(date?: string, symbol: string = 'SPX'): Promise<TradeAlert[]> {
+        try {
+            const db = getDb();
+            let query = 'SELECT alert_data FROM trade_alerts WHERE underlying = ?';
+            const params: any[] = [symbol];
+
+            if (date) {
+                query += ' AND generated_at LIKE ?';
+                params.push(`${date}%`);
+            }
+
+            query += ' ORDER BY generated_at DESC LIMIT 100';
+
+            const rows = await db.all(query, params);
+            return rows.map((row: any) => JSON.parse(row.alert_data));
+        } catch (error) {
+            console.error('❌ Error fetching alert history:', error);
+            return [];
         }
     }
 }

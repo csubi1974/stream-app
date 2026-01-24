@@ -103,6 +103,15 @@ async function startServer() {
       // Do not exit process, allow server to run without DB
     }
 
+    // Setup Persistence DB (SQLite)
+    try {
+      console.log('🔄 Initializing SQLite Database...');
+      await initializeDb();
+      console.log('✅ SQLite Initialized');
+    } catch (sqliteError) {
+      console.error('❌ Failed to initialize SQLite database:', sqliteError);
+    }
+
     // Setup routes
     setupRoutes(app, schwabService, marketDataService);
 

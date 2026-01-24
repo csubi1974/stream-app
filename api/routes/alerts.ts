@@ -32,6 +32,29 @@ router.get('/strategies', async (req, res) => {
 });
 
 /**
+ * GET /api/alerts/history
+ * Obtiene el historial de señales filtrado por fecha
+ */
+router.get('/history', async (req, res) => {
+    try {
+        const symbol = (req.query.symbol as string) || 'SPX';
+        const date = req.query.date as string; // Esperado: YYYY-MM-DD
+        const alerts = await tradeAlertService.getAlertHistory(date, symbol);
+
+        res.json({
+            success: true,
+            alerts
+        });
+    } catch (error) {
+        console.error('❌ Error fetching alert history:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch alert history'
+        });
+    }
+});
+
+/**
  * GET /api/alerts/status
  * Verifica el estado del motor de alertas
  */
