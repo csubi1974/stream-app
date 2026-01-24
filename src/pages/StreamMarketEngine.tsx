@@ -127,25 +127,7 @@ export function StreamMarketEngine() {
                     />
                 </div>
 
-                {/* Call to Action */}
-                <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-3xl p-12 text-center shadow-2xl relative overflow-hidden">
-                    <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
-                    <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-64 h-64 bg-black/20 rounded-full blur-2xl"></div>
 
-                    <h2 className="text-4xl font-bold mb-6 relative z-10">{t('¿Para quién es Stream Market Engine?')}</h2>
-                    <div className="max-w-3xl mx-auto space-y-4 relative z-10 text-blue-100 mb-10">
-                        <p>{t('Traders intermedios y avanzados que operan SPX, SPY y QQQ.')}</p>
-                        <p>{t('Operadores decididos a profesionalizar su ejecución mediante el dominio de la liquidez y las dinámicas de flujo institucional.')}</p>
-                    </div>
-                    <div className="relative z-10 flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-                        <Link
-                            to="/settings"
-                            className="px-8 py-4 bg-white text-blue-800 rounded-xl font-bold hover:bg-blue-50 transition-colors shadow-lg"
-                        >
-                            {t('Configurar API Schwab')}
-                        </Link>
-                    </div>
-                </div>
             </main>
         </div>
     );
