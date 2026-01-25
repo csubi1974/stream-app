@@ -27,7 +27,7 @@ interface NewsItem {
 type TabType = 'today' | 'week' | 'next-week';
 
 export function Calendar() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [activeTab, setActiveTab] = useState<TabType>('today');
     const [events, setEvents] = useState<EconomicEvent[]>([]);
     const [news, setNews] = useState<NewsItem[]>([]);
@@ -103,12 +103,64 @@ export function Calendar() {
         const diffMs = now.getTime() - then.getTime();
         const diffMins = Math.floor(diffMs / 60000);
 
-        if (diffMins < 1) return 'Just now';
-        if (diffMins < 60) return `${diffMins} min ago`;
+        if (diffMins < 1) return t('Just now');
+        if (diffMins < 60) return `${diffMins} ${t('min ago')}`;
         const diffHours = Math.floor(diffMins / 60);
-        if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+        if (diffHours < 24) return `${diffHours} ${t('hour')}${diffHours > 1 ? 's' : ''} ${t('ago')}`;
         const diffDays = Math.floor(diffHours / 24);
-        return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+        return `${diffDays} ${t('day')}${diffDays > 1 ? 's' : ''} ${t('ago')}`;
+    };
+
+    /**
+     * Translates economic event titles if the current language is Spanish
+     */
+    const translateEvent = (title: string) => {
+        if (i18n.language !== 'es') return title;
+
+        const dictionary: Record<string, string> = {
+            'NFP': 'Nóminas No Agrícolas',
+            'Non-Farm Payrolls': 'Nóminas No Agrícolas',
+            'Employment Situation': 'Situación de Empleo',
+            'Employment Report': 'Reporte de Empleo',
+            'Consumer Price Index': 'Índice de Precios al Consumidor (IPC)',
+            'CPI': 'IPC',
+            'Producer Price Index': 'Índice de Precios al Productor (IPP)',
+            'PPI': 'IPP',
+            'GDP Growth Rate': 'Tasa de Crecimiento del PIB',
+            'GDP': 'PIB',
+            'FOMC Meeting Decision': 'Decisión de Tasas del FOMC',
+            'FOMC Meeting - Day 1': 'Reunión del FOMC - Día 1',
+            'FOMC Minutes': 'Minutas del FOMC',
+            'Initial Jobless Claims': 'Nuevas Peticiones de Subsidio por Desempleo',
+            'Durable Goods Orders': 'Pedidos de Bienes Duraderos',
+            'ISM Manufacturing PMI': 'PMI Manufacturero del ISM',
+            'ISM Non-Manufacturing PMI': 'PMI No Manufacturero del ISM',
+            'Retail Sales': 'Ventas Minoristas',
+            'Core': 'Subyacente',
+            'Unemployment Rate': 'Tasa de Desempleo',
+            'Interest Rate': 'Tasa de Interés',
+            'Personal Income': 'Ingresos Personales',
+            'Personal Spending': 'Gastos Personales',
+            'Trade Balance': 'Balanza Comercial',
+            'Crude Oil Inventories': 'Inventarios de Petróleo Crudo',
+            'Building Permits': 'Permisos de Construcción',
+            'Housing Starts': 'Inicios de Viviendas',
+            'Factory Orders': 'Pedidos de Fábrica',
+            'Business Inventories': 'Inventarios de Negocios'
+        };
+
+        // Try exact match
+        if (dictionary[title]) return dictionary[title];
+
+        // Try partial matches and replacements
+        let translated = title;
+        Object.entries(dictionary).forEach(([en, es]) => {
+            if (translated.includes(en)) {
+                translated = translated.replace(en, es);
+            }
+        });
+
+        return translated;
     };
 
     return (
@@ -228,7 +280,7 @@ export function Calendar() {
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center space-x-2 mb-2">
                                                             <span className="text-2xl">{getCountryFlag(event.country)}</span>
-                                                            <h3 className="text-white font-semibold">{event.event}</h3>
+                                                            <h3 className="text-white font-semibold">{translateEvent(event.event)}</h3>
                                                             {event.impact === 'HIGH' && (
                                                                 <span className="px-2 py-0.5 bg-red-900/50 text-red-300 text-xs rounded-full font-bold">
                                                                     HIGH IMPACT
