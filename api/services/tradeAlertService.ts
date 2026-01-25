@@ -353,13 +353,24 @@ export class TradeAlertService {
                 if (bearCall) alerts.push(bearCall);
             }
 
+            // 3. Vanna Crush Play (Independent of Drift)
+            if (gexMetrics.netVanna > 15000000 && regime !== 'volatile') {
+                const bullPut = this.generateBullPutSpread(options, gexMetrics, targetExpiration, gexContext, 'vanna_crush');
+                if (bullPut && !alerts.find(a => a.id === bullPut.id)) alerts.push(bullPut);
+            }
+
+            if (gexMetrics.netVanna < -10000000 && regime !== 'volatile') {
+                const bearCall = this.generateBearCallSpread(options, gexMetrics, targetExpiration, gexContext, 'vanna_crush');
+                if (bearCall && !alerts.find(a => a.id === bearCall.id)) alerts.push(bearCall);
+            }
+
             // Neutral drift but stable: Also suggest spreads near walls
             if (Math.abs(netDrift) <= 0.5 && regime === 'stable') {
                 const bullPut = this.generateBullPutSpread(options, gexMetrics, targetExpiration, gexContext);
-                if (bullPut) alerts.push(bullPut);
+                if (bullPut && !alerts.find(a => a.id === bullPut.id)) alerts.push(bullPut);
 
                 const bearCall = this.generateBearCallSpread(options, gexMetrics, targetExpiration, gexContext);
-                if (bearCall) alerts.push(bearCall);
+                if (bearCall && !alerts.find(a => a.id === bearCall.id)) alerts.push(bearCall);
             }
 
             // Volatile regime warning
@@ -403,7 +414,8 @@ export class TradeAlertService {
         options: any[],
         gexMetrics: GEXMetrics,
         expiration: string,
-        gexContext: any
+        gexContext: any,
+        trigger?: 'vanna_crush' | 'drift' | 'wall'
     ): TradeAlert | null {
         try {
             const puts = options.filter(o => o.putCall === 'PUT');
@@ -508,7 +520,9 @@ export class TradeAlertService {
                 maxProfit: parseFloat(netCredit.toFixed(2)),
                 probability: parseFloat((probability * 100).toFixed(1)),
                 riskReward: `1:${(maxLoss / netCredit).toFixed(1)}`,
-                rationale: `El Put Wall en $${putWall.toFixed(0)} actúa como un imán y soporte institucional clave para el mercado hoy. El strike corto de $${shortStrike.toFixed(0)} se ha seleccionado para estar ${expectedMove ? (shortStrike < lowerBound ? `FUERA de las fronteras del Movimiento Esperado (±$${expectedMove.toFixed(1)})` : `DENTRO del rango del Movimiento Esperado`) : 'en una zona técnica de alta probabilidad'}. Bajo este régimen ${gexContext.regime === 'stable' ? 'estable' : 'volátil'}, los Dealers tienden a amortiguar las caídas cerca de estos niveles de soporte.`,
+                rationale: trigger === 'vanna_crush'
+                    ? `ESTRATEGIA VANNA CRUSH: El Net Vanna es altamente positivo (${(gexMetrics.netVanna / 1e6).toFixed(1)}M), lo que significa que un colapso de volatilidad (IV Crush) forzará a los Dealers a comprar acciones, empujando el precio al alza independientemente del drift actual. Se vende premium aprovechando este viento a favor institucional.`
+                    : `El Put Wall en $${putWall.toFixed(0)} actúa como un imán y soporte institucional clave para el mercado hoy. El strike corto de $${shortStrike.toFixed(0)} se ha seleccionado para estar ${expectedMove ? (shortStrike < lowerBound ? `FUERA de las fronteras del Movimiento Esperado (±$${expectedMove.toFixed(1)})` : `DENTRO del rango del Movimiento Esperado`) : 'en una zona técnica de alta probabilidad'}. Bajo este régimen ${gexContext.regime === 'stable' ? 'estable' : 'volátil'}, los Dealers tienden a amortiguar las caídas cerca de estos niveles de soporte.`,
                 status,
                 gexContext,
                 generatedAt: new Date().toISOString(),
@@ -534,7 +548,8 @@ export class TradeAlertService {
         options: any[],
         gexMetrics: GEXMetrics,
         expiration: string,
-        gexContext: any
+        gexContext: any,
+        trigger?: 'vanna_crush' | 'drift' | 'wall'
     ): TradeAlert | null {
         try {
             const calls = options.filter(o => o.putCall === 'CALL');
@@ -637,7 +652,9 @@ export class TradeAlertService {
                 maxProfit: parseFloat(netCredit.toFixed(2)),
                 probability: parseFloat((probability * 100).toFixed(1)),
                 riskReward: `1:${(maxLoss / netCredit).toFixed(1)}`,
-                rationale: `El Call Wall en $${callWall.toFixed(0)} representa la frontera superior de liquidez y es la resistencia estadística más importante del día. El strike vendido de $${shortStrike.toFixed(0)} está ${expectedMove ? (shortStrike > upperBound ? `PROTEGIDO fuera del Movimiento Esperado (±$${expectedMove.toFixed(1)})` : `DENTRO del rango proyectado del Movimiento Esperado`) : 'en una zona de fuerte resistencia de gamma'}. En este contexto de Gamma negativa para Dealers, el Call Wall suele actuar como un techo sólido que frena las subidas aceleradas.`,
+                rationale: trigger === 'vanna_crush'
+                    ? `ESTRATEGIA VANNA CRUSH: El Net Vanna es negativo (${(gexMetrics.netVanna / 1e6).toFixed(1)}M). Un colapso de volatilidad (IV Crush) resultará en ventas institucionales por cobertura, presionando el precio a la baja. Se vende Bear Call Spread para capturar este movimiento estructural.`
+                    : `El Call Wall en $${callWall.toFixed(0)} representa la frontera superior de liquidez y es la resistencia estadística más importante del día. El strike vendido de $${shortStrike.toFixed(0)} está ${expectedMove ? (shortStrike > upperBound ? `PROTEGIDO fuera del Movimiento Esperado (±$${expectedMove.toFixed(1)})` : `DENTRO del rango proyectado del Movimiento Esperado`) : 'en una zona de fuerte resistencia de gamma'}. En este contexto de Gamma negativa para Dealers, el Call Wall suele actuar como un techo sólido que frena las subidas aceleradas.`,
                 status,
                 gexContext,
                 generatedAt: new Date().toISOString(),

@@ -10,6 +10,7 @@ export interface GEXMetrics {
     currentPrice: number;
     regime: 'stable' | 'volatile' | 'neutral';
     expectedMove?: number; // Expected daily move based on ATM straddle
+    netVanna: number;      // Net Vanna exposure
 }
 
 export class GEXService {
@@ -69,6 +70,7 @@ export class GEXService {
                 callOI: number;
                 putOI: number;
                 netGEX: number;
+                netVanna: number;
             }>();
 
             let maxCallOI = 0;
@@ -94,7 +96,8 @@ export class GEXService {
                         putDelta: 0,
                         callOI: 0,
                         putOI: 0,
-                        netGEX: 0
+                        netGEX: 0,
+                        netVanna: 0
                     });
                 }
 
@@ -104,10 +107,18 @@ export class GEXService {
                 // Factor 100 porque cada contrato representa 100 acciones
                 const gexContribution = gamma * oi * 100 * currentPrice;
 
+                // Vanna approximation if not provided: Vanna ≈ Vega / IV (simplified for Net exposure)
+                // Institutional Vanna is typically dDelta/dVol
+                const vega = opt.vega || 0;
+                const vannaContribution = vega * oi * 100; // Simplified Vanna exposure
+
+
                 if (isCall) {
                     metrics.callGEX += gexContribution;
                     metrics.callDelta += delta * oi * 100;
                     metrics.callOI += oi;
+                    metrics.netVanna += vannaContribution; // Calls have positive Vanna
+
 
                     // Actualizar Call Wall
                     if (metrics.callOI > maxCallOI) {
@@ -119,6 +130,8 @@ export class GEXService {
                     metrics.putGEX -= gexContribution;
                     metrics.putDelta += delta * oi * 100;
                     metrics.putOI += oi;
+                    metrics.netVanna -= vannaContribution; // Puts have negative Vanna for dealers (short puts)
+
 
                     // Actualizar Put Wall
                     if (metrics.putOI > maxPutOI) {
@@ -130,9 +143,13 @@ export class GEXService {
                 metrics.netGEX = metrics.callGEX + metrics.putGEX;
             }
 
-            // 1. Total GEX (Suma de todos los strikes)
+            // 1. Total Metrics
             let totalGEX = 0;
-            strikeMetrics.forEach(m => totalGEX += m.netGEX);
+            let netVanna = 0;
+            strikeMetrics.forEach(m => {
+                totalGEX += m.netGEX;
+                netVanna += m.netVanna;
+            });
 
             // 2. Gamma Flip (Strike donde GEX cruza de positivo a negativo)
             let gammaFlip = currentPrice;
@@ -205,7 +222,8 @@ export class GEXService {
                 putWall: putWallStrike,
                 currentPrice,
                 regime,
-                expectedMove
+                expectedMove,
+                netVanna
             };
 
         } catch (error) {
@@ -250,7 +268,8 @@ export class GEXService {
             callWall: 0,
             putWall: 0,
             currentPrice: 0,
-            regime: 'neutral'
+            regime: 'neutral',
+            netVanna: 0
         };
     }
 

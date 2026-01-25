@@ -13,7 +13,7 @@ interface GEXMetrics {
     currentPrice: number;     // Precio actual del subyacente
     regime: 'stable' | 'volatile' | 'neutral'; // Régimen de volatilidad
     expectedMove?: number;    // Movimiento esperado del día
-    vannaExposure?: number;   // Exposición Vanna Neta
+    netVanna: number;         // Exposición Vanna Neta
 }
 
 export function GEXMetricsHUD() {
@@ -84,7 +84,8 @@ export function GEXMetricsHUD() {
         putWall,
         currentPrice,
         regime,
-        expectedMove
+        expectedMove,
+        netVanna
     } = gexMetrics;
 
     // Determinar color del Total GEX
@@ -195,14 +196,14 @@ export function GEXMetricsHUD() {
                     tooltip={t('La fuerza de empuje o "deriva" del mercado. Si es alto y positivo, los Dealers están obligados a comprar para cubrirse mientras el precio sube, creando una tendencia.')}
                 />
 
-                {/* Net Vanna Exposure - NEW */}
+                {/* Net Vanna - NEW */}
                 <MetricCard
                     icon={<Activity className="h-5 w-5" />}
-                    label={t('Vanna Exposure')}
-                    value={gexMetrics.vannaExposure ? formatNumber(gexMetrics.vannaExposure) : '--'}
-                    valueColor={gexMetrics.vannaExposure && gexMetrics.vannaExposure > 0 ? 'text-green-400' : 'text-red-400'}
-                    subtitle={gexMetrics.vannaExposure && gexMetrics.vannaExposure > 0 ? t('IV Drop → Buy') : t('IV Drop → Sell')}
-                    trend={gexMetrics.vannaExposure && gexMetrics.vannaExposure > 0 ? 'up' : 'down'}
+                    label={t('Net Vanna')}
+                    value={formatNumber(netVanna)}
+                    valueColor={netVanna > 0 ? 'text-green-400' : 'text-red-400'}
+                    subtitle={netVanna > 0 ? t('IV Drop → Buy') : t('IV Drop → Sell')}
+                    trend={netVanna > 0 ? 'up' : 'down'}
                     tooltip={t('Mide cómo reaccionan los Dealers ante cambios en la Volatilidad (IV). Si es positivo (Verde), una caída de IV fuerza a los Dealers a comprar (Viento a favor). Si es negativo (Rojo), una caída de IV los fuerza a vender.')}
                 />
 
