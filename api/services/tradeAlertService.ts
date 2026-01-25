@@ -69,6 +69,11 @@ export interface TradeAlert {
     riskLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
     qualityFactors?: QualityFactors;
     metadata?: AlertMetadata;
+    exitCriteria?: {
+        profitTarget: string;
+        stopLoss: string;
+        timeExit: string;
+    };
 }
 
 export class TradeAlertService {
@@ -468,6 +473,14 @@ export class TradeAlertService {
                 'BULL_PUT'
             );
 
+            // Calculate Exit Criteria
+            const stopPrice = expectedMove ? Math.max(lowerBound, shortStrike + 5) : shortStrike + 5;
+            const exitCriteria = {
+                profitTarget: "100% (Dejar Expirar)",
+                stopLoss: `Cerrar si SPX baja a ${stopPrice.toFixed(0)} (Risk Zone)`,
+                timeExit: "Cerrar a las 3:45 PM si SPX está a <10 pts del strike"
+            };
+
             return {
                 id: alertId,
                 strategy: 'BULL_PUT_SPREAD',
@@ -505,7 +518,8 @@ export class TradeAlertService {
                 qualityLevel: quality.qualityLevel,
                 riskLevel: quality.riskLevel,
                 qualityFactors: quality.qualityFactors,
-                metadata: quality.metadata
+                metadata: quality.metadata,
+                exitCriteria // New field
             };
         } catch (error) {
             console.error('Error generating Bull Put Spread:', error);
@@ -588,6 +602,14 @@ export class TradeAlertService {
                 'BEAR_CALL'
             );
 
+            // Calculate Exit Criteria
+            const stopPrice = expectedMove ? Math.min(upperBound, shortStrike - 5) : shortStrike - 5;
+            const exitCriteria = {
+                profitTarget: "100% (Dejar Expirar)",
+                stopLoss: `Cerrar si SPX sube a ${stopPrice.toFixed(0)} (Rompe Estructura)`,
+                timeExit: "Cerrar a las 3:45 PM si SPX está a <10 pts del strike"
+            };
+
             return {
                 id: alertId,
                 strategy: 'BEAR_CALL_SPREAD',
@@ -625,7 +647,8 @@ export class TradeAlertService {
                 qualityLevel: quality.qualityLevel,
                 riskLevel: quality.riskLevel,
                 qualityFactors: quality.qualityFactors,
-                metadata: quality.metadata
+                metadata: quality.metadata,
+                exitCriteria // New field
             };
         } catch (error) {
             console.error('Error generating Bear Call Spread:', error);
@@ -851,8 +874,9 @@ export class TradeAlertService {
                     await db.run(`
                         INSERT OR IGNORE INTO trade_alerts (
                             id, strategy, underlying, generated_at, status, alert_data,
-                            quality_score, quality_level, risk_level, quality_metadata
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            quality_score, quality_level, risk_level, quality_metadata,
+                            exit_criteria
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     `, [
                         alert.id,
                         alert.strategy,
@@ -863,7 +887,8 @@ export class TradeAlertService {
                         alert.qualityScore || null,
                         alert.qualityLevel || null,
                         alert.riskLevel || null,
-                        alert.metadata ? JSON.stringify(alert.metadata) : null
+                        alert.metadata ? JSON.stringify(alert.metadata) : null,
+                        alert.exitCriteria ? JSON.stringify(alert.exitCriteria) : null
                     ]);
                 } catch (saveError) {
                     console.error(`❌ Error saving alert ${alert.id}:`, saveError);

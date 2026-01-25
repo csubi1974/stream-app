@@ -61,6 +61,11 @@ interface TradeAlert {
         hoursRemaining: number;
         generatedAtPrice: number;
     };
+    exitCriteria?: {
+        profitTarget: string;
+        stopLoss: string;
+        timeExit: string;
+    };
 }
 
 export function Signals() {
@@ -594,6 +599,30 @@ export function Signals() {
                                                 <div className="w-full bg-gray-700 rounded-full h-1.5">
                                                     <div className={`h-1.5 rounded-full ${alert.qualityFactors.driftAlignment >= 7 ? 'bg-green-500' : alert.qualityFactors.driftAlignment >= 4 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${alert.qualityFactors.driftAlignment * 10}%` }}></div>
                                                 </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Exit Strategy Section */}
+                                {alert.exitCriteria && (
+                                    <div className="bg-blue-900/10 rounded-xl p-3 mb-4 border border-blue-700/30">
+                                        <h4 className="text-xs font-bold text-blue-300 uppercase mb-2 tracking-wider flex items-center">
+                                            <Shield className="h-3 w-3 mr-1" />
+                                            Estrategia de Salida
+                                        </h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                                            <div className="bg-gray-800/50 p-2 rounded border border-gray-700">
+                                                <div className="text-green-400 font-bold mb-1">🎯 Take Profit</div>
+                                                <div className="text-gray-300">{alert.exitCriteria.profitTarget}</div>
+                                            </div>
+                                            <div className="bg-gray-800/50 p-2 rounded border border-gray-700">
+                                                <div className="text-red-400 font-bold mb-1">🛑 Stop Loss</div>
+                                                <div className="text-gray-300">{alert.exitCriteria.stopLoss}</div>
+                                            </div>
+                                            <div className="bg-gray-800/50 p-2 rounded border border-gray-700">
+                                                <div className="text-yellow-400 font-bold mb-1">⏰ Time Exit</div>
+                                                <div className="text-gray-300">{alert.exitCriteria.timeExit}</div>
                                             </div>
                                         </div>
                                     </div>
