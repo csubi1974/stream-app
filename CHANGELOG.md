@@ -2,17 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.2] - 2026-01-25
+
+### Feat (Características Nuevas)
+- **Net Vanna Implementation**: Cálculo formal de la exposición Vanna Neta de los dealers basado en Vega e IV.
+- **Vanna Crush Play Strategy**: Nueva estrategia de señales que identifica oportunidades de venta de premium basadas en el sesgo de volatilidad (IV Crush), independiente del movimiento del precio.
+- **HUD Update**: Renombrado "Vanna Exposure" a "Net Vanna" para mayor precisión técnica y habilitación de datos en tiempo real.
+
 ## [1.7.1] - 2026-01-25
 
 ### Feat (Características Nuevas)
-- **Vanna Exposure HUD**: Nueva métrica que mide la sensibilidad del mercado ante cambios en la volatilidad (IV). Permite anticipar si una caída de IV generará presión de compra (Vanna Rally) o venta.
-- **HUD Compact Layout**: Rediseño del panel de Inteligencia de Mercado para mostrar 8 métricas clave en una sola fila, optimizando el espacio en pantalla.
-
-## [1.7.1] - 2026-01-25
-
-### Feat (Características Nuevas)
-- **Vanna Exposure HUD**: Nueva métrica que mide la sensibilidad del mercado ante cambios en la volatilidad (IV). Permite anticipar si una caída de IV generará presión de compra (Vanna Rally) o venta.
-- **HUD Compact Layout**: Rediseño del panel de Inteligencia de Mercado para mostrar 8 métricas clave en una sola fila, optimizando el espacio en pantalla.
+- **Vanna Metrics Placeholder**: Preparación del HUD para métricas de volatilidad avanzada.
+- **HUD Compact Layout**: Rediseño del panel de Inteligencia de Mercado para mostrar 8 métricas clave en una sola fila.
 
 ## [1.7.0] - 2026-01-25
 
