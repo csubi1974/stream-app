@@ -40,6 +40,27 @@ interface TradeAlert {
         expectedMove?: number;
     };
     generatedAt: string;
+    // Quality Scoring (NEW)
+    qualityScore?: number;
+    qualityLevel?: 'PREMIUM' | 'STANDARD' | 'AGGRESSIVE';
+    riskLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
+    qualityFactors?: {
+        moveExhaustion: number;
+        expectedMoveUsage: number;
+        wallProximity: number;
+        timeRemaining: number;
+        regimeStrength: number;
+        driftAlignment: number;
+    };
+    metadata?: {
+        openPrice: number;
+        moveFromOpen: number;
+        movePercent: number;
+        moveRatio: number;
+        wallDistance: number;
+        hoursRemaining: number;
+        generatedAtPrice: number;
+    };
 }
 
 export function Signals() {
@@ -148,6 +169,60 @@ export function Signals() {
                     <span className="inline-flex items-center px-3 py-1 bg-red-900/30 text-red-300 text-xs rounded-full font-medium border border-red-500/30">
                         <XCircle className="h-3 w-3 mr-1" />
                         {t('Cancelada')}
+                    </span>
+                );
+            default:
+                return null;
+        }
+    };
+
+    const getQualityBadge = (qualityLevel?: string, qualityScore?: number) => {
+        if (!qualityLevel || qualityScore === undefined) return null;
+
+        switch (qualityLevel) {
+            case 'PREMIUM':
+                return (
+                    <span className="inline-flex items-center px-3 py-1 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white text-xs rounded-full font-bold shadow-lg">
+                        ✨ PREMIUM {qualityScore}
+                    </span>
+                );
+            case 'STANDARD':
+                return (
+                    <span className="inline-flex items-center px-3 py-1 bg-blue-600 text-white text-xs rounded-full font-bold">
+                        👍 STANDARD {qualityScore}
+                    </span>
+                );
+            case 'AGGRESSIVE':
+                return (
+                    <span className="inline-flex items-center px-3 py-1 bg-orange-600 text-white text-xs rounded-full font-bold">
+                        ⚠️ AGGRESSIVE {qualityScore}
+                    </span>
+                );
+            default:
+                return null;
+        }
+    };
+
+    const getRiskBadge = (riskLevel?: string) => {
+        if (!riskLevel) return null;
+
+        switch (riskLevel) {
+            case 'LOW':
+                return (
+                    <span className="inline-flex items-center px-2 py-1 bg-green-900/40 text-green-300 text-xs rounded font-medium">
+                        🟢 LOW RISK
+                    </span>
+                );
+            case 'MEDIUM':
+                return (
+                    <span className="inline-flex items-center px-2 py-1 bg-yellow-900/40 text-yellow-300 text-xs rounded font-medium">
+                        🟡 MEDIUM RISK
+                    </span>
+                );
+            case 'HIGH':
+                return (
+                    <span className="inline-flex items-center px-2 py-1 bg-red-900/40 text-red-300 text-xs rounded font-medium">
+                        🔴 HIGH RISK
                     </span>
                 );
             default:
@@ -373,7 +448,16 @@ export function Signals() {
                                             </div>
                                         </div>
                                     </div>
-                                    {getStatusBadge(alert.status)}
+                                    <div className="flex flex-col items-end space-y-2">
+                                        {getStatusBadge(alert.status)}
+                                        {getQualityBadge(alert.qualityLevel, alert.qualityScore)}
+                                        {getRiskBadge(alert.riskLevel)}
+                                        {alert.metadata && alert.metadata.moveRatio > 1.0 && (
+                                            <span className="text-xs text-orange-400">
+                                                📊 Move: {alert.metadata.moveRatio.toFixed(1)}× expected
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
 
                                 {/* Legs Table */}

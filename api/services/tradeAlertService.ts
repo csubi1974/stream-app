@@ -11,6 +11,33 @@ export interface TradeLeg {
     symbol?: string;
 }
 
+export interface QualityFactors {
+    moveExhaustion: number;   // 0-10 (10 = no movement, 0 = exhausted)
+    expectedMoveUsage: number; // 0-10 (10 = not used, 0 = exceeded)
+    wallProximity: number;     // 0-10 (10 = very close to wall)
+    timeRemaining: number;     // 0-10 (10 = lots of time, 0 = expiring soon)
+    regimeStrength: number;    // 0-10 (10 = very stable regime)
+    driftAlignment: number;    // 0-10 (10 = perfect alignment)
+}
+
+export interface AlertMetadata {
+    openPrice: number;
+    moveFromOpen: number;
+    movePercent: number;
+    moveRatio: number;
+    wallDistance: number;
+    hoursRemaining: number;
+    generatedAtPrice: number;
+}
+
+export interface QualityMetrics {
+    qualityScore: number;
+    qualityLevel: 'PREMIUM' | 'STANDARD' | 'AGGRESSIVE';
+    riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+    qualityFactors: QualityFactors;
+    metadata: AlertMetadata;
+}
+
 export interface TradeAlert {
     id: string;
     strategy: 'BULL_PUT_SPREAD' | 'BEAR_CALL_SPREAD' | 'IRON_CONDOR';
@@ -36,6 +63,12 @@ export interface TradeAlert {
     };
     generatedAt: string;
     validUntil: string;
+    // Quality Scoring (NEW)
+    qualityScore?: number;
+    qualityLevel?: 'PREMIUM' | 'STANDARD' | 'AGGRESSIVE';
+    riskLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
+    qualityFactors?: QualityFactors;
+    metadata?: AlertMetadata;
 }
 
 export class TradeAlertService {
@@ -47,6 +80,187 @@ export class TradeAlertService {
         this.schwabService = schwabService;
         this.gexService = new GEXService(schwabService);
     }
+
+    /**
+     * Get hours remaining until market close (4 PM ET)
+     */
+    private getHoursUntilClose(): number {
+        const now = new Date();
+        const formatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'America/New_York',
+            hour: 'numeric',
+            minute: 'numeric',
+            hour12: false
+        });
+
+        const parts = formatter.formatToParts(now);
+        const getPart = (type: string) => parts.find(p => p.type === type)?.value;
+
+        const hour = parseInt(getPart('hour') || '0');
+        const minute = parseInt(getPart('minute') || '0');
+
+        const currentMinutes = hour * 60 + minute;
+        const closeMinutes = 16 * 60; // 4:00 PM
+
+        const minutesRemaining = closeMinutes - currentMinutes;
+        return Math.max(0, minutesRemaining / 60);
+    }
+
+    /**
+     * Get opening price from chain data
+     */
+    private getOpenPrice(chain: any, currentPrice: number): number {
+        return chain?.underlying?.open || currentPrice;
+    }
+
+    /**
+     * Calculate quality score for a trade alert
+     */
+    private calculateQualityScore(
+        gexContext: any,
+        shortStrike: number,
+        currentPrice: number,
+        openPrice: number,
+        expectedMove: number,
+        wall: number,
+        type: 'BULL_PUT' | 'BEAR_CALL'
+    ): QualityMetrics {
+        const { regime, netDrift, totalGEX } = gexContext;
+
+        // Calculate metadata
+        const moveFromOpen = currentPrice - openPrice;
+        const movePercent = Math.abs((moveFromOpen / openPrice) * 100);
+        const moveRatio = Math.abs(moveFromOpen) / Math.max(expectedMove, 1);
+        const wallDistance = Math.abs(shortStrike - wall);
+        const hoursRemaining = this.getHoursUntilClose();
+
+        // Calculate individual quality factors (0-10 scale)
+
+        // 1. Move Exhaustion (10 = fresh, 0 = exhausted)
+        let moveExhaustion = 10;
+        if (moveRatio > 2.0) moveExhaustion = 0;
+        else if (moveRatio > 1.5) moveExhaustion = 2;
+        else if (moveRatio > 1.0) moveExhaustion = 4;
+        else if (moveRatio > 0.7) moveExhaustion = 6;
+        else if (moveRatio > 0.5) moveExhaustion = 8;
+
+        // 2. Expected Move Usage (10 = not used, 0 = exceeded)
+        let expectedMoveUsage = 10;
+        if (moveRatio > 2.0) expectedMoveUsage = 0;
+        else if (moveRatio > 1.5) expectedMoveUsage = 2;
+        else if (moveRatio > 1.0) expectedMoveUsage = 4;
+        else if (moveRatio > 0.75) expectedMoveUsage = 6;
+        else if (moveRatio > 0.5) expectedMoveUsage = 8;
+
+        // 3. Wall Proximity (10 = very close, 0 = very far)
+        let wallProximity = 10;
+        if (wallDistance > 50) wallProximity = 1;
+        else if (wallDistance > 40) wallProximity = 3;
+        else if (wallDistance > 30) wallProximity = 5;
+        else if (wallDistance > 20) wallProximity = 7;
+        else if (wallDistance > 10) wallProximity = 9;
+
+        // 4. Time Remaining (10 = lots of time, 0 = expiring soon)
+        let timeRemaining = 10;
+        if (hoursRemaining < 1) timeRemaining = 1;
+        else if (hoursRemaining < 1.5) timeRemaining = 3;
+        else if (hoursRemaining < 2.5) timeRemaining = 5;
+        else if (hoursRemaining < 3.5) timeRemaining = 7;
+        else if (hoursRemaining < 5) timeRemaining = 9;
+
+        // 5. Regime Strength (10 = very stable, 0 = volatile)
+        let regimeStrength = 5;
+        if (regime === 'volatile') regimeStrength = 1;
+        else if (regime === 'neutral') regimeStrength = 5;
+        else if (regime === 'stable') {
+            if (Math.abs(totalGEX || 0) > 1000000) regimeStrength = 10;
+            else if (Math.abs(totalGEX || 0) > 500000) regimeStrength = 8;
+            else regimeStrength = 7;
+        }
+
+        // 6. Drift Alignment (10 = perfect alignment, 0 = against drift)
+        let driftAlignment = 5;
+        const absDrift = Math.abs(netDrift);
+
+        if (type === 'BULL_PUT') {
+            // Bull Put wants positive drift (bullish bias)
+            if (netDrift > 1.0) driftAlignment = 10;
+            else if (netDrift > 0.7) driftAlignment = 9;
+            else if (netDrift > 0.5) driftAlignment = 8;
+            else if (netDrift > 0.2) driftAlignment = 6;
+            else if (netDrift > 0) driftAlignment = 5;
+            else driftAlignment = 3; // Against drift
+        } else {
+            // Bear Call wants negative drift (bearish bias)
+            if (netDrift < -1.0) driftAlignment = 10;
+            else if (netDrift < -0.7) driftAlignment = 9;
+            else if (netDrift < -0.5) driftAlignment = 8;
+            else if (netDrift < -0.2) driftAlignment = 6;
+            else if (netDrift < 0) driftAlignment = 5;
+            else driftAlignment = 3; // Against drift
+        }
+
+        const qualityFactors: QualityFactors = {
+            moveExhaustion,
+            expectedMoveUsage,
+            wallProximity,
+            timeRemaining,
+            regimeStrength,
+            driftAlignment
+        };
+
+        // Calculate overall quality score (weighted average)
+        const weights = {
+            moveExhaustion: 0.25,      // 25% - Most important
+            expectedMoveUsage: 0.20,    // 20%
+            wallProximity: 0.20,        // 20%
+            timeRemaining: 0.15,        // 15%
+            regimeStrength: 0.10,       // 10%
+            driftAlignment: 0.10        // 10%
+        };
+
+        const qualityScore = Math.round(
+            moveExhaustion * weights.moveExhaustion * 10 +
+            expectedMoveUsage * weights.expectedMoveUsage * 10 +
+            wallProximity * weights.wallProximity * 10 +
+            timeRemaining * weights.timeRemaining * 10 +
+            regimeStrength * weights.regimeStrength * 10 +
+            driftAlignment * weights.driftAlignment * 10
+        );
+
+        // Determine quality level
+        let qualityLevel: 'PREMIUM' | 'STANDARD' | 'AGGRESSIVE';
+        if (qualityScore >= 80) qualityLevel = 'PREMIUM';
+        else if (qualityScore >= 60) qualityLevel = 'STANDARD';
+        else qualityLevel = 'AGGRESSIVE';
+
+        // Determine risk level
+        let riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+        if (moveRatio > 1.5 || hoursRemaining < 1.5) riskLevel = 'HIGH';
+        else if (moveRatio > 1.0 || hoursRemaining < 2.5 || wallDistance > 35) riskLevel = 'MEDIUM';
+        else riskLevel = 'LOW';
+
+        const metadata: AlertMetadata = {
+            openPrice,
+            moveFromOpen,
+            movePercent,
+            moveRatio,
+            wallDistance,
+            hoursRemaining,
+            generatedAtPrice: currentPrice
+        };
+
+        console.log(`📊 Quality Score: ${qualityScore} (${qualityLevel}) | Risk: ${riskLevel} | Move Ratio: ${moveRatio.toFixed(2)}× | Hours: ${hoursRemaining.toFixed(1)}`);
+
+        return {
+            qualityScore,
+            qualityLevel,
+            riskLevel,
+            qualityFactors,
+            metadata
+        };
+    }
+
 
     /**
      * Generate trade alerts based on current market conditions
@@ -90,12 +304,15 @@ export class TradeAlertService {
 
             // 6. Generate alerts based on regime
             const alerts: TradeAlert[] = [];
-            const { regime, netDrift, callWall, putWall, gammaFlip, currentPrice } = gexMetrics;
+            const { regime, netDrift, callWall, putWall, gammaFlip, currentPrice, totalGEX } = gexMetrics;
 
             // Calculate expected move
             const expectedMove = this.calculateExpectedMove(options, currentPrice);
 
-            console.log(`📊 Generating alerts for ${symbol} | Regime: ${regime} | Drift: ${netDrift.toFixed(2)} | Expected Move: ±${expectedMove.toFixed(2)}`);
+            // Get opening price for quality scoring
+            const openPrice = this.getOpenPrice(chain, currentPrice);
+
+            console.log(`📊 Generating alerts for ${symbol} | Regime: ${regime} | Drift: ${netDrift.toFixed(2)} | Expected Move: ±${expectedMove.toFixed(2)} | Open: $${openPrice.toFixed(2)}`);
 
             // Context for all alerts
             const gexContext = {
@@ -105,8 +322,11 @@ export class TradeAlertService {
                 gammaFlip,
                 currentPrice,
                 netDrift,
-                expectedMove
+                expectedMove,
+                totalGEX,  // Add totalGEX for quality scoring
+                openPrice  // Add openPrice for move exhaustion calculation
             };
+
 
             // Strategy Selection based on Regime
             if (regime === 'stable') {
@@ -237,6 +457,17 @@ export class TradeAlertService {
                 riskWarning = ' ⚠️ DENTRO del rango esperado - Mayor riesgo';
             }
 
+            // Calculate quality score
+            const quality = this.calculateQualityScore(
+                gexContext,
+                shortStrike,
+                currentPrice,
+                gexContext.openPrice,
+                expectedMove || 0,
+                putWall,
+                'BULL_PUT'
+            );
+
             return {
                 id: alertId,
                 strategy: 'BULL_PUT_SPREAD',
@@ -268,7 +499,13 @@ export class TradeAlertService {
                 status,
                 gexContext,
                 generatedAt: new Date().toISOString(),
-                validUntil: this.getValidUntil()
+                validUntil: this.getValidUntil(),
+                // Quality Scoring
+                qualityScore: quality.qualityScore,
+                qualityLevel: quality.qualityLevel,
+                riskLevel: quality.riskLevel,
+                qualityFactors: quality.qualityFactors,
+                metadata: quality.metadata
             };
         } catch (error) {
             console.error('Error generating Bull Put Spread:', error);
@@ -340,6 +577,17 @@ export class TradeAlertService {
                 status = 'WATCH';
             }
 
+            // Calculate quality score
+            const quality = this.calculateQualityScore(
+                gexContext,
+                shortStrike,
+                currentPrice,
+                gexContext.openPrice,
+                expectedMove || 0,
+                callWall,
+                'BEAR_CALL'
+            );
+
             return {
                 id: alertId,
                 strategy: 'BEAR_CALL_SPREAD',
@@ -371,7 +619,13 @@ export class TradeAlertService {
                 status,
                 gexContext,
                 generatedAt: new Date().toISOString(),
-                validUntil: this.getValidUntil()
+                validUntil: this.getValidUntil(),
+                // Quality Scoring
+                qualityScore: quality.qualityScore,
+                qualityLevel: quality.qualityLevel,
+                riskLevel: quality.riskLevel,
+                qualityFactors: quality.qualityFactors,
+                metadata: quality.metadata
             };
         } catch (error) {
             console.error('Error generating Bear Call Spread:', error);
