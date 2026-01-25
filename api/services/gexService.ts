@@ -24,14 +24,36 @@ export class GEXService {
      */
     async calculateGEXMetrics(symbol: string = 'SPX'): Promise<GEXMetrics> {
         try {
-            const chain = await this.schwabService.getOptionsChain(symbol);
+            let searchSymbol = symbol.toUpperCase();
+            let chain = await this.schwabService.getOptionsChain(searchSymbol);
+
+            // Fallback for SPX
+            if ((!chain || (!chain.callExpDateMap && !chain.putExpDateMap)) && searchSymbol === 'SPX') {
+                console.log('⚠️ GEX: SPX Chain unavailable, trying SPXW...');
+                chain = await this.schwabService.getOptionsChain('SPXW');
+                if (chain) searchSymbol = 'SPXW';
+            }
+
+            // Fallback to SPY
+            if ((!chain || (!chain.callExpDateMap && !chain.putExpDateMap)) && (searchSymbol === 'SPX' || searchSymbol === 'SPXW')) {
+                console.log('⚠️ GEX: SPXW Chain unavailable, failing over to SPY...');
+                chain = await this.schwabService.getOptionsChain('SPY');
+            }
 
             if (!chain || (!chain.callExpDateMap && !chain.calls)) {
-                console.warn('⚠️ No options chain data available for GEX calculation');
+                console.warn(`⚠️ No options chain data available for GEX calculation (${symbol})`);
                 return this.getDefaultMetrics();
             }
 
-            const currentPrice = chain.underlying?.last || 0;
+            // Robust price detection
+            const currentPrice = chain.underlying?.last ||
+                chain.underlying?.lastPrice ||
+                chain.underlyingPrice || 0;
+
+            if (currentPrice === 0) {
+                console.warn(`⚠️ GEX: Missing underlying price for ${symbol}`);
+            }
+
             const allOptions: any[] = [];
 
             // Flatten options data

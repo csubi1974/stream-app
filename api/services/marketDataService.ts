@@ -117,16 +117,26 @@ export class MarketDataService {
 
   async getZeroDTEOptions(symbol: string = 'SPX'): Promise<any> {
     try {
-      // Fetch Option Chain
-      let chain = await this.schwabService.getOptionsChain(symbol);
+      // Map SPX to include SPXW for more 0DTE options if needed
+      let searchSymbol = symbol.toUpperCase();
+      if (searchSymbol === 'SPX') searchSymbol = 'SPX'; // Could also try SPXW
 
-      if (!chain && symbol === 'SPX') {
-        console.log('⚠️ SPX Chain unavailable (502/Error), failing over to SPY for Scanner/GEX');
+      // Fetch Option Chain
+      let chain = await this.schwabService.getOptionsChain(searchSymbol);
+
+      // Fallback logic for indices
+      if ((!chain || (!chain.callExpDateMap && !chain.putExpDateMap)) && searchSymbol === 'SPX') {
+        console.log('⚠️ SPX Chain unavailable, trying SPXW...');
+        chain = await this.schwabService.getOptionsChain('SPXW');
+      }
+
+      if ((!chain || (!chain.callExpDateMap && !chain.putExpDateMap)) && (searchSymbol === 'SPX' || searchSymbol === 'SPXW')) {
+        console.log('⚠️ SPXW Chain unavailable, failing over to SPY for Scanner/GEX');
         chain = await this.schwabService.getOptionsChain('SPY');
       }
 
       if (!chain || (!chain.calls && !chain.puts && !chain.callExpDateMap && !chain.putExpDateMap)) {
-        console.log('⚠️ Chain missing calls/puts and maps');
+        console.log(`⚠️ Chain missing for ${symbol}`);
         return { options: [], stats: null };
       }
 
@@ -162,7 +172,12 @@ export class MarketDataService {
       const strikes = new Map<number, { callOi: number; putOi: number; callGex: number; putGex: number }>();
       let callWall = { strike: 0, oi: 0 };
       let putWall = { strike: 0, oi: 0 };
-      const currentPrice = chain.underlying?.last || 0;
+
+      // Robust price detection
+      const currentPrice = chain.underlying?.last ||
+        chain.underlying?.lastPrice ||
+        chain.underlyingPrice ||
+        (allOptions.length > 0 ? parseFloat(allOptions[0].strikePrice || allOptions[0].strike) : 0);
 
       // Extract all available expirations
       const availableDates = new Set<string>();
@@ -173,29 +188,17 @@ export class MarketDataService {
       // Determine target date: Today OR Next Available
       let targetDate = today;
       const sortedDates = Array.from(availableDates).sort();
-      console.log(`🔎 Found ${sortedDates.length} expiry dates for ${symbol}. First: ${sortedDates[0]}`);
 
       // Robust Date Selection:
-      // 1. Try exact match for today
-      // 2. Try first date equal or after today
-      // 3. Fallback to the very first available date (nearest expiry) if list not empty
+      // We want the EARLIEST expiration that is >= today
+      const futureDates = sortedDates.filter(d => d.split('T')[0] >= today);
 
-      const hasToday = sortedDates.some(d => d.startsWith(today));
-
-      if (hasToday) {
-        console.log(`📅 Showing 0DTE for ${symbol} today: ${targetDate}`);
+      if (futureDates.length > 0) {
+        targetDate = futureDates[0].split('T')[0];
+        console.log(`📅 Found target expiry for ${symbol}: ${targetDate}`);
       } else if (sortedDates.length > 0) {
-        // Find first date >= today
-        const nextDate = sortedDates.find(d => d >= today);
-
-        if (nextDate) {
-          targetDate = nextDate.split('T')[0];
-          console.log(`📅 Market closed/No 0DTE today for ${symbol}. Showing next expiry: ${targetDate}`);
-        } else {
-          // Fallback: Just take the first one (e.g. if today is messed up or all dates are weird)
-          targetDate = sortedDates[0].split('T')[0];
-          console.log(`📅 No future dates found relative to ${today}. Defaulting to first available: ${targetDate}`);
-        }
+        targetDate = sortedDates[0].split('T')[0];
+        console.log(`📅 No future dates found, defaulting to nearest: ${targetDate}`);
       } else {
         console.warn(`⚠️ No expiry dates found for ${symbol}`);
       }
@@ -321,24 +324,49 @@ export class MarketDataService {
     try {
       const chain = await this.schwabService.getOptionsChain(symbol);
 
-      if (!chain || (!chain.calls && !chain.puts)) {
+      if (!chain || (!chain.calls && !chain.puts && !chain.callExpDateMap)) {
         return { callWall: 0, putWall: 0 };
+      }
+
+      const allCalls: any[] = [];
+      const allPuts: any[] = [];
+
+      // Extract calls
+      if (chain.callExpDateMap) {
+        Object.values(chain.callExpDateMap).forEach((expMap: any) => {
+          Object.values(expMap).forEach((strikeArr: any) => allCalls.push(...strikeArr));
+        });
+      } else if (chain.calls) {
+        allCalls.push(...chain.calls);
+      }
+
+      // Extract puts
+      if (chain.putExpDateMap) {
+        Object.values(chain.putExpDateMap).forEach((expMap: any) => {
+          Object.values(expMap).forEach((strikeArr: any) => allPuts.push(...strikeArr));
+        });
+      } else if (chain.puts) {
+        allPuts.push(...chain.puts);
       }
 
       let callWall = { strike: 0, oi: 0 };
       let putWall = { strike: 0, oi: 0 };
 
       // Find Call Wall (Max OI)
-      (chain.calls || []).forEach((opt: any) => {
-        if ((opt.openInterest || 0) > callWall.oi) {
-          callWall = { strike: Number(opt.strike), oi: opt.openInterest };
+      allCalls.forEach((opt: any) => {
+        const strike = parseFloat(opt.strikePrice || opt.strike);
+        const oi = opt.openInterest || 0;
+        if (oi > callWall.oi) {
+          callWall = { strike, oi };
         }
       });
 
       // Find Put Wall (Max OI)
-      (chain.puts || []).forEach((opt: any) => {
-        if ((opt.openInterest || 0) > putWall.oi) {
-          putWall = { strike: Number(opt.strike), oi: opt.openInterest };
+      allPuts.forEach((opt: any) => {
+        const strike = parseFloat(opt.strikePrice || opt.strike);
+        const oi = opt.openInterest || 0;
+        if (oi > putWall.oi) {
+          putWall = { strike, oi };
         }
       });
 

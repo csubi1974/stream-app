@@ -2,13 +2,17 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 interface GammaProfileChartProps {
-    data: { strike: number; callGex: number; putGex: number }[];
+    data: { strike: number; callGex: number; putGex: number; callOi?: number; putOi?: number }[];
     currentPrice?: number;
     symbol?: string;
 }
 
 export function GammaProfileChart({ data, currentPrice, symbol }: GammaProfileChartProps) {
     const { t } = useTranslation();
+
+    // Check if we have GEX data or only OI
+    const hasGex = useMemo(() => data.some(d => Math.abs(d.callGex) > 0 || Math.abs(d.putGex) > 0), [data]);
+
     // SVG Dimensions
     const width = 800;
     const height = 400;
@@ -17,12 +21,25 @@ export function GammaProfileChart({ data, currentPrice, symbol }: GammaProfileCh
     const graphHeight = height - margin.top - margin.bottom;
 
     // Filter significant data to zoom in on the action
-    // If we have many strikes, we might want to center around current price or where the GEX is
     const activeStrikes = useMemo(() => {
-        // Filter strikes with some minimal GEX or near current price
-        // Or just take the whole range if it's 0DTE (usually limited range anyway)
-        return data.filter(d => Math.abs(d.callGex) > 1000 || Math.abs(d.putGex) > 1000 || (currentPrice && Math.abs(d.strike - currentPrice) < 50));
-    }, [data, currentPrice]);
+        if (data.length === 0) return [];
+
+        // If we have GEX, filter by GEX significant levels
+        if (hasGex) {
+            return data.filter(d =>
+                Math.abs(d.callGex) > 0 ||
+                Math.abs(d.putGex) > 0 ||
+                (currentPrice && Math.abs(d.strike - currentPrice) < 50)
+            );
+        }
+
+        // If only OI, filter by OI
+        return data.filter(d =>
+            (d.callOi || 0) > 0 ||
+            (d.putOi || 0) > 0 ||
+            (currentPrice && Math.abs(d.strike - currentPrice) < 50)
+        );
+    }, [data, currentPrice, hasGex]);
 
     // If filtered data is empty, revert to original (or handle empty state)
     const chartData = activeStrikes.length > 5 ? activeStrikes : data;
@@ -30,18 +47,20 @@ export function GammaProfileChart({ data, currentPrice, symbol }: GammaProfileCh
     // Scales
     const xMin = Math.min(...chartData.map(d => d.strike));
     const xMax = Math.max(...chartData.map(d => d.strike));
-    const yMax = Math.max(...chartData.map(d => Math.max(d.callGex, Math.abs(d.putGex))));
+
+    // Y Max based on GEX or OI
+    const yMax = hasGex
+        ? Math.max(...chartData.map(d => Math.max(Math.abs(d.callGex), Math.abs(d.putGex))))
+        : Math.max(...chartData.map(d => Math.max(Math.abs(d.callOi || 0), Math.abs(d.putOi || 0))));
 
     // Create a symmetric Y scale for aesthetics
-    const limit = yMax * 1.1; // Add 10% padding
+    const limit = yMax > 0 ? yMax * 1.1 : 100; // Add 10% padding
 
     const getX = (strike: number) => {
         return ((strike - xMin) / (xMax - xMin)) * graphWidth;
     };
 
     const getY = (value: number) => {
-        // Remap value: limit -> 0, -limit -> graphHeight
-        // 0 -> graphHeight / 2
         return graphHeight / 2 - (value / limit) * (graphHeight / 2);
     };
 
@@ -52,10 +71,14 @@ export function GammaProfileChart({ data, currentPrice, symbol }: GammaProfileCh
 
     // Calculate Totals
     const totalCallGex = useMemo(() => data.reduce((acc, curr) => acc + curr.callGex, 0), [data]);
-    const totalPutGex = useMemo(() => data.reduce((acc, curr) => acc + curr.putGex, 0), [data]); // putGex usually comes negative or we treat it as negative for chart
+    const totalPutGex = useMemo(() => data.reduce((acc, curr) => acc + curr.putGex, 0), [data]);
+    const totalCallOi = useMemo(() => data.reduce((acc, curr) => acc + (curr.callOi || 0), 0), [data]);
+    const totalPutOi = useMemo(() => data.reduce((acc, curr) => acc + (curr.putOi || 0), 0), [data]);
+
     const netGex = totalCallGex + totalPutGex;
 
-    const formatGex = (val: number) => {
+    const formatValue = (val: number, isOi: boolean = false) => {
+        if (isOi) return val.toLocaleString();
         const v = Math.abs(val);
         if (v >= 1e9) return `$${(val / 1e9).toFixed(2)}B`;
         if (v >= 1e6) return `$${(val / 1e6).toFixed(2)}M`;
@@ -69,25 +92,36 @@ export function GammaProfileChart({ data, currentPrice, symbol }: GammaProfileCh
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800 bg-gray-800/50">
                 <div className="flex items-center space-x-2">
                     <span className="text-sm font-bold text-white">
-                        {t('Gamma Exposure (GEX)')}
+                        {hasGex ? t('Gamma Exposure (GEX)') : t('Open Interest (OI) Profile')}
                         {symbol && <span className="ml-2 text-blue-400 font-mono tracking-tighter">[{symbol}]</span>}
                     </span>
+                    {!hasGex && (
+                        <span className="bg-yellow-900/30 text-yellow-500 text-[10px] px-2 py-0.5 rounded border border-yellow-800/50">
+                            {t('Greeks unavailable - Showing OI')}
+                        </span>
+                    )}
                 </div>
                 <div className="flex space-x-6 text-xs">
                     <div className="flex flex-col items-end">
-                        <span className="text-gray-400">Total Call GEX</span>
-                        <span className="text-green-400 font-mono font-bold">{formatGex(totalCallGex)}</span>
-                    </div>
-                    <div className="flex flex-col items-end">
-                        <span className="text-gray-400">Total Put GEX</span>
-                        <span className="text-red-400 font-mono font-bold">{formatGex(totalPutGex)}</span>
-                    </div>
-                    <div className="flex flex-col items-end border-l border-gray-700 pl-4">
-                        <span className="text-gray-400">Net GEX</span>
-                        <span className={`font-mono font-bold ${netGex > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                            {formatGex(netGex)}
+                        <span className="text-gray-400">{hasGex ? 'Total Call GEX' : 'Total Call OI'}</span>
+                        <span className="text-green-400 font-mono font-bold">
+                            {hasGex ? formatValue(totalCallGex) : formatValue(totalCallOi, true)}
                         </span>
                     </div>
+                    <div className="flex flex-col items-end">
+                        <span className="text-gray-400">{hasGex ? 'Total Put GEX' : 'Total Put OI'}</span>
+                        <span className="text-red-400 font-mono font-bold">
+                            {hasGex ? formatValue(totalPutGex) : formatValue(totalPutOi, true)}
+                        </span>
+                    </div>
+                    {hasGex && (
+                        <div className="flex flex-col items-end border-l border-gray-700 pl-4">
+                            <span className="text-gray-400">Net GEX</span>
+                            <span className={`font-mono font-bold ${netGex > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                {formatValue(netGex)}
+                            </span>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -122,10 +156,15 @@ export function GammaProfileChart({ data, currentPrice, symbol }: GammaProfileCh
                             {chartData.map((d) => {
                                 const x = getX(d.strike);
                                 const barWidth = (graphWidth / chartData.length) * 0.65;
-                                const yCall = getY(d.callGex);
+
+                                // Values for Call and Put bars
+                                const valCall = hasGex ? d.callGex : (d.callOi || 0);
+                                const valPut = hasGex ? d.putGex : -(d.putOi || 0); // Put OI shown as negative for balance
+
+                                const yCall = getY(valCall);
                                 const hCall = Math.max(0, zeroY - yCall);
 
-                                const yPut = getY(d.putGex);
+                                const yPut = getY(valPut);
                                 const hPut = Math.max(0, yPut - zeroY);
 
                                 const isCurrentPrice = currentPrice && Math.abs(d.strike - currentPrice) < 5;
@@ -141,7 +180,7 @@ export function GammaProfileChart({ data, currentPrice, symbol }: GammaProfileCh
                                             fill="url(#greenGradient)"
                                             className="hover:filter hover:brightness-110"
                                         >
-                                            <title>Strike: {d.strike} | Call GEX: {formatGex(d.callGex)}</title>
+                                            <title>Strike: {d.strike} | {hasGex ? 'Call GEX' : 'Call OI'}: {formatValue(valCall, !hasGex)}</title>
                                         </rect>
 
                                         {/* Put Bar */}
@@ -153,7 +192,7 @@ export function GammaProfileChart({ data, currentPrice, symbol }: GammaProfileCh
                                             fill="url(#redGradient)"
                                             className="hover:filter hover:brightness-110"
                                         >
-                                            <title>Strike: {d.strike} | Put GEX: {formatGex(d.putGex)}</title>
+                                            <title>Strike: {d.strike} | {hasGex ? 'Put GEX' : 'Put OI'}: {formatValue(Math.abs(valPut), !hasGex)}</title>
                                         </rect>
                                     </g>
                                 );
