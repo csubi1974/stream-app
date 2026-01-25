@@ -228,6 +228,24 @@ export class MarketDataService {
         }
       });
 
+      // Calculate Vanna Exposure (Net Delta Change per 1% IV Drop)
+      // Dealer Short Call: IV Drop -> Delta less negative -> Buy Underlying (+ Effect)
+      // Dealer Short Put:  IV Drop -> Delta less positive -> Sell Underlying (- Effect)
+      // Formula: Vanna ~ Σ(CallVega * OI) - Σ(PutVega * OI)
+      let vannaExposure = 0;
+      allOptions.forEach((opt: any) => {
+        if (!opt.expirationDate?.startsWith(targetDate)) return;
+
+        const oi = opt.openInterest || 0;
+        const vega = opt.vega || 0;
+
+        if (opt.putCall === 'CALL') {
+          vannaExposure += (vega * oi);
+        } else {
+          vannaExposure -= (vega * oi);
+        }
+      });
+
       const zeroDte = allOptions.filter((opt: any) =>
         opt.expirationDate && opt.expirationDate.startsWith(targetDate)
       );
@@ -291,7 +309,8 @@ export class MarketDataService {
           targetDate, // Send back which date we used
           deltaTarget, // Add calculated target
           volatilityImplied, // Add for reference
-          drift: changePercent // Add for reference
+          drift: changePercent, // Add for reference
+          vannaExposure // Net Vanna
         }
       };
 

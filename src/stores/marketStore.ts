@@ -58,6 +58,7 @@ export interface GEXMetrics {
   currentPrice: number;                // Precio actual del subyacente
   regime: 'stable' | 'volatile' | 'neutral'; // Régimen de volatilidad
   expectedMove?: number;               // Movimiento esperado del día (ATM Straddle)
+  vannaExposure?: number;              // Exposición Vanna Neta (IV Drop -> Buy/Sell)
 }
 
 interface MarketStore {

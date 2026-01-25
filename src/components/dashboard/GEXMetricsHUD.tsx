@@ -13,6 +13,7 @@ interface GEXMetrics {
     currentPrice: number;     // Precio actual del subyacente
     regime: 'stable' | 'volatile' | 'neutral'; // Régimen de volatilidad
     expectedMove?: number;    // Movimiento esperado del día
+    vannaExposure?: number;   // Exposición Vanna Neta
 }
 
 export function GEXMetricsHUD() {
@@ -113,7 +114,7 @@ export function GEXMetricsHUD() {
     };
 
     return (
-        <div className="bg-gradient-to-br from-gray-800 via-gray-900 to-gray-800 rounded-lg p-6 border border-gray-700 shadow-xl">
+        <div className="bg-gradient-to-br from-gray-800 via-gray-900 to-gray-800 rounded-lg p-4 border border-gray-700 shadow-xl">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
                 <div className="flex items-center gap-4">
@@ -148,7 +149,7 @@ export function GEXMetricsHUD() {
             </div>
 
             {/* Main Metrics Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
 
                 {/* Total GEX */}
                 <MetricCard
@@ -192,6 +193,17 @@ export function GEXMetricsHUD() {
                     subtitle={t('Market Push Direction')}
                     trend={netDrift > 0 ? 'up' : 'down'}
                     tooltip={t('La fuerza de empuje o "deriva" del mercado. Si es alto y positivo, los Dealers están obligados a comprar para cubrirse mientras el precio sube, creando una tendencia.')}
+                />
+
+                {/* Net Vanna Exposure - NEW */}
+                <MetricCard
+                    icon={<Activity className="h-5 w-5" />}
+                    label={t('Vanna Exposure')}
+                    value={gexMetrics.vannaExposure ? formatNumber(gexMetrics.vannaExposure) : '--'}
+                    valueColor={gexMetrics.vannaExposure && gexMetrics.vannaExposure > 0 ? 'text-green-400' : 'text-red-400'}
+                    subtitle={gexMetrics.vannaExposure && gexMetrics.vannaExposure > 0 ? t('IV Drop → Buy') : t('IV Drop → Sell')}
+                    trend={gexMetrics.vannaExposure && gexMetrics.vannaExposure > 0 ? 'up' : 'down'}
+                    tooltip={t('Mide cómo reaccionan los Dealers ante cambios en la Volatilidad (IV). Si es positivo (Verde), una caída de IV fuerza a los Dealers a comprar (Viento a favor). Si es negativo (Rojo), una caída de IV los fuerza a vender.')}
                 />
 
                 {/* Expected Move */}
@@ -298,7 +310,7 @@ function MetricCard({ icon, label, value, valueColor, subtitle, trend, highlight
     };
 
     return (
-        <div className={`group relative bg-gray-900 rounded-lg p-4 border transition-all duration-300 ${highlight
+        <div className={`group relative bg-gray-900 rounded-lg p-3 border transition-all duration-300 ${highlight
             ? 'border-orange-500 shadow-lg shadow-orange-500/20 animate-pulse'
             : 'border-gray-700 hover:border-gray-600'
             }`}>
@@ -320,7 +332,7 @@ function MetricCard({ icon, label, value, valueColor, subtitle, trend, highlight
             <div className="text-[10px] uppercase text-gray-500 font-bold tracking-wider mb-1">
                 {label}
             </div>
-            <div className={`text-2xl font-bold ${valueColor} mb-1 font-mono`}>
+            <div className={`text-lg font-bold ${valueColor} mb-1 font-mono truncate`}>
                 {value}
             </div>
             <div className="text-[10px] text-gray-400">
