@@ -14,6 +14,7 @@ interface GEXMetrics {
     regime: 'stable' | 'volatile' | 'neutral'; // Régimen de volatilidad
     expectedMove?: number;    // Movimiento esperado del día
     netVanna: number;         // Exposición Vanna Neta
+    netCharm: number;         // Exposición Charm Neta
 }
 
 export function GEXMetricsHUD() {
@@ -85,7 +86,8 @@ export function GEXMetricsHUD() {
         currentPrice,
         regime,
         expectedMove,
-        netVanna
+        netVanna,
+        netCharm
     } = gexMetrics;
 
     // Determinar color del Total GEX
@@ -150,7 +152,7 @@ export function GEXMetricsHUD() {
             </div>
 
             {/* Main Metrics Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-9 gap-3">
 
                 {/* Total GEX */}
                 <MetricCard
@@ -205,6 +207,17 @@ export function GEXMetricsHUD() {
                     subtitle={netVanna > 0 ? t('IV Drop → Buy') : t('IV Drop → Sell')}
                     trend={netVanna > 0 ? 'up' : 'down'}
                     tooltip={t('Mide cómo reaccionan los Dealers ante cambios en la Volatilidad (IV). Si es positivo (Verde), una caída de IV fuerza a los Dealers a comprar (Viento a favor). Si es negativo (Rojo), una caída de IV los fuerza a vender.')}
+                />
+
+                {/* Net Charm - NEW */}
+                <MetricCard
+                    icon={<Activity className="h-5 w-5" />}
+                    label={t('Net Charm')}
+                    value={formatNumber(netCharm)}
+                    valueColor={netCharm > 0 ? 'text-green-400' : 'text-red-400'}
+                    subtitle={netCharm > 0 ? t('Time → Buy') : t('Time → Sell')}
+                    trend={netCharm > 0 ? 'up' : 'down'}
+                    tooltip={t('Mide el efecto del paso del tiempo (Delta Decay) en las coberturas de los Dealers. Si es positivo (Verde), el simple paso del tiempo obliga a los Dealers a comprar acciones (Rally de cierre). Si es negativo (Rojo), los obliga a vender.')}
                 />
 
                 {/* Expected Move */}

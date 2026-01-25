@@ -225,18 +225,21 @@ export class TradeAlertService {
         };
 
         const qualityScore = Math.round(
-            moveExhaustion * weights.moveExhaustion * 10 +
-            expectedMoveUsage * weights.expectedMoveUsage * 10 +
-            wallProximity * weights.wallProximity * 10 +
-            timeRemaining * weights.timeRemaining * 10 +
-            regimeStrength * weights.regimeStrength * 10 +
             driftAlignment * weights.driftAlignment * 10
         );
 
+        // 7. Charm Bonus (Bonus for favorable time decay pressure)
+        const netCharm = gexContext.netCharm || 0;
+        let charmBonus = 0;
+        if (type === 'BULL_PUT' && netCharm > 1000) charmBonus = 5;
+        else if (type === 'BEAR_CALL' && netCharm < -1000) charmBonus = 5;
+
+        const finalScore = Math.min(100, qualityScore + charmBonus);
+
         // Determine quality level
         let qualityLevel: 'PREMIUM' | 'STANDARD' | 'AGGRESSIVE';
-        if (qualityScore >= 80) qualityLevel = 'PREMIUM';
-        else if (qualityScore >= 60) qualityLevel = 'STANDARD';
+        if (finalScore >= 80) qualityLevel = 'PREMIUM';
+        else if (finalScore >= 60) qualityLevel = 'STANDARD';
         else qualityLevel = 'AGGRESSIVE';
 
         // Determine risk level
@@ -258,7 +261,7 @@ export class TradeAlertService {
         console.log(`📊 Quality Score: ${qualityScore} (${qualityLevel}) | Risk: ${riskLevel} | Move Ratio: ${moveRatio.toFixed(2)}× | Hours: ${hoursRemaining.toFixed(1)}`);
 
         return {
-            qualityScore,
+            qualityScore: finalScore,
             qualityLevel,
             riskLevel,
             qualityFactors,
@@ -309,7 +312,7 @@ export class TradeAlertService {
 
             // 6. Generate alerts based on regime
             const alerts: TradeAlert[] = [];
-            const { regime, netDrift, callWall, putWall, gammaFlip, currentPrice, totalGEX } = gexMetrics;
+            const { regime, netDrift, callWall, putWall, gammaFlip, currentPrice, totalGEX, netCharm } = gexMetrics;
 
             // Calculate expected move
             const expectedMove = this.calculateExpectedMove(options, currentPrice);
@@ -329,7 +332,8 @@ export class TradeAlertService {
                 netDrift,
                 expectedMove,
                 totalGEX,  // Add totalGEX for quality scoring
-                openPrice  // Add openPrice for move exhaustion calculation
+                openPrice,  // Add openPrice for move exhaustion calculation
+                netCharm   // Add netCharm for time decay bonus
             };
 
 
@@ -522,7 +526,7 @@ export class TradeAlertService {
                 riskReward: `1:${(maxLoss / netCredit).toFixed(1)}`,
                 rationale: trigger === 'vanna_crush'
                     ? `ESTRATEGIA VANNA CRUSH: El Net Vanna es altamente positivo (${(gexMetrics.netVanna / 1e6).toFixed(1)}M), lo que significa que un colapso de volatilidad (IV Crush) forzará a los Dealers a comprar acciones, empujando el precio al alza independientemente del drift actual. Se vende premium aprovechando este viento a favor institucional.`
-                    : `El Put Wall en $${putWall.toFixed(0)} actúa como un imán y soporte institucional clave para el mercado hoy. El strike corto de $${shortStrike.toFixed(0)} se ha seleccionado para estar ${expectedMove ? (shortStrike < lowerBound ? `FUERA de las fronteras del Movimiento Esperado (±$${expectedMove.toFixed(1)})` : `DENTRO del rango del Movimiento Esperado`) : 'en una zona técnica de alta probabilidad'}. Bajo este régimen ${gexContext.regime === 'stable' ? 'estable' : 'volátil'}, los Dealers tienden a amortiguar las caídas cerca de estos niveles de soporte.`,
+                    : `El Put Wall en $${putWall.toFixed(0)} actúa como un imán y soporte institucional clave para el mercado hoy. El strike corto de $${shortStrike.toFixed(0)} se ha seleccionado para estar ${expectedMove ? (shortStrike < lowerBound ? `FUERA de las fronteras del Movimiento Esperado (±$${expectedMove.toFixed(1)})` : `DENTRO del rango del Movimiento Esperado`) : 'en una zona técnica de alta probabilidad'}. Bajo este régimen ${gexContext.regime === 'stable' ? 'estable' : 'volátil'}, los Dealers tienden a amortiguar las caídas cerca de estos niveles de soporte.${gexMetrics.netCharm > 1000 ? ` ADEMÁS, el Net Charm positivo (+${(gexMetrics.netCharm / 100).toFixed(1)}K/min) sugiere que el paso del tiempo obligará a los Dealers a comprar acciones para cubrir sus deltas, lo que protege tu posición.` : ''}`,
                 status,
                 gexContext,
                 generatedAt: new Date().toISOString(),
@@ -654,7 +658,7 @@ export class TradeAlertService {
                 riskReward: `1:${(maxLoss / netCredit).toFixed(1)}`,
                 rationale: trigger === 'vanna_crush'
                     ? `ESTRATEGIA VANNA CRUSH: El Net Vanna es negativo (${(gexMetrics.netVanna / 1e6).toFixed(1)}M). Un colapso de volatilidad (IV Crush) resultará en ventas institucionales por cobertura, presionando el precio a la baja. Se vende Bear Call Spread para capturar este movimiento estructural.`
-                    : `El Call Wall en $${callWall.toFixed(0)} representa la frontera superior de liquidez y es la resistencia estadística más importante del día. El strike vendido de $${shortStrike.toFixed(0)} está ${expectedMove ? (shortStrike > upperBound ? `PROTEGIDO fuera del Movimiento Esperado (±$${expectedMove.toFixed(1)})` : `DENTRO del rango proyectado del Movimiento Esperado`) : 'en una zona de fuerte resistencia de gamma'}. En este contexto de Gamma negativa para Dealers, el Call Wall suele actuar como un techo sólido que frena las subidas aceleradas.`,
+                    : `El Call Wall en $${callWall.toFixed(0)} representa la frontera superior de liquidez y es la resistencia estadística más importante del día. El strike vendido de $${shortStrike.toFixed(0)} está ${expectedMove ? (shortStrike > upperBound ? `PROTEGIDO fuera del Movimiento Esperado (±$${expectedMove.toFixed(1)})` : `DENTRO del rango proyectado del Movimiento Esperado`) : 'en una zona de fuerte resistencia de gamma'}. En este contexto de Gamma negativa para Dealers, el Call Wall suele actuar como un techo sólido que frena las subidas aceleradas.${gexMetrics.netCharm < -1000 ? ` ADEMÁS, el Net Charm negativo sugiere que el paso del tiempo forzará ventas institucionales, favoreciendo tu posición bajista.` : ''}`,
                 status,
                 gexContext,
                 generatedAt: new Date().toISOString(),

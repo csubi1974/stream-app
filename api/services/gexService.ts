@@ -11,6 +11,7 @@ export interface GEXMetrics {
     regime: 'stable' | 'volatile' | 'neutral';
     expectedMove?: number; // Expected daily move based on ATM straddle
     netVanna: number;      // Net Vanna exposure
+    netCharm: number;      // Net Charm exposure (Delta decay)
 }
 
 export class GEXService {
@@ -71,6 +72,7 @@ export class GEXService {
                 putOI: number;
                 netGEX: number;
                 netVanna: number;
+                netCharm: number;
             }>();
 
             let maxCallOI = 0;
@@ -97,7 +99,8 @@ export class GEXService {
                         callOI: 0,
                         putOI: 0,
                         netGEX: 0,
-                        netVanna: 0
+                        netVanna: 0,
+                        netCharm: 0
                     });
                 }
 
@@ -141,14 +144,31 @@ export class GEXService {
                 }
 
                 metrics.netGEX = metrics.callGEX + metrics.putGEX;
+
+                // Charm Calculation (Delta Decay)
+                // For 0DTE, Delta of OTM options decays to 0. 
+                // Rate: Delta / TimeRemaining
+                // We use minutes to expiration for a more granular 0DTE view
+                const now = new Date();
+                const closeTime = new Date();
+                closeTime.setHours(16, 0, 0, 0); // 4 PM ET
+                const minutesLeft = Math.max(1, (closeTime.getTime() - now.getTime()) / (1000 * 60));
+
+                // Charm = Total Delta that will decay / minutes remaining
+                // Inverted because we want Dealer position (Dealer is short the option)
+                // Short Call Delta: -0.15 -> 0 (Needs to buy)
+                // Short Put Delta: +0.15 -> 0 (Needs to sell)
+                metrics.netCharm = -(metrics.callDelta + metrics.putDelta) / minutesLeft;
             }
 
             // 1. Total Metrics
             let totalGEX = 0;
             let netVanna = 0;
+            let netCharm = 0;
             strikeMetrics.forEach(m => {
                 totalGEX += m.netGEX;
                 netVanna += m.netVanna;
+                netCharm += m.netCharm;
             });
 
             // 2. Gamma Flip (Strike donde GEX cruza de positivo a negativo)
@@ -223,7 +243,8 @@ export class GEXService {
                 currentPrice,
                 regime,
                 expectedMove,
-                netVanna
+                netVanna,
+                netCharm
             };
 
         } catch (error) {
@@ -269,7 +290,8 @@ export class GEXService {
             putWall: 0,
             currentPrice: 0,
             regime: 'neutral',
-            netVanna: 0
+            netVanna: 0,
+            netCharm: 0
         };
     }
 

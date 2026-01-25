@@ -2,12 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.7.2] - 2026-01-25
+## [1.7.3] - 2026-01-25
 
 ### Feat (Características Nuevas)
-- **Net Vanna Implementation**: Cálculo formal de la exposición Vanna Neta de los dealers basado en Vega e IV.
-- **Vanna Crush Play Strategy**: Nueva estrategia de señales que identifica oportunidades de venta de premium basadas en el sesgo de volatilidad (IV Crush), independiente del movimiento del precio.
-- **HUD Update**: Renombrado "Vanna Exposure" a "Net Vanna" para mayor precisión técnica y habilitación de datos en tiempo real.
+- **Net Charm HUD Card**: Nueva métrica visual que calcula la presión de compra/venta generada por el paso del tiempo (Delta Decay). Un sensor crítico para entender los rallies y sell-offs de fin de sesión.
+- **Charm-Engineered Signals**: Habilitación del factor Charm en el cálculo del Quality Scoring. Las señales Premium ahora requieren alineación con el factor temporal para mayor probabilidad de éxito.
+
+## [1.7.2] - 2026-01-25
 
 ## [1.7.1] - 2026-01-25
 

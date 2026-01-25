@@ -59,6 +59,7 @@ export interface GEXMetrics {
   regime: 'stable' | 'volatile' | 'neutral'; // Régimen de volatilidad
   expectedMove?: number;               // Movimiento esperado del día (ATM Straddle)
   netVanna: number;                    // Exposición Vanna Neta (IV Drop -> Buy/Sell)
+  netCharm: number;                    // Exposición Charm Neta (Delta Decay)
 }
 
 interface MarketStore {
