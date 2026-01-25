@@ -294,6 +294,10 @@ export class SchwabService {
    */
   async getMarketNews(symbol?: string, limit: number = 20): Promise<any[]> {
     try {
+      if (!this.accessToken) {
+        return [];
+      }
+
       const endpoint = symbol
         ? `/marketdata/v1/${symbol}/news`
         : `/marketdata/v1/news`;
@@ -301,7 +305,7 @@ export class SchwabService {
       const response = await this.apiGet(endpoint, { maxResults: limit });
       return response || [];
     } catch (error) {
-      console.error('❌ Failed to fetch market news:', error);
+      console.warn('⚠️ Failed to fetch market news from Schwab.');
       return [];
     }
   }

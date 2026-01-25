@@ -1,6 +1,7 @@
 
 interface EconomicEvent {
     id: string;
+    date: string;
     time: string;
     event: string;
     country: string;
@@ -79,7 +80,8 @@ export class EconomicCalendarService {
         staticEvents.forEach(e => {
             events.push({
                 id: `${e.date}-${e.event.replace(/\s/g, '-')}`,
-                time: e.time,
+                date: e.date,
+                time: e.time, // Assumed to be ET/NY Time
                 event: e.event,
                 country: e.country,
                 impact: e.impact,
@@ -96,7 +98,8 @@ export class EconomicCalendarService {
         if (dayOfWeek === 5) { // Friday
             events.push({
                 id: `${dateStr}-nfp`,
-                time: '08:30',
+                date: dateStr,
+                time: '08:30', // NY Time
                 event: 'Non-Farm Payrolls',
                 country: 'US',
                 impact: 'HIGH',
@@ -108,7 +111,8 @@ export class EconomicCalendarService {
         if (dayOfWeek === 4) { // Thursday
             events.push({
                 id: `${dateStr}-jobless`,
-                time: '08:30',
+                date: dateStr,
+                time: '08:30', // NY Time
                 event: 'Initial Jobless Claims',
                 country: 'US',
                 impact: 'MEDIUM',
@@ -121,7 +125,8 @@ export class EconomicCalendarService {
         if (dayOfMonth >= 10 && dayOfMonth <= 15) {
             events.push({
                 id: `${dateStr}-cpi`,
-                time: '08:30',
+                date: dateStr,
+                time: '08:30', // NY Time
                 event: 'CPI (Consumer Price Index) MoM',
                 country: 'US',
                 impact: 'HIGH',

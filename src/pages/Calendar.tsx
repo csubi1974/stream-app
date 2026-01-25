@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 interface EconomicEvent {
     id: string;
+    date: string;
     time: string;
     event: string;
     country: string;
@@ -183,9 +184,10 @@ export function Calendar() {
                                                 }`}
                                         >
                                             <div className="flex items-start space-x-4">
-                                                {/* Time */}
-                                                <div className="flex-shrink-0 w-16">
-                                                    <div className="text-sm font-mono text-gray-400">{event.time}</div>
+                                                {/* Time & Date */}
+                                                <div className="flex-shrink-0 w-24">
+                                                    <div className="text-xs text-gray-500 font-bold mb-1">{event.date}</div>
+                                                    <div className="text-sm font-mono text-gray-300">{event.time} ET</div>
                                                     {event.isLive && (
                                                         <div className="text-xs text-red-400 font-bold animate-pulse mt-1">
                                                             LIVE NOW
@@ -250,8 +252,11 @@ export function Calendar() {
                             <div className="divide-y divide-gray-700 max-h-[600px] overflow-y-auto">
                                 {news.length === 0 ? (
                                     <div className="p-8 text-center">
-                                        <TrendingUp className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-                                        <p className="text-gray-400">{t('No news available')}</p>
+                                        <AlertCircle className="h-12 w-12 text-gray-600 mx-auto mb-4" />
+                                        <p className="text-gray-400 font-medium mb-2">{t('No news sources connected')}</p>
+                                        <p className="text-xs text-gray-500 max-w-[200px] mx-auto">
+                                            {t('Connect your Schwab account to receive live market news, or add an external feed.')}
+                                        </p>
                                     </div>
                                 ) : (
                                     news.map((item, index) => (
