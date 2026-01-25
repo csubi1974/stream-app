@@ -176,6 +176,17 @@ export function GEXMetricsHUD() {
                     tooltip={t('El nivel de precio donde el mercado cambia de régimen estable a volátil. Por debajo de este nivel, los Dealers venden cuando el mercado cae, aumentando la volatilidad.')}
                 />
 
+                {/* Expected Move */}
+                <MetricCard
+                    icon={<TrendingUp className="h-5 w-5" />}
+                    label={t('Expected Move')}
+                    value={expectedMove ? `±$${expectedMove.toFixed(1)}` : '--'}
+                    valueColor="text-purple-400"
+                    subtitle={expectedMove && currentPrice > 0 ? `${((expectedMove / currentPrice) * 100).toFixed(2)}%` : t('Calculating...')}
+                    trend="stable"
+                    tooltip={t('El rango máximo de movimiento esperado para hoy basado en el precio de los Straddles ATM. El 68% del tiempo el precio terminará dentro de esta frontera.')}
+                />
+
                 {/* Net Institutional Delta */}
                 <MetricCard
                     icon={netInstitutionalDelta > 0 ? <TrendingUp className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />}
@@ -220,15 +231,16 @@ export function GEXMetricsHUD() {
                     tooltip={t('Mide el efecto del paso del tiempo (Delta Decay) en las coberturas de los Dealers. Si es positivo (Verde), el simple paso del tiempo obliga a los Dealers a comprar acciones (Rally de cierre). Si es negativo (Rojo), los obliga a vender.')}
                 />
 
-                {/* Expected Move */}
+                {/* Put Wall */}
                 <MetricCard
-                    icon={<TrendingUp className="h-5 w-5" />}
-                    label={t('Expected Move')}
-                    value={expectedMove ? `±$${expectedMove.toFixed(1)}` : '--'}
-                    valueColor="text-purple-400"
-                    subtitle={expectedMove && currentPrice > 0 ? `${((expectedMove / currentPrice) * 100).toFixed(2)}%` : t('Calculating...')}
-                    trend="stable"
-                    tooltip={t('El rango máximo de movimiento esperado para hoy basado en el precio de los Straddles ATM. El 68% del tiempo el precio terminará dentro de esta frontera.')}
+                    icon={<Shield className="h-5 w-5 rotate-180" />}
+                    label={t('Put Wall')}
+                    value={`$${putWall.toFixed(0)}`}
+                    valueColor="text-green-400"
+                    subtitle={t('Support Level')}
+                    trend="support"
+                    highlight={Math.abs(currentPrice - putWall) / currentPrice < 0.01}
+                    tooltip={t('El Strike con mayor exposición de Gamma en Puts. Actúa como el soporte más sólido. Es donde los Dealers compran agresivamente para frenar la caída.')}
                 />
 
                 {/* Call Wall */}
@@ -241,18 +253,6 @@ export function GEXMetricsHUD() {
                     trend="resistance"
                     highlight={Math.abs(currentPrice - callWall) / currentPrice < 0.01}
                     tooltip={t('El Strike con mayor exposición de Gamma en Calls. Actúa como un imán que frena las subidas. Es la resistencia estadística más fuerte del día.')}
-                />
-
-                {/* Put Wall */}
-                <MetricCard
-                    icon={<Shield className="h-5 w-5 rotate-180" />}
-                    label={t('Put Wall')}
-                    value={`$${putWall.toFixed(0)}`}
-                    valueColor="text-green-400"
-                    subtitle={t('Support Level')}
-                    trend="support"
-                    highlight={Math.abs(currentPrice - putWall) / currentPrice < 0.01}
-                    tooltip={t('El Strike con mayor exposición de Gamma en Puts. Actúa como el soporte más sólido. Es donde los Dealers compran agresivamente para frenar la caída.')}
                 />
             </div>
 
