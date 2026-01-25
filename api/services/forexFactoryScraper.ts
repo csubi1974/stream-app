@@ -4,6 +4,7 @@ import axios from 'axios';
 export interface ScrapedEvent {
     id: string;
     time: string;
+    date: string;
     currency: string;
     impact: 'HIGH' | 'MEDIUM' | 'LOW';
     event: string;
@@ -13,99 +14,60 @@ export interface ScrapedEvent {
 }
 
 export class ForexFactoryScraper {
-    private readonly BASE_URL = 'https://www.forexfactory.com/calendar';
+    private readonly JSON_URL = 'https://nfs.faireconomy.media/ff_calendar_thisweek.json';
 
     /**
-     * Scrape events for a specific date (format: MmmDD.yyyy e.g., jan24.2025)
-     * If no date provided, defaults to today
+     * Fetch events from Forex Factory's JSON feed.
+     * The feed usually contains events for the current week.
      */
     async scrapeEvents(dateStr?: string): Promise<ScrapedEvent[]> {
         try {
-            const url = dateStr ? `${this.BASE_URL}?day=${dateStr}` : this.BASE_URL;
-            // console.log(`🕵️ Scraping Forex Factory: ${url}`);
-
-            const response = await axios.get(url, {
+            // console.log(`🕵️ Fetching Forex Factory JSON: ${this.JSON_URL}`);
+            const response = await axios.get(this.JSON_URL, {
                 headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
                 }
             });
 
-            return this.parseHtml(response.data);
+            const rawEvents = response.data;
+            if (!Array.isArray(rawEvents)) return [];
+
+            const events = rawEvents.map((item: any, index: number) => {
+                // Map impact
+                let impact: 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW';
+                const rawImpact = (item.impact || '').toLowerCase();
+                if (rawImpact === 'high') impact = 'HIGH';
+                else if (rawImpact === 'medium') impact = 'MEDIUM';
+                else if (rawImpact === 'low') impact = 'LOW';
+
+                return {
+                    id: `ff-${index}-${item.date}`,
+                    date: item.date, // Format: "YYYY-MM-DD" usually, but let's check
+                    time: item.time, // Format: "12:30pm"
+                    currency: item.country, // "USD", "EUR", etc.
+                    impact,
+                    event: item.title,
+                    actual: item.actual || '',
+                    forecast: item.forecast || '',
+                    previous: item.previous || ''
+                };
+            });
+
+            if (dateStr) {
+                // ForexFactory JSON dates are usually ISO or similar. 
+                // We might need to normalize dateStr to match item.date.
+                // The dateStr passed from EconomicCalendarService is currently "MmmDD.yyyy".
+                // Let's try to filter by the normalized date if possible.
+                // However, the JSON feed is small enough that we can just return it all 
+                // and let the service handle the filter if needed, or filter here.
+
+                // For now, let's just return all and fix the service to filter correctly.
+            }
+
+            return events;
         } catch (error) {
-            console.error('❌ Error scraping Forex Factory:', error.message);
+            console.error('❌ Error fetching Forex Factory JSON:', error.message);
             return [];
         }
-    }
-
-    private parseHtml(html: string): ScrapedEvent[] {
-        const events: ScrapedEvent[] = [];
-
-        // Simple regex-based extraction (lighter than cheerio for this specific table structure)
-        // We look for the table rows in the calendar
-
-        // This is a simplified parser. The actual HTML structure is complex.
-        // We will look for data-event-id patterns which usually contain the row data
-
-        const rowRegex = /<tr class="calendar_row[\s\S]*?<\/tr>/g;
-        const matches = html.match(rowRegex);
-
-        if (!matches) return [];
-
-        for (const row of matches) {
-            // Extract Time
-            const timeMatch = row.match(/class="calendar__time"[^>]*>([\s\S]*?)<\/td>/);
-            let time = timeMatch ? timeMatch[1].trim() : '';
-            // Clean time tag if present
-            time = time.replace(/<[^>]*>/g, '').trim();
-
-            // Extract Currency
-            const currencyMatch = row.match(/class="calendar__currency"[^>]*>([\s\S]*?)<\/td>/);
-            const currency = currencyMatch ? currencyMatch[1].trim() : '';
-
-            // Extract Impact (color)
-            let impact: 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW';
-            if (row.includes('impact-red')) impact = 'HIGH';
-            else if (row.includes('impact-orange')) impact = 'MEDIUM';
-            else if (row.includes('impact-yellow')) impact = 'LOW';
-
-            // Extract Event Name
-            const eventMatch = row.match(/class="calendar__event-title"[^>]*>([\s\S]*?)<\/span>/);
-            const event = eventMatch ? eventMatch[1].trim() : '';
-
-            // Extract Actual
-            const actualMatch = row.match(/class="calendar__actual"[^>]*>([\s\S]*?)<\/td>/);
-            let actual = actualMatch ? actualMatch[1].trim() : '';
-            actual = actual.replace(/<[^>]*>/g, '').trim();
-
-            // Extract Forecast
-            const forecastMatch = row.match(/class="calendar__forecast"[^>]*>([\s\S]*?)<\/td>/);
-            let forecast = forecastMatch ? forecastMatch[1].trim() : '';
-            forecast = forecast.replace(/<[^>]*>/g, '').trim();
-
-            // Extract Previous
-            const previousMatch = row.match(/class="calendar__previous"[^>]*>([\s\S]*?)<\/td>/);
-            let previous = previousMatch ? previousMatch[1].trim() : '';
-            previous = previous.replace(/<[^>]*>/g, '').trim();
-
-            // ID
-            const idMatch = row.match(/data-event-id="(\d+)"/);
-            const id = idMatch ? idMatch[1] : `evt-${Math.random()}`;
-
-            // Filter out empty rows or non-relevant currencies if needed (optional)
-            if (currency && event) {
-                events.push({
-                    id,
-                    time,
-                    currency,
-                    impact,
-                    event,
-                    actual,
-                    forecast,
-                    previous
-                });
-            }
-        }
-
-        return events;
     }
 }

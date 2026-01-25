@@ -22,15 +22,29 @@ export class EconomicCalendarService {
     }
 
     private static readonly STATIC_EVENTS = [
-        // FOMC Meetings 2026
+        // JANUARY 2026
+        { date: '2026-01-09', time: '08:30', event: 'Employment Situation (NFP)', country: 'US', impact: 'HIGH' as const },
+        { date: '2026-01-13', time: '08:30', event: 'Consumer Price Index (CPI)', country: 'US', impact: 'HIGH' as const },
+        { date: '2026-01-26', time: '08:30', event: 'Durable Goods Orders', country: 'US', impact: 'MEDIUM' as const },
+        { date: '2026-01-27', time: '14:00', event: 'FOMC Meeting - Day 1', country: 'US', impact: 'MEDIUM' as const },
         { date: '2026-01-28', time: '14:00', event: 'FOMC Meeting Decision', country: 'US', impact: 'HIGH' as const },
-        { date: '2026-03-17', time: '14:00', event: 'FOMC Meeting Decision', country: 'US', impact: 'HIGH' as const },
-        { date: '2026-05-06', time: '14:00', event: 'FOMC Meeting Decision', country: 'US', impact: 'HIGH' as const },
-        { date: '2026-06-16', time: '14:00', event: 'FOMC Meeting Decision', country: 'US', impact: 'HIGH' as const },
-        { date: '2026-07-28', time: '14:00', event: 'FOMC Meeting Decision', country: 'US', impact: 'HIGH' as const },
-        { date: '2026-09-15', time: '14:00', event: 'FOMC Meeting Decision', country: 'US', impact: 'HIGH' as const },
-        { date: '2026-11-04', time: '14:00', event: 'FOMC Meeting Decision', country: 'US', impact: 'HIGH' as const },
-        { date: '2026-12-15', time: '14:00', event: 'FOMC Meeting Decision', country: 'US', impact: 'HIGH' as const },
+        { date: '2026-01-29', time: '08:30', event: 'GDP Growth Rate (Advance)', country: 'US', impact: 'HIGH' as const },
+        { date: '2026-01-30', time: '08:30', event: 'Producer Price Index (PPI)', country: 'US', impact: 'MEDIUM' as const },
+
+        // FEBRUARY 2026
+        { date: '2026-02-02', time: '10:00', event: 'ISM Manufacturing PMI', country: 'US', impact: 'HIGH' as const },
+        { date: '2026-02-06', time: '08:30', event: 'Employment Report (NFP)', country: 'US', impact: 'HIGH' as const },
+        { date: '2026-02-11', time: '08:30', event: 'Consumer Price Index (CPI)', country: 'US', impact: 'HIGH' as const },
+        { date: '2026-02-18', time: '14:00', event: 'FOMC Minutes (Jan meeting)', country: 'US', impact: 'MEDIUM' as const },
+
+        // FOMC Meetings Rest of 2026
+        { date: '2026-03-18', time: '14:00', event: 'FOMC Meeting Decision', country: 'US', impact: 'HIGH' as const },
+        { date: '2026-04-29', time: '14:00', event: 'FOMC Meeting Decision', country: 'US', impact: 'HIGH' as const },
+        { date: '2026-06-17', time: '14:00', event: 'FOMC Meeting Decision', country: 'US', impact: 'HIGH' as const },
+        { date: '2026-07-29', time: '14:00', event: 'FOMC Meeting Decision', country: 'US', impact: 'HIGH' as const },
+        { date: '2026-09-16', time: '14:00', event: 'FOMC Meeting Decision', country: 'US', impact: 'HIGH' as const },
+        { date: '2026-10-28', time: '14:00', event: 'FOMC Meeting Decision', country: 'US', impact: 'HIGH' as const },
+        { date: '2026-12-09', time: '14:00', event: 'FOMC Meeting Decision', country: 'US', impact: 'HIGH' as const },
     ];
 
     /**
