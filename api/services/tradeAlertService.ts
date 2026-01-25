@@ -850,15 +850,20 @@ export class TradeAlertService {
                     // Use INSERT OR IGNORE to avoid errors on duplicate IDs (same strike/expiry)
                     await db.run(`
                         INSERT OR IGNORE INTO trade_alerts (
-                            id, strategy, underlying, generated_at, status, alert_data
-                        ) VALUES (?, ?, ?, ?, ?, ?)
+                            id, strategy, underlying, generated_at, status, alert_data,
+                            quality_score, quality_level, risk_level, quality_metadata
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     `, [
                         alert.id,
                         alert.strategy,
                         alert.underlying,
                         alert.generatedAt,
                         alert.status,
-                        JSON.stringify(alert)
+                        JSON.stringify(alert),
+                        alert.qualityScore || null,
+                        alert.qualityLevel || null,
+                        alert.riskLevel || null,
+                        alert.metadata ? JSON.stringify(alert.metadata) : null
                     ]);
                 } catch (saveError) {
                     console.error(`❌ Error saving alert ${alert.id}:`, saveError);

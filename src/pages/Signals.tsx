@@ -74,6 +74,8 @@ export function Signals() {
     const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [filterStrategy, setFilterStrategy] = useState<string>('ALL');
     const [filterStatus, setFilterStatus] = useState<string>('ACTIVE');
+    const [filterQuality, setFilterQuality] = useState<string>('ALL');
+    const [filterRisk, setFilterRisk] = useState<string>('ALL');
     const [minProbability, setMinProbability] = useState<number>(70);
 
     const fetchAlerts = async () => {
@@ -118,6 +120,8 @@ export function Signals() {
     const filteredAlerts = alerts.filter(alert => {
         if (filterStrategy !== 'ALL' && alert.strategy !== filterStrategy) return false;
         if (filterStatus !== 'ALL' && alert.status !== filterStatus) return false;
+        if (filterQuality !== 'ALL' && alert.qualityLevel !== filterQuality) return false;
+        if (filterRisk !== 'ALL' && alert.riskLevel !== filterRisk) return false;
         if (alert.probability < minProbability) return false;
         return true;
     });
@@ -353,9 +357,9 @@ export function Signals() {
                         <Filter className="h-4 w-4 text-gray-400" />
                         <span className="text-sm font-medium text-gray-300">{t('Filtros')}</span>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
                         {viewMode === 'HISTORY' && (
-                            <div>
+                            <div className="md:col-span-1">
                                 <label className="block text-xs text-gray-400 mb-2">{t('Fecha')}</label>
                                 <input
                                     type="date"
@@ -365,7 +369,7 @@ export function Signals() {
                                 />
                             </div>
                         )}
-                        <div className={viewMode === 'LIVE' ? 'col-span-1' : ''}>
+                        <div className={viewMode === 'LIVE' ? 'md:col-span-1' : ''}>
                             <label className="block text-xs text-gray-400 mb-2">{t('Estrategia')}</label>
                             <select
                                 value={filterStrategy}
@@ -376,6 +380,32 @@ export function Signals() {
                                 <option value="BULL_PUT_SPREAD">{t('Bull Put Spread')}</option>
                                 <option value="BEAR_CALL_SPREAD">{t('Bear Call Spread')}</option>
                                 <option value="IRON_CONDOR">{t('Iron Condor')}</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs text-gray-400 mb-2">{t('Calidad')}</label>
+                            <select
+                                value={filterQuality}
+                                onChange={(e) => setFilterQuality(e.target.value)}
+                                className="w-full bg-gray-700 text-white px-3 py-2 rounded-lg text-sm border border-gray-600 focus:border-blue-500 focus:outline-none"
+                            >
+                                <option value="ALL">{t('Todas')}</option>
+                                <option value="PREMIUM">✨ Premium</option>
+                                <option value="STANDARD">👍 Standard</option>
+                                <option value="AGGRESSIVE">⚠️ Aggressive</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs text-gray-400 mb-2">{t('Riesgo')}</label>
+                            <select
+                                value={filterRisk}
+                                onChange={(e) => setFilterRisk(e.target.value)}
+                                className="w-full bg-gray-700 text-white px-3 py-2 rounded-lg text-sm border border-gray-600 focus:border-blue-500 focus:outline-none"
+                            >
+                                <option value="ALL">{t('Todos')}</option>
+                                <option value="LOW">🟢 Low</option>
+                                <option value="MEDIUM">🟡 Medium</option>
+                                <option value="HIGH">🔴 High</option>
                             </select>
                         </div>
                         <div>
@@ -524,6 +554,50 @@ export function Signals() {
                                         </div>
                                     </div>
                                 </div>
+
+                                {/* Quality Factors Breakdown */}
+                                {alert.qualityFactors && (
+                                    <div className="bg-gray-900/40 rounded-xl p-3 mb-4 border border-gray-700/50">
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+                                            <div>
+                                                <div className="text-gray-500 mb-1">Move Exhaustion</div>
+                                                <div className="w-full bg-gray-700 rounded-full h-1.5">
+                                                    <div className={`h-1.5 rounded-full ${alert.qualityFactors.moveExhaustion >= 7 ? 'bg-green-500' : alert.qualityFactors.moveExhaustion >= 4 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${alert.qualityFactors.moveExhaustion * 10}%` }}></div>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div className="text-gray-500 mb-1">Expected Move Usage</div>
+                                                <div className="w-full bg-gray-700 rounded-full h-1.5">
+                                                    <div className={`h-1.5 rounded-full ${alert.qualityFactors.expectedMoveUsage >= 7 ? 'bg-green-500' : alert.qualityFactors.expectedMoveUsage >= 4 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${alert.qualityFactors.expectedMoveUsage * 10}%` }}></div>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div className="text-gray-500 mb-1">Wall Proximity</div>
+                                                <div className="w-full bg-gray-700 rounded-full h-1.5">
+                                                    <div className={`h-1.5 rounded-full ${alert.qualityFactors.wallProximity >= 7 ? 'bg-green-500' : alert.qualityFactors.wallProximity >= 4 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${alert.qualityFactors.wallProximity * 10}%` }}></div>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div className="text-gray-500 mb-1">Time Remaining</div>
+                                                <div className="w-full bg-gray-700 rounded-full h-1.5">
+                                                    <div className={`h-1.5 rounded-full ${alert.qualityFactors.timeRemaining >= 7 ? 'bg-green-500' : alert.qualityFactors.timeRemaining >= 4 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${alert.qualityFactors.timeRemaining * 10}%` }}></div>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div className="text-gray-500 mb-1">Regime Strength</div>
+                                                <div className="w-full bg-gray-700 rounded-full h-1.5">
+                                                    <div className={`h-1.5 rounded-full ${alert.qualityFactors.regimeStrength >= 7 ? 'bg-green-500' : alert.qualityFactors.regimeStrength >= 4 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${alert.qualityFactors.regimeStrength * 10}%` }}></div>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div className="text-gray-500 mb-1">Drift Alignment</div>
+                                                <div className="w-full bg-gray-700 rounded-full h-1.5">
+                                                    <div className={`h-1.5 rounded-full ${alert.qualityFactors.driftAlignment >= 7 ? 'bg-green-500' : alert.qualityFactors.driftAlignment >= 4 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${alert.qualityFactors.driftAlignment * 10}%` }}></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Footer: GEX Context + Actions */}
                                 <div className="flex items-center justify-between pt-4 border-t border-gray-700">

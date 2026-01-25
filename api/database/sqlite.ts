@@ -39,9 +39,12 @@ class JsonFallbackDB {
   async run(query: string, params: any[]) {
     const lowerQuery = query.toLowerCase();
     if (lowerQuery.includes('insert into trade_alerts') || lowerQuery.includes('insert or ignore into trade_alerts')) {
-      const [id, strategy, underlying, generated_at, status, alert_data] = params;
+      const [id, strategy, underlying, generated_at, status, alert_data, quality_score, quality_level, risk_level, quality_metadata] = params;
       if (!this.data.alerts.find((a: any) => a.id === id)) {
-        this.data.alerts.push({ id, strategy, underlying, generated_at, status, alert_data });
+        this.data.alerts.push({
+          id, strategy, underlying, generated_at, status, alert_data,
+          quality_score, quality_level, risk_level, quality_metadata
+        });
         this.save();
         console.log(`✅ Alert ${id} saved to JSON fallback`);
       } else {
@@ -108,11 +111,26 @@ export async function initializeDb() {
       );
       CREATE TABLE IF NOT EXISTS trade_alerts (
         id TEXT PRIMARY KEY, strategy TEXT, underlying TEXT, generated_at TEXT, 
-        status TEXT, alert_data TEXT
+        status TEXT, alert_data TEXT,
+        quality_score INTEGER, quality_level TEXT, risk_level TEXT, quality_metadata TEXT
       );
       CREATE INDEX IF NOT EXISTS idx_symbol_time ON options_chain_snapshots(symbol, snapshot_time);
       CREATE INDEX IF NOT EXISTS idx_alerts_time ON trade_alerts(generated_at);
     `);
+
+    // Migration for existing tables
+    try {
+      await db.exec(`ALTER TABLE trade_alerts ADD COLUMN quality_score INTEGER;`);
+    } catch (e) { /* Column likely exists */ }
+    try {
+      await db.exec(`ALTER TABLE trade_alerts ADD COLUMN quality_level TEXT;`);
+    } catch (e) { /* Column likely exists */ }
+    try {
+      await db.exec(`ALTER TABLE trade_alerts ADD COLUMN risk_level TEXT;`);
+    } catch (e) { /* Column likely exists */ }
+    try {
+      await db.exec(`ALTER TABLE trade_alerts ADD COLUMN quality_metadata TEXT;`);
+    } catch (e) { /* Column likely exists */ }
 
     isAvailable = true;
     console.log('💾 SQLite Database initialized (Native)');
