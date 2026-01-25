@@ -8,7 +8,7 @@
     "MARKET OPEN": "MARKET OPEN",
     "MARKET CLOSED": "MARKET CLOSED",
     "TapeReading": "TapeReading",
-    "Version": "v1.7.4",
+    "Version": "v1.7.5",
     "TapeReading Platform": "Tape Reading Platform",
     "Real-time analysis": "Real-time market flow analysis for 0DTE options and swing trading",
     "Connected to market data": "Connected to market data",
@@ -265,9 +265,11 @@
     "Rastreo dinámico del Delta Decay conforme se acerca el cierre. Permite identificar la presión mecánica de compra o venta generada puramente por el paso del tiempo.": "Dynamic Delta Decay tracking towards the close. Identifies mechanical buy or sell pressure generated purely by the passage of time.",
     "Sistema de validación multi-factorial que puntúa la probabilidad de éxito de cada señal basándose en el agotamiento del movimiento, uso del rango esperado y alineación de deriva.": "Multi-factorial validation system that scores the probability of success for each signal based on move exhaustion, expected range usage, and drift alignment.",
     "Generación de estructuras profesionales (BPS, BCS, IC) validadas por el ecosistema de GEX/Vanna/Charm, optimizando strikes para máxima captura de premium con riesgo controlado.": "Generation of professional structures (BPS, BCS, IC) validated by the GEX/Vanna/Charm ecosystem, optimizing strikes for maximum premium capture with controlled risk.",
-    "Net Vanna & Charm": "Net Vanna & Charm",
-    "Quality Scoring System": "Quality Scoring System",
-    "Net Vanna Edge": "Net Vanna Edge",
-    "Temporal Charm Factor": "Temporal Charm Factor",
-    "Institutional Quality Scoring": "Institutional Quality Scoring"
+    "Net Vanna & Charm: Sensores de volatilidad y tiempo": "Net Vanna & Charm: Volatility and Time Sensors",
+    "Quality Scoring: Filtrado algorítmico de riesgo": "Quality Scoring: Algorithmic Risk Filtering",
+    "Institutional Delta: Rastreo del sesgo de mercado": "Institutional Delta: Market Bias Tracking",
+    "Elimina el ruido del análisis convencional. Stream Market Engine procesa dinámicas complejas de opciones y flujos de capital para identificar zonas de alta probabilidad operativa basadas en liquidez y cobertura institucional.": "Eliminate the noise of conventional retail analysis. Our infrastructure processes thousands of hedging data points to identify liquidity nodes where institutional intervention is mechanically inevitable.",
+    "Gamma Exposure (GEX): El mapa de liquidez institucional": "Gamma Exposure (GEX): The Institutional Liquidity Map",
+    "¿Qué es Stream Market Engine?": "What is Stream Market Engine?",
+    "Arquitectura avanzada para la decodificación de flujos institucionales. Stream Market Engine permite visualizar las fuerzas subyacentes de la microestructura del mercado, revelando el posicionamiento real de los proveedores de liquidez.": "Intel architecture that decodes market microstructure in real-time. Stream Market Engine identifies institutional hedging imbalances, allowing you to trade where major players are mechanically forced to intervene."
 }

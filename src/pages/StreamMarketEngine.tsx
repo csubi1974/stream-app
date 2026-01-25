@@ -44,10 +44,10 @@ export function StreamMarketEngine() {
                         </p>
                         <ul className="space-y-4">
                             {[
-                                { label: 'Gamma Exposure (GEX)', icon: Activity, color: 'text-blue-400' },
-                                { label: 'Net Vanna & Charm', icon: Zap, color: 'text-yellow-400' },
-                                { label: 'Quality Scoring System', icon: Shield, color: 'text-green-400' },
-                                { label: 'Net Institutional Delta', icon: TrendingUp, color: 'text-orange-400' }
+                                { label: 'Gamma Exposure (GEX): El mapa de liquidez institucional', icon: Activity, color: 'text-blue-400' },
+                                { label: 'Net Vanna & Charm: Sensores de volatilidad y tiempo', icon: Zap, color: 'text-yellow-400' },
+                                { label: 'Quality Scoring: Filtrado algorítmico de riesgo', icon: Shield, color: 'text-green-400' },
+                                { label: 'Institutional Delta: Rastreo del sesgo de mercado', icon: TrendingUp, color: 'text-orange-400' }
                             ].map((item, i) => (
                                 <li key={i} className="flex items-center space-x-3 text-gray-300 font-medium">
                                     <item.icon className={`h-5 w-5 ${item.color}`} />

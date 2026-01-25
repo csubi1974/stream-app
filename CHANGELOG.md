@@ -2,13 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.7.4] - 2026-01-25
+## [1.7.5] - 2026-01-25
 
 ### Feat (Características Nuevas)
-- **Engine Page Update**: Actualización de la documentación técnica en la página `/engine` para incluir las nuevas capacidades de Vanna, Charm y Quality Scoring.
-- **Multilingual Consistency**: Asegurada la traducción completa de los nuevos conceptos institucionales en español e inglés.
+- **Institutional Branding & Terminology**: Rediseño del contenido textual en la página `/engine` con terminología de alto impacto institucional. Los textos ahora reflejan la capacidad de decodificación de microestructura y desequilibrios de cobertura mecánica.
+- **Value-Driven Labels**: Actualización de los indicadores core para incluir promesas de valor directas (ej: "Mapa de liquidez institucional").
 
-## [1.7.3] - 2026-01-25
+## [1.7.4] - 2026-01-25
 
 ## [1.7.1] - 2026-01-25
 
