@@ -54,8 +54,8 @@ export function Header() {
     { path: '/', label: t('Dashboard'), icon: BarChart3 },
     { path: '/signals', label: t('Signals'), icon: Target },
     { path: '/engine', label: t('Market Engine'), icon: Zap },
-    { path: '/watchlist', label: t('Watchlist'), icon: Bell },
     { path: '/calendar', label: t('Calendar'), icon: Calendar },
+    { path: '/watchlist', label: t('Watchlist'), icon: Bell },
     { path: '/backtest', label: t('Backtest'), icon: Clock },
     { path: '/settings', label: t('Settings'), icon: Settings },
   ];
