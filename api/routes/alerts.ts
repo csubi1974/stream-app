@@ -86,4 +86,42 @@ router.get('/status', async (req, res) => {
     }
 });
 
+/**
+ * PUT /api/alerts/:id/result
+ * Update the result of a trade alert (Settlement)
+ * Body: { result: 'WIN'|'LOSS', realizedPnl: number, closedAtPrice: number }
+ */
+router.put('/:id/result', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { result, realizedPnl, closedAtPrice } = req.body;
+
+        if (!result || realizedPnl === undefined || closedAtPrice === undefined) {
+            res.status(400).json({
+                success: false,
+                error: 'Missing required fields: result, realizedPnl, closedAtPrice'
+            });
+            return;
+        }
+
+        const success = await tradeAlertService.updateAlertResult(
+            id,
+            result,
+            Number(realizedPnl),
+            Number(closedAtPrice)
+        );
+
+        res.json({
+            success,
+            message: success ? 'Alert result updated successfully' : 'Alert not found'
+        });
+    } catch (error) {
+        console.error('❌ Error updating alert result:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to update alert result'
+        });
+    }
+});
+
 export default router;

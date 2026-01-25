@@ -921,4 +921,31 @@ export class TradeAlertService {
             return [];
         }
     }
+
+    /**
+     * Update the result of an alert (Settlement)
+     */
+    async updateAlertResult(
+        alertId: string,
+        result: 'WIN' | 'LOSS' | 'BREAKEVEN' | 'EXPIRED',
+        realizedPnl: number,
+        closedAtPrice: number
+    ) {
+        try {
+            const db = getDb();
+            const status = result === 'WIN' || result === 'LOSS' || result === 'BREAKEVEN' ? 'CLOSED' : 'EXPIRED';
+
+            await db.run(`
+                UPDATE trade_alerts 
+                SET result = ?, realized_pnl = ?, closed_at_price = ?, status = ?
+                WHERE id = ?
+            `, [result, realizedPnl, closedAtPrice, status, alertId]);
+
+            console.log(`✅ Updated result for alert ${alertId}: ${result} ($${realizedPnl})`);
+            return true;
+        } catch (error) {
+            console.error(`❌ Error updating alert result for ${alertId}:`, error);
+            return false;
+        }
+    }
 }

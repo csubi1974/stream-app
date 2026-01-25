@@ -38,16 +38,26 @@ class JsonFallbackDB {
   async run(query: string, params: any[]) {
     const lowerQuery = query.toLowerCase();
     if (lowerQuery.includes('insert into trade_alerts') || lowerQuery.includes('insert or ignore into trade_alerts')) {
-      const [id, strategy, underlying, generated_at, status, alert_data, quality_score, quality_level, risk_level, quality_metadata, exit_criteria] = params;
+      const [id, strategy, underlying, generated_at, status, alert_data, quality_score, quality_level, risk_level, quality_metadata, exit_criteria, result, realized_pnl, closed_at_price] = params;
       if (!this.data.alerts.find((a: any) => a.id === id)) {
         this.data.alerts.push({
           id, strategy, underlying, generated_at, status, alert_data,
-          quality_score, quality_level, risk_level, quality_metadata, exit_criteria
+          quality_score, quality_level, risk_level, quality_metadata, exit_criteria,
+          result, realized_pnl, closed_at_price
         });
         this.save();
         console.log(`✅ Alert ${id} saved to JSON fallback`);
       } else {
         console.log(`ℹ️ Alert ${id} already exists in JSON fallback`);
+      }
+    } else if (lowerQuery.includes('update trade_alerts set result')) {
+      // Mock update for results
+      const [result, realized_pnl, closed_at_price, status, id] = params;
+      const alertIndex = this.data.alerts.findIndex((a: any) => a.id === id);
+      if (alertIndex !== -1) {
+        this.data.alerts[alertIndex] = { ...this.data.alerts[alertIndex], result, realized_pnl, closed_at_price, status };
+        this.save();
+        console.log(`✅ Alert ${id} updated with results in JSON fallback`);
       }
     }
   }
@@ -112,7 +122,8 @@ export async function initializeDb() {
         id TEXT PRIMARY KEY, strategy TEXT, underlying TEXT, generated_at TEXT, 
         status TEXT, alert_data TEXT,
         quality_score INTEGER, quality_level TEXT, risk_level TEXT, quality_metadata TEXT,
-        exit_criteria TEXT
+        exit_criteria TEXT,
+        result TEXT, realized_pnl REAL, closed_at_price REAL
       );
       CREATE INDEX IF NOT EXISTS idx_symbol_time ON options_chain_snapshots(symbol, snapshot_time);
       CREATE INDEX IF NOT EXISTS idx_alerts_time ON trade_alerts(generated_at);
@@ -124,6 +135,9 @@ export async function initializeDb() {
     try { await db.exec(`ALTER TABLE trade_alerts ADD COLUMN risk_level TEXT;`); } catch (e) { }
     try { await db.exec(`ALTER TABLE trade_alerts ADD COLUMN quality_metadata TEXT;`); } catch (e) { }
     try { await db.exec(`ALTER TABLE trade_alerts ADD COLUMN exit_criteria TEXT;`); } catch (e) { }
+    try { await db.exec(`ALTER TABLE trade_alerts ADD COLUMN result TEXT;`); } catch (e) { }
+    try { await db.exec(`ALTER TABLE trade_alerts ADD COLUMN realized_pnl REAL;`); } catch (e) { }
+    try { await db.exec(`ALTER TABLE trade_alerts ADD COLUMN closed_at_price REAL;`); } catch (e) { }
 
     isAvailable = true;
     console.log('💾 SQLite Database initialized (Native)');
