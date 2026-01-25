@@ -12,7 +12,15 @@ interface EconomicEvent {
     isLive?: boolean;
 }
 
+import { ForexFactoryScraper } from './forexFactoryScraper.js';
+
 export class EconomicCalendarService {
+    private scraper: ForexFactoryScraper;
+
+    constructor() {
+        this.scraper = new ForexFactoryScraper();
+    }
+
     private static readonly STATIC_EVENTS = [
         // FOMC Meetings 2026
         { date: '2026-01-28', time: '14:00', event: 'FOMC Meeting Decision', country: 'US', impact: 'HIGH' as const },
@@ -73,6 +81,37 @@ export class EconomicCalendarService {
      * Get events by specific date
      */
     private async getEventsByDate(dateStr: string): Promise<EconomicEvent[]> {
+        // Try to scrape real data first
+        try {
+            // Need to convert YYYY-MM-DD to MmmDD.yyyy (e.g. jan24.2025)
+            const dateObj = new Date(dateStr);
+            const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
+            const monthStr = months[dateObj.getMonth()];
+            const formattedDate = `${monthStr}${dateObj.getDate()}.${dateObj.getFullYear()}`;
+
+            // console.log(`🔍 Scraping events for: ${formattedDate}`);
+            const scrapedEvents = await this.scraper.scrapeEvents(formattedDate);
+
+            if (scrapedEvents && scrapedEvents.length > 0) {
+                return scrapedEvents.map(e => ({
+                    id: e.id,
+                    date: dateStr,
+                    time: e.time,
+                    event: e.event,
+                    country: this.mapCurrencyToCountry(e.currency),
+                    impact: e.impact,
+                    actual: e.actual,
+                    forecast: e.forecast,
+                    previous: e.previous,
+                    isLive: false // We can't easily determine live status from scraper yet without accurate timezone parsing
+                }));
+            }
+        } catch (error) {
+            console.error(`⚠️ Failed to scrape events for ${dateStr}, falling back to static logic.`);
+        }
+
+        // FALLBACK: Static Logic if scraper fails
         const events: EconomicEvent[] = [];
 
         // Check static events (FOMC, etc.)
@@ -136,6 +175,20 @@ export class EconomicCalendarService {
         }
 
         return events.sort((a, b) => a.time.localeCompare(b.time));
+    }
+
+    private mapCurrencyToCountry(currency: string): string {
+        const map: Record<string, string> = {
+            'USD': 'US',
+            'EUR': 'EU',
+            'GBP': 'UK',
+            'JPY': 'JP',
+            'CNY': 'CN',
+            'CAD': 'CA',
+            'AUD': 'AU',
+            'CHF': 'CH'
+        };
+        return map[currency] || 'US';
     }
 
     /**
