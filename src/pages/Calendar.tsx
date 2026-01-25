@@ -33,6 +33,7 @@ export function Calendar() {
     const [news, setNews] = useState<NewsItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [lastUpdate, setLastUpdate] = useState<string>('');
+    const [impactFilter, setImpactFilter] = useState<'ALL' | 'HIGH' | 'MEDIUM' | 'LOW'>('ALL');
 
     useEffect(() => {
         fetchData();
@@ -137,24 +138,50 @@ export function Calendar() {
                     </div>
                 </div>
 
-                {/* Tabs */}
-                <div className="flex space-x-2 mb-6">
-                    {[
-                        { id: 'today' as TabType, label: t('Today') },
-                        { id: 'week' as TabType, label: t('This Week') },
-                        { id: 'next-week' as TabType, label: t('Next Week') }
-                    ].map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            className={`px-6 py-3 rounded-lg font-bold transition-all ${activeTab === tab.id
-                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                                }`}
-                        >
-                            {tab.label}
-                        </button>
-                    ))}
+                {/* Tabs & Filters */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <div className="flex space-x-2">
+                        {[
+                            { id: 'today' as TabType, label: t('Today') },
+                            { id: 'week' as TabType, label: t('This Week') },
+                            { id: 'next-week' as TabType, label: t('Next Week') }
+                        ].map(tab => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === tab.id
+                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                                    }`}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="flex items-center space-x-2 bg-gray-800 p-1 rounded-xl border border-gray-700">
+                        {[
+                            { id: 'ALL', label: t('All'), color: 'text-white' },
+                            { id: 'HIGH', label: '🔴', color: 'bg-red-500/20 text-red-500' },
+                            { id: 'MEDIUM', label: '🟡', color: 'bg-yellow-500/20 text-yellow-500' },
+                            { id: 'LOW', label: '🟢', color: 'bg-green-500/20 text-green-500' }
+                        ].map(filter => (
+                            <button
+                                key={filter.id}
+                                onClick={() => setImpactFilter(filter.id as any)}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${impactFilter === filter.id
+                                    ? 'bg-gray-700 text-white border border-gray-600'
+                                    : 'text-gray-500 hover:text-gray-300'
+                                    }`}
+                                title={filter.id === 'ALL' ? t('Show All') : `${t('Filter by')} ${filter.id}`}
+                            >
+                                <span className="flex items-center space-x-1">
+                                    <span>{filter.label}</span>
+                                    {filter.id === 'ALL' && <span>{t('Impact')}</span>}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -171,72 +198,74 @@ export function Calendar() {
                                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
                                         <p className="text-gray-400 mt-4">{t('Loading events...')}</p>
                                     </div>
-                                ) : events.length === 0 ? (
+                                ) : events.filter(e => impactFilter === 'ALL' || e.impact === impactFilter).length === 0 ? (
                                     <div className="p-8 text-center">
-                                        <CalendarIcon className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-                                        <p className="text-gray-400">{t('No events scheduled')}</p>
+                                        <AlertCircle className="h-12 w-12 text-gray-600 mx-auto mb-4" />
+                                        <p className="text-gray-400">{t('No events found for this impact level')}</p>
                                     </div>
                                 ) : (
-                                    events.map(event => (
-                                        <div
-                                            key={event.id}
-                                            className={`p-4 hover:bg-gray-700/50 transition-colors ${event.isLive ? 'bg-red-900/20 border-l-4 border-l-red-500' : ''
-                                                }`}
-                                        >
-                                            <div className="flex items-start space-x-4">
-                                                {/* Time & Date */}
-                                                <div className="flex-shrink-0 w-24">
-                                                    <div className="text-xs text-gray-500 font-bold mb-1">{event.date}</div>
-                                                    <div className="text-sm font-mono text-gray-300">{event.time} ET</div>
-                                                    {event.isLive && (
-                                                        <div className="text-xs text-red-400 font-bold animate-pulse mt-1">
-                                                            LIVE NOW
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                {/* Event Details */}
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center space-x-2 mb-2">
-                                                        <span className="text-2xl">{getCountryFlag(event.country)}</span>
-                                                        <h3 className="text-white font-semibold">{event.event}</h3>
-                                                        {event.impact === 'HIGH' && (
-                                                            <span className="px-2 py-0.5 bg-red-900/50 text-red-300 text-xs rounded-full font-bold">
-                                                                HIGH IMPACT
-                                                            </span>
+                                    events
+                                        .filter(e => impactFilter === 'ALL' || e.impact === impactFilter)
+                                        .map(event => (
+                                            <div
+                                                key={event.id}
+                                                className={`p-4 hover:bg-gray-700/50 transition-colors ${event.isLive ? 'bg-red-900/20 border-l-4 border-l-red-500' : ''
+                                                    }`}
+                                            >
+                                                <div className="flex items-start space-x-4">
+                                                    {/* Time & Date */}
+                                                    <div className="flex-shrink-0 w-24">
+                                                        <div className="text-xs text-gray-500 font-bold mb-1">{event.date}</div>
+                                                        <div className="text-sm font-mono text-gray-300">{event.time} ET</div>
+                                                        {event.isLive && (
+                                                            <div className="text-xs text-red-400 font-bold animate-pulse mt-1">
+                                                                LIVE NOW
+                                                            </div>
                                                         )}
                                                     </div>
 
-                                                    {/* Data */}
-                                                    <div className="grid grid-cols-3 gap-4 text-sm">
-                                                        <div>
-                                                            <div className="text-gray-500 text-xs">Real</div>
-                                                            <div className="text-green-400 font-mono font-bold">
-                                                                {event.actual || '--'}
-                                                            </div>
+                                                    {/* Event Details */}
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center space-x-2 mb-2">
+                                                            <span className="text-2xl">{getCountryFlag(event.country)}</span>
+                                                            <h3 className="text-white font-semibold">{event.event}</h3>
+                                                            {event.impact === 'HIGH' && (
+                                                                <span className="px-2 py-0.5 bg-red-900/50 text-red-300 text-xs rounded-full font-bold">
+                                                                    HIGH IMPACT
+                                                                </span>
+                                                            )}
                                                         </div>
-                                                        <div>
-                                                            <div className="text-gray-500 text-xs">Forecast</div>
-                                                            <div className="text-gray-300 font-mono">
-                                                                {event.forecast || '--'}
+
+                                                        {/* Data */}
+                                                        <div className="grid grid-cols-3 gap-4 text-sm">
+                                                            <div>
+                                                                <div className="text-gray-500 text-xs">Real</div>
+                                                                <div className="text-green-400 font-mono font-bold">
+                                                                    {event.actual || '--'}
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                        <div>
-                                                            <div className="text-gray-500 text-xs">Previous</div>
-                                                            <div className="text-gray-400 font-mono">
-                                                                {event.previous || '--'}
+                                                            <div>
+                                                                <div className="text-gray-500 text-xs">Forecast</div>
+                                                                <div className="text-gray-300 font-mono">
+                                                                    {event.forecast || '--'}
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-gray-500 text-xs">Previous</div>
+                                                                <div className="text-gray-400 font-mono">
+                                                                    {event.previous || '--'}
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                </div>
 
-                                                {/* Impact Indicator */}
-                                                <div className="flex-shrink-0">
-                                                    <div className="text-2xl">{getImpactDots(event.impact)}</div>
+                                                    {/* Impact Indicator */}
+                                                    <div className="flex-shrink-0">
+                                                        <div className="text-2xl">{getImpactDots(event.impact)}</div>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))
+                                        ))
                                 )}
                             </div>
                         </div>
