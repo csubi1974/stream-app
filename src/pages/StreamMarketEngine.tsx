@@ -45,8 +45,8 @@ export function StreamMarketEngine() {
                         <ul className="space-y-4">
                             {[
                                 { label: 'Gamma Exposure (GEX)', icon: Activity, color: 'text-blue-400' },
-                                { label: 'Gamma Flip', icon: Target, color: 'text-purple-400' },
-                                { label: 'Institutional Positioning', icon: Shield, color: 'text-green-400' },
+                                { label: 'Net Vanna & Charm', icon: Zap, color: 'text-yellow-400' },
+                                { label: 'Quality Scoring System', icon: Shield, color: 'text-green-400' },
                                 { label: 'Net Institutional Delta', icon: TrendingUp, color: 'text-orange-400' }
                             ].map((item, i) => (
                                 <li key={i} className="flex items-center space-x-3 text-gray-300 font-medium">
@@ -112,8 +112,18 @@ export function StreamMarketEngine() {
                     />
                     <FeatureCard
                         icon={<Zap />}
-                        title={t('Micro-Flow Intelligence')}
-                        description={t('Detección de anomalías y barridas de liquidez en tiempo real. Máxima granularidad para anticipar movimientos explosivos mediante la lectura de cinta.')}
+                        title={t('Net Vanna Edge')}
+                        description={t('Decodificación del flujo de volatilidad. Mide cómo los cambios en la IV fuerzan a los Market Makers a ajustar sus coberturas, anticipando el "Vanna Rally" o el efecto "Crush".')}
+                    />
+                    <FeatureCard
+                        icon={<TrendingUp />}
+                        title={t('Temporal Charm Factor')}
+                        description={t('Rastreo dinámico del Delta Decay conforme se acerca el cierre. Permite identificar la presión mecánica de compra o venta generada puramente por el paso del tiempo.')}
+                    />
+                    <FeatureCard
+                        icon={<Shield />}
+                        title={t('Institutional Quality Scoring')}
+                        description={t('Sistema de validación multi-factorial que puntúa la probabilidad de éxito de cada señal basándose en el agotamiento del movimiento, uso del rango esperado y alineación de deriva.')}
                     />
                     <FeatureCard
                         icon={<Target />}
@@ -123,7 +133,7 @@ export function StreamMarketEngine() {
                     <FeatureCard
                         icon={<ChevronRight />}
                         title={t('Algorithmic Signal Engine')}
-                        description={t('Generación de estructuras optimizadas (Spreads) validadas por el régimen GEX. Identifica ejecuciones de alta probabilidad fuera del rango esperado.')}
+                        description={t('Generación de estructuras profesionales (BPS, BCS, IC) validadas por el ecosistema de GEX/Vanna/Charm, optimizando strikes para máxima captura de premium con riesgo controlado.')}
                     />
                 </div>
 

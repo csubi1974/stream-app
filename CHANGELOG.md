@@ -2,13 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.7.3] - 2026-01-25
+## [1.7.4] - 2026-01-25
 
 ### Feat (Características Nuevas)
-- **Net Charm HUD Card**: Nueva métrica visual que calcula la presión de compra/venta generada por el paso del tiempo (Delta Decay). Un sensor crítico para entender los rallies y sell-offs de fin de sesión.
-- **Charm-Engineered Signals**: Habilitación del factor Charm en el cálculo del Quality Scoring. Las señales Premium ahora requieren alineación con el factor temporal para mayor probabilidad de éxito.
+- **Engine Page Update**: Actualización de la documentación técnica en la página `/engine` para incluir las nuevas capacidades de Vanna, Charm y Quality Scoring.
+- **Multilingual Consistency**: Asegurada la traducción completa de los nuevos conceptos institucionales en español e inglés.
 
-## [1.7.2] - 2026-01-25
+## [1.7.3] - 2026-01-25
 
 ## [1.7.1] - 2026-01-25
 
