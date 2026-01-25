@@ -7,6 +7,7 @@ import { Backtest } from './pages/Backtest';
 import { Settings } from './pages/Settings';
 import { StreamMarketEngine } from './pages/StreamMarketEngine';
 import { Signals } from './pages/Signals';
+import { Calendar } from './pages/Calendar';
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
         <Route path="/ladder/:symbol" element={<OptionsLadderPage />} />
         <Route path="/engine" element={<StreamMarketEngine />} />
         <Route path="/signals" element={<Signals />} />
+        <Route path="/calendar" element={<Calendar />} />
         <Route path="/watchlist" element={<Watchlist />} />
         <Route path="/backtest" element={<Backtest />} />
         <Route path="/settings" element={<Settings />} />

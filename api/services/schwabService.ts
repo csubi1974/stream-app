@@ -289,6 +289,23 @@ export class SchwabService {
     return this.accessToken !== null;
   }
 
+  /**
+   * Get market news headlines
+   */
+  async getMarketNews(symbol?: string, limit: number = 20): Promise<any[]> {
+    try {
+      const endpoint = symbol
+        ? `/marketdata/v1/${symbol}/news`
+        : `/marketdata/v1/news`;
+
+      const response = await this.apiGet(endpoint, { maxResults: limit });
+      return response || [];
+    } catch (error) {
+      console.error('❌ Failed to fetch market news:', error);
+      return [];
+    }
+  }
+
   async getPriceHistory(symbol: string, periodType: string = 'day', period: number = 1, frequencyType: string = 'minute', frequency: number = 5): Promise<any[]> {
     const endpoint = '/marketdata/v1/pricehistory';
 

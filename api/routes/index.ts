@@ -4,6 +4,7 @@ import { MarketDataService } from '../services/marketDataService.js';
 import { createSchwabAuthRouter } from './schwabAuth.js';
 import gexRouter from './gex.js';
 import alertsRouter from './alerts.js';
+import calendarRouter from './calendar.js';
 
 export function setupRoutes(
   app: express.Application,
@@ -18,6 +19,9 @@ export function setupRoutes(
 
   // Mount Trade Alerts Routes
   app.use('/api/alerts', alertsRouter);
+
+  // Mount Calendar & News Routes
+  app.use('/api/calendar', calendarRouter);
 
   // Legacy callback support (minimal)
   app.get(['/callback', '/'], async (req, res) => {
