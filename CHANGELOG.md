@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.0] - 2026-01-25
+
+### Feat (Características Nuevas)
+- **Dynamic Delta Target**: Implementación de lógica adaptativa para la selección de Strikes en 0DTE:
+    - **Ajuste por Volatilidad**:
+        - IV Alta (>25): Target Δ **0.25** (Vender más OTM para capturar primas infladas).
+        - IV Baja (<12): Target Δ **0.15** (Vender más cerca/conservador, protegiendo gamma risk).
+    - **Protección por Drift**:
+        - Si el movimiento intradía (Drift) supera el **0.7%**, el sistema fuerza un delta conservador (**0.20**) para evitar posiciones agresivas contra tendencia.
+    - **Visualización en Scanner**: Nuevos indicadores en el dashboard mostrando el Target Δ, IV actual y Drift en tiempo real.
+
 ## [1.6.0] - 2026-01-25
 
 ### Feat (Características Nuevas)

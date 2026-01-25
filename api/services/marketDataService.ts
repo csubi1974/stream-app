@@ -248,6 +248,39 @@ export class MarketDataService {
         }))
         .sort((a, b) => a.strike - b.strike);
 
+      const changePercent = chain.underlying?.percentChange || chain.underlying?.changePercent || chain.underlying?.netPercentChange || 0;
+
+      // Calculate Delta Target logic
+      // 1. Get IV (Implied Volatility) - Estimate from ATM Option
+      let volatilityImplied = 0;
+
+      if (allOptions.length > 0) {
+        const atmOption = allOptions.reduce((prev: any, curr: any) => {
+          const prevDiff = Math.abs(parseFloat(prev.strikePrice || prev.strike) - currentPrice);
+          const currDiff = Math.abs(parseFloat(curr.strikePrice || curr.strike) - currentPrice);
+          return currDiff < prevDiff ? curr : prev;
+        }, allOptions[0]);
+
+        if (atmOption) {
+          volatilityImplied = atmOption.volatility || 0;
+        }
+      }
+
+      // 2. Apply Dynamic Delta Logic
+      let deltaTarget = 0.20;  // Default
+
+      if (volatilityImplied > 25) {
+        deltaTarget = 0.25;  // IV alta -> vender más OTM
+      }
+
+      if (volatilityImplied < 12) {
+        deltaTarget = 0.15;  // IV baja -> vender más cercano
+      }
+
+      if (Math.abs(changePercent) > 0.7) {
+        deltaTarget = 0.20;  // Drift fuerte -> mantener conservador
+      }
+
       return {
         options: topOptions,
         stats: {
@@ -255,7 +288,10 @@ export class MarketDataService {
           putWall: putWall.strike,
           currentPrice,
           strikes: strikesArray,
-          targetDate // Send back which date we used
+          targetDate, // Send back which date we used
+          deltaTarget, // Add calculated target
+          volatilityImplied, // Add for reference
+          drift: changePercent // Add for reference
         }
       };
 

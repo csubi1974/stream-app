@@ -12,6 +12,10 @@ interface ScanStats {
   totalVolume: number;
   currentPrice?: number;
   strikes: any[];
+  targetDate?: string;
+  deltaTarget?: number;
+  volatilityImplied?: number;
+  drift?: number;
 }
 
 export function ZeroDTEScanner() {
@@ -188,8 +192,29 @@ export function ZeroDTEScanner() {
                 </div>
               </>
             )}
+
+            {stats.deltaTarget && (
+              <>
+                <div className="w-[1px] bg-gray-700"></div>
+                <div className="text-center">
+                  <span className="block text-[10px] text-purple-400 uppercase font-bold" title={`Drift: ${stats.drift?.toFixed(2)}%`}>Target Δ</span>
+                  <span className="text-white font-mono">{stats.deltaTarget.toFixed(2)}</span>
+                </div>
+              </>
+            )}
+
+            {stats.volatilityImplied !== undefined && (
+              <>
+                <div className="w-[1px] bg-gray-700"></div>
+                <div className="text-center">
+                  <span className="block text-[10px] text-yellow-400 uppercase font-bold">IV</span>
+                  <span className="text-white font-mono">{stats.volatilityImplied.toFixed(1)}%</span>
+                </div>
+              </>
+            )}
           </div>
-        )}
+        )
+        }
 
         <div className="flex items-center space-x-2">
           <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
@@ -198,18 +223,20 @@ export function ZeroDTEScanner() {
             {isConnected ? t('Live') : t('Offline')}
           </span>
         </div>
-      </div>
+      </div >
 
       {/* Gamma Chart */}
-      {stats && stats.strikes && stats.strikes.length > 0 && (
-        <div className="mb-6">
-          <GammaProfileChart
-            data={stats.strikes}
-            currentPrice={stats.currentPrice}
-            symbol={selectedSymbol}
-          />
-        </div>
-      )}
+      {
+        stats && stats.strikes && stats.strikes.length > 0 && (
+          <div className="mb-6">
+            <GammaProfileChart
+              data={stats.strikes}
+              currentPrice={stats.currentPrice}
+              symbol={selectedSymbol}
+            />
+          </div>
+        )
+      }
 
       {/* Filters */}
       <div className="flex flex-wrap gap-4 mb-4">
@@ -371,49 +398,53 @@ export function ZeroDTEScanner() {
         </table>
       </div>
 
-      {filteredOptions.length === 0 && (
-        <div className="text-center py-8">
-          <TrendingUp className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-400">{t('No options found')}</p>
-          <p className="text-xs text-gray-500 mt-1">
-            {t('Waiting for market data')}
-          </p>
-        </div>
-      )}
+      {
+        filteredOptions.length === 0 && (
+          <div className="text-center py-8">
+            <TrendingUp className="h-12 w-12 text-gray-600 mx-auto mb-4" />
+            <p className="text-gray-400">{t('No options found')}</p>
+            <p className="text-xs text-gray-500 mt-1">
+              {t('Waiting for market data')}
+            </p>
+          </div>
+        )
+      }
 
       {/* Summary */}
-      {filteredOptions.length > 0 && (
-        <div className="mt-4 pt-4 border-t border-gray-700">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-            <div>
-              <div className="text-gray-400 text-xs">{t('Total Options')}</div>
-              <div className="text-white font-bold">{filteredOptions.length}</div>
-            </div>
-            <div>
-              <div className="text-gray-400 text-xs">{t('High Volume')}</div>
-              <div className="text-orange-400 font-bold">
-                {filteredOptions.filter(o => o.volume > 500).length}
+      {
+        filteredOptions.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-gray-700">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+              <div>
+                <div className="text-gray-400 text-xs">{t('Total Options')}</div>
+                <div className="text-white font-bold">{filteredOptions.length}</div>
               </div>
-            </div>
-            <div>
-              <div className="text-gray-400 text-xs">{t('High OI')}</div>
-              <div className="text-green-400 font-bold">
-                {filteredOptions.filter(o => o.openInterest > 2000).length}
+              <div>
+                <div className="text-gray-400 text-xs">{t('High Volume')}</div>
+                <div className="text-orange-400 font-bold">
+                  {filteredOptions.filter(o => o.volume > 500).length}
+                </div>
               </div>
-            </div>
-            <div>
-              <div className="text-gray-400 text-xs">{t('Call/Put Ratio')}</div>
-              <div className="text-blue-400 font-bold">
-                {(() => {
-                  const calls = filteredOptions.filter(o => o.type === 'CALL').length;
-                  const puts = Math.max(filteredOptions.filter(o => o.type === 'PUT').length, 1);
-                  return (calls / puts).toFixed(1);
-                })()}
+              <div>
+                <div className="text-gray-400 text-xs">{t('High OI')}</div>
+                <div className="text-green-400 font-bold">
+                  {filteredOptions.filter(o => o.openInterest > 2000).length}
+                </div>
+              </div>
+              <div>
+                <div className="text-gray-400 text-xs">{t('Call/Put Ratio')}</div>
+                <div className="text-blue-400 font-bold">
+                  {(() => {
+                    const calls = filteredOptions.filter(o => o.type === 'CALL').length;
+                    const puts = Math.max(filteredOptions.filter(o => o.type === 'PUT').length, 1);
+                    return (calls / puts).toFixed(1);
+                  })()}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 }
