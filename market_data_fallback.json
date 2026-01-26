@@ -97,6 +97,58 @@
       "risk_level": null,
       "quality_metadata": null,
       "exit_criteria": null
+    },
+    {
+      "id": "IC-2026-01-26-6935-6965",
+      "strategy": "IRON_CONDOR",
+      "underlying": "SPX",
+      "generated_at": "2026-01-26T17:50:19.090Z",
+      "status": "ACTIVE",
+      "alert_data": "{\"id\":\"IC-2026-01-26-6935-6965\",\"strategy\":\"IRON_CONDOR\",\"strategyLabel\":\"Iron Condor\",\"underlying\":\"SPX\",\"expiration\":\"2026-01-26\",\"legs\":[{\"action\":\"SELL\",\"type\":\"PUT\",\"strike\":6935,\"price\":1.875,\"delta\":-0.169},{\"action\":\"BUY\",\"type\":\"PUT\",\"strike\":6930,\"price\":1.525,\"delta\":-0.134},{\"action\":\"SELL\",\"type\":\"CALL\",\"strike\":6965,\"price\":1.775,\"delta\":0.226},{\"action\":\"BUY\",\"type\":\"CALL\",\"strike\":6970,\"price\":0.8999999999999999,\"delta\":0.134}],\"netCredit\":1.23,\"maxLoss\":3.77,\"maxProfit\":1.23,\"probability\":77.4,\"riskReward\":\"1:3.1\",\"rationale\":\"Ideal para captura de Theta en un régimen estable con Dealers en Gamma Positiva. El precio se proyecta contenido dentro del rango de Muros ($6000 - $7000). Esta estrategia aprovecha la compresión de volatilidad implícita y la defensa de los Market Makers en ambos extremos.\",\"status\":\"ACTIVE\",\"gexContext\":{\"regime\":\"stable\",\"callWall\":7000,\"putWall\":6000,\"gammaFlip\":6902.5,\"currentPrice\":6954.95,\"netDrift\":-108496.41478371523,\"expectedMove\":11.8,\"totalGEX\":461513790.12,\"openPrice\":6954.95,\"netCharm\":-108176.52284631324},\"generatedAt\":\"2026-01-26T17:50:19.090Z\",\"validUntil\":\"2026-01-26T19:50:19.090Z\"}",
+      "quality_score": null,
+      "quality_level": null,
+      "risk_level": null,
+      "quality_metadata": null,
+      "exit_criteria": null
+    },
+    {
+      "id": "BCS-2026-01-26-6965",
+      "strategy": "BEAR_CALL_SPREAD",
+      "underlying": "SPX",
+      "generated_at": "2026-01-26T17:50:19.090Z",
+      "status": "WATCH",
+      "alert_data": "{\"id\":\"BCS-2026-01-26-6965\",\"strategy\":\"BEAR_CALL_SPREAD\",\"strategyLabel\":\"Bear Call Spread\",\"underlying\":\"SPX\",\"expiration\":\"2026-01-26\",\"legs\":[{\"action\":\"SELL\",\"type\":\"CALL\",\"strike\":6965,\"price\":1.775,\"delta\":0.226},{\"action\":\"BUY\",\"type\":\"CALL\",\"strike\":6970,\"price\":0.8999999999999999,\"delta\":0.134}],\"netCredit\":0.88,\"maxLoss\":4.13,\"maxProfit\":0.88,\"probability\":77.4,\"riskReward\":\"1:4.7\",\"rationale\":\"El Call Wall en $7000 representa la frontera superior de liquidez y es la resistencia estadística más importante del día. El strike vendido de $6965 está DENTRO del rango proyectado del Movimiento Esperado. En este contexto de Gamma negativa para Dealers, el Call Wall suele actuar como un techo sólido que frena las subidas aceleradas. ADEMÁS, el Net Charm negativo sugiere que el paso del tiempo forzará ventas institucionales, favoreciendo tu posición bajista.\",\"status\":\"WATCH\",\"gexContext\":{\"regime\":\"stable\",\"callWall\":7000,\"putWall\":6000,\"gammaFlip\":6902.5,\"currentPrice\":6954.95,\"netDrift\":-108496.41478371523,\"expectedMove\":11.8,\"totalGEX\":461513790.12,\"openPrice\":6954.95,\"netCharm\":-108176.52284631324},\"generatedAt\":\"2026-01-26T17:50:19.090Z\",\"validUntil\":\"2026-01-26T19:50:19.090Z\",\"qualityScore\":15,\"qualityLevel\":\"AGGRESSIVE\",\"riskLevel\":\"LOW\",\"qualityFactors\":{\"moveExhaustion\":10,\"expectedMoveUsage\":10,\"wallProximity\":5,\"timeRemaining\":7,\"regimeStrength\":10,\"driftAlignment\":10},\"metadata\":{\"openPrice\":6954.95,\"moveFromOpen\":0,\"movePercent\":0,\"moveRatio\":0,\"wallDistance\":35,\"hoursRemaining\":3.1666666666666665,\"generatedAtPrice\":6954.95},\"exitCriteria\":{\"profitTarget\":\"100% (Dejar Expirar)\",\"stopLoss\":\"Cerrar si SPX sube a 6960 (Rompe Estructura)\",\"timeExit\":\"Cerrar a las 3:45 PM si SPX está a <10 pts del strike\"}}",
+      "quality_score": 15,
+      "quality_level": "AGGRESSIVE",
+      "risk_level": "LOW",
+      "quality_metadata": "{\"openPrice\":6954.95,\"moveFromOpen\":0,\"movePercent\":0,\"moveRatio\":0,\"wallDistance\":35,\"hoursRemaining\":3.1666666666666665,\"generatedAtPrice\":6954.95}",
+      "exit_criteria": "{\"profitTarget\":\"100% (Dejar Expirar)\",\"stopLoss\":\"Cerrar si SPX sube a 6960 (Rompe Estructura)\",\"timeExit\":\"Cerrar a las 3:45 PM si SPX está a <10 pts del strike\"}"
+    },
+    {
+      "id": "IC-2026-01-26-6955-6965",
+      "strategy": "IRON_CONDOR",
+      "underlying": "SPX",
+      "generated_at": "2026-01-26T20:32:17.804Z",
+      "status": "ACTIVE",
+      "alert_data": "{\"id\":\"IC-2026-01-26-6955-6965\",\"strategy\":\"IRON_CONDOR\",\"strategyLabel\":\"Iron Condor\",\"underlying\":\"SPX\",\"expiration\":\"2026-01-26\",\"legs\":[{\"action\":\"SELL\",\"type\":\"PUT\",\"strike\":6955,\"price\":0.8999999999999999,\"delta\":-0.219},{\"action\":\"BUY\",\"type\":\"PUT\",\"strike\":6950,\"price\":0.375,\"delta\":-0.098},{\"action\":\"SELL\",\"type\":\"CALL\",\"strike\":6965,\"price\":0.8500000000000001,\"delta\":0.238},{\"action\":\"BUY\",\"type\":\"CALL\",\"strike\":6970,\"price\":0.25,\"delta\":0.081}],\"netCredit\":1.12,\"maxLoss\":3.88,\"maxProfit\":1.12,\"probability\":76.2,\"riskReward\":\"1:3.5\",\"rationale\":\"Ideal para captura de Theta en un régimen estable con Dealers en Gamma Positiva. El precio se proyecta contenido dentro del rango de Muros ($6000 - $7000). Esta estrategia aprovecha la compresión de volatilidad implícita y la defensa de los Market Makers en ambos extremos.\",\"status\":\"ACTIVE\",\"gexContext\":{\"regime\":\"stable\",\"callWall\":7000,\"putWall\":6000,\"gammaFlip\":6882.5,\"currentPrice\":6960.44,\"netDrift\":-129130.00471234594,\"expectedMove\":5.175,\"totalGEX\":583001582.0919998,\"openPrice\":6960.44,\"netCharm\":-8988016.5},\"generatedAt\":\"2026-01-26T20:32:17.804Z\",\"validUntil\":\"2026-01-26T22:32:17.804Z\"}",
+      "quality_score": null,
+      "quality_level": null,
+      "risk_level": null,
+      "quality_metadata": null,
+      "exit_criteria": null
+    },
+    {
+      "id": "BCS-2026-01-26-6960",
+      "strategy": "BEAR_CALL_SPREAD",
+      "underlying": "SPX",
+      "generated_at": "2026-01-26T20:51:30.091Z",
+      "status": "ACTIVE",
+      "alert_data": "{\"id\":\"BCS-2026-01-26-6960\",\"strategy\":\"BEAR_CALL_SPREAD\",\"strategyLabel\":\"Bear Call Spread\",\"underlying\":\"SPX\",\"expiration\":\"2026-01-26\",\"legs\":[{\"action\":\"SELL\",\"type\":\"CALL\",\"strike\":6960,\"price\":0.45,\"delta\":0.185},{\"action\":\"BUY\",\"type\":\"CALL\",\"strike\":6965,\"price\":0.025,\"delta\":0.016}],\"netCredit\":0.42,\"maxLoss\":4.58,\"maxProfit\":0.42,\"probability\":81.5,\"riskReward\":\"1:10.8\",\"rationale\":\"El Call Wall en $7000 representa la frontera superior de liquidez y es la resistencia estadística más importante del día. El strike vendido de $6960 está PROTEGIDO fuera del Movimiento Esperado (±$3.8). En este contexto de Gamma negativa para Dealers, el Call Wall suele actuar como un techo sólido que frena las subidas aceleradas. ADEMÁS, el Net Charm negativo sugiere que el paso del tiempo forzará ventas institucionales, favoreciendo tu posición bajista.\",\"status\":\"ACTIVE\",\"gexContext\":{\"regime\":\"stable\",\"callWall\":7000,\"putWall\":6000,\"gammaFlip\":6882.5,\"currentPrice\":6955.5,\"netDrift\":-118001.70225001805,\"expectedMove\":3.8,\"totalGEX\":515700245.3999999,\"openPrice\":6955.5,\"netCharm\":-8207608.4},\"generatedAt\":\"2026-01-26T20:51:30.091Z\",\"validUntil\":\"2026-01-26T22:51:30.091Z\",\"qualityScore\":15,\"qualityLevel\":\"AGGRESSIVE\",\"riskLevel\":\"HIGH\",\"qualityFactors\":{\"moveExhaustion\":10,\"expectedMoveUsage\":10,\"wallProximity\":5,\"timeRemaining\":1,\"regimeStrength\":10,\"driftAlignment\":10},\"metadata\":{\"openPrice\":6955.5,\"moveFromOpen\":0,\"movePercent\":0,\"moveRatio\":0,\"wallDistance\":40,\"hoursRemaining\":0.15,\"generatedAtPrice\":6955.5},\"exitCriteria\":{\"profitTarget\":\"100% (Dejar Expirar)\",\"stopLoss\":\"Cerrar si SPX sube a 6955 (Rompe Estructura)\",\"timeExit\":\"Cerrar a las 3:45 PM si SPX está a <10 pts del strike\"}}",
+      "quality_score": 15,
+      "quality_level": "AGGRESSIVE",
+      "risk_level": "HIGH",
+      "quality_metadata": "{\"openPrice\":6955.5,\"moveFromOpen\":0,\"movePercent\":0,\"moveRatio\":0,\"wallDistance\":40,\"hoursRemaining\":0.15,\"generatedAtPrice\":6955.5}",
+      "exit_criteria": "{\"profitTarget\":\"100% (Dejar Expirar)\",\"stopLoss\":\"Cerrar si SPX sube a 6955 (Rompe Estructura)\",\"timeExit\":\"Cerrar a las 3:45 PM si SPX está a <10 pts del strike\"}"
     }
   ]
 }

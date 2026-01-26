@@ -66,6 +66,12 @@ interface TradeAlert {
         stopLoss: string;
         timeExit: string;
     };
+    performance?: {
+        currentPrice: number;
+        unrealizedPnL: number;
+        unrealizedPnLPercent: number;
+        lastUpdated: string;
+    };
 }
 
 export function Signals() {
@@ -85,10 +91,10 @@ export function Signals() {
 
     const fetchAlerts = async () => {
         try {
-            setLoading(true);
+            // setLoading(true); // Don't reset full loading on refresh
             const endpoint = viewMode === 'LIVE'
-                ? '/api/alerts/strategies?symbol=SPX'
-                : `/api/alerts/history?symbol=SPX&date=${selectedDate}`;
+                ? `/api/alerts/strategies?symbol=SPX&_t=${Date.now()}`
+                : `/api/alerts/history?symbol=SPX&date=${selectedDate}&_t=${Date.now()}`;
 
             const response = await fetch(endpoint);
             const data = await response.json();
@@ -242,6 +248,7 @@ export function Signals() {
     const stats = {
         total: alerts.length,
         active: alerts.filter(a => a.status === 'ACTIVE').length,
+        totalPnL: alerts.reduce((sum, a) => sum + (a.performance?.unrealizedPnL || 0), 0),
         avgProbability: alerts.length > 0
             ? (alerts.reduce((sum, a) => sum + a.probability, 0) / alerts.length).toFixed(1)
             : 0
@@ -292,7 +299,22 @@ export function Signals() {
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+                    <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 relative overflow-hidden group">
+                        <div className={`absolute top-0 left-0 w-1 h-full ${stats.totalPnL >= 0 ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                        <div className="flex items-center justify-between relative z-10">
+                            <div>
+                                <div className="text-gray-400 text-xs font-bold uppercase tracking-wider">{t('Rendimiento Total')}</div>
+                                <div className={`text-2xl font-bold font-mono mt-1 ${stats.totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                    {stats.totalPnL > 0 ? '+' : ''}${stats.totalPnL.toFixed(0)}
+                                </div>
+                            </div>
+                            <div className={`p-2 rounded-lg ${stats.totalPnL >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                                <Zap className="h-6 w-6" />
+                            </div>
+                        </div>
+                    </div>
+
                     <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
                         <div className="flex items-center justify-between">
                             <div>
@@ -525,6 +547,49 @@ export function Signals() {
                                     </div>
                                 )}
 
+                                {/* Performance Board (NEW) */}
+                                {alert.performance ? (
+                                    <div className="mb-6 bg-black/40 rounded-xl p-4 border border-gray-700/50">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <div className="text-xs text-gray-400 uppercase font-bold tracking-wider flex items-center">
+                                                <Zap className="w-3 h-3 mr-1 text-yellow-500" />
+                                                {t('Live Performance')}
+                                            </div>
+                                            <div className="text-[10px] text-gray-600 font-mono flex items-center">
+                                                <Clock className="w-3 h-3 mr-1" />
+                                                {new Date(alert.performance.lastUpdated).toLocaleTimeString()}
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-6">
+                                            <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700/50">
+                                                <div className="text-[10px] text-gray-500 uppercase mb-1">{t('Unrealized PnL')}</div>
+                                                <div className={`text-xl font-mono font-bold ${alert.performance.unrealizedPnL > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                                    {alert.performance.unrealizedPnL > 0 ? '+' : ''}${alert.performance.unrealizedPnL.toFixed(0)}
+                                                </div>
+                                            </div>
+                                            <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700/50">
+                                                <div className="text-[10px] text-gray-500 uppercase mb-1">{t('Return (ROI)')}</div>
+                                                <div className={`text-xl font-mono font-bold ${alert.performance.unrealizedPnLPercent > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                                    {alert.performance.unrealizedPnLPercent > 0 ? '+' : ''}{alert.performance.unrealizedPnLPercent.toFixed(1)}%
+                                                </div>
+                                            </div>
+                                            <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700/50 text-right">
+                                                <div className="text-[10px] text-gray-500 uppercase mb-1">{t('Cost / Value')}</div>
+                                                <div className="text-xl font-mono font-bold text-white">
+                                                    ${alert.performance.currentPrice.toFixed(2)}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="mb-6 bg-gray-800/30 rounded-xl p-4 border border-dashed border-gray-700 text-center">
+                                        <span className="text-xs text-gray-500 flex items-center justify-center">
+                                            <RefreshCw className="w-3 h-3 mr-2 animate-spin" />
+                                            {t('Waiting for Real-Time PnL...')}
+                                        </span>
+                                    </div>
+                                )}
+
                                 {/* Metrics Grid */}
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                                     <div className="bg-gray-900 rounded-xl p-4 border border-gray-700">
@@ -668,8 +733,9 @@ export function Signals() {
                             </div>
                         ))}
                     </div>
-                )}
-            </main>
-        </div>
+                )
+                }
+            </main >
+        </div >
     );
 }
