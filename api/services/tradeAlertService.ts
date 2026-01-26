@@ -174,6 +174,9 @@ export class TradeAlertService {
                 });
             });
 
+            // Always add the underlying index to see the current spot price
+            uniqueSymbols.add('$SPX');
+
             if (uniqueSymbols.size === 0) return alerts;
 
             console.log(`🔍 [PnL] Checking quotes for ${uniqueSymbols.size} symbols`);
@@ -193,6 +196,13 @@ export class TradeAlertService {
             return alerts.map(alert => {
                 // Determine closing prices even if alert is EXPIRED or WATCH
                 // We want to see performance history for everything fetched
+
+                // Update spot price if available from fresh quotes
+                const spxQuote = quotes['$SPX']?.quote;
+                if (spxQuote) {
+                    const spxPrice = spxQuote.lastPrice || spxQuote.closePrice || alert.gexContext.currentPrice;
+                    alert.gexContext.currentPrice = spxPrice;
+                }
 
                 let currentCostToClose = 0;
                 let dataMissing = false;

@@ -141,6 +141,32 @@ export async function initializeDb() {
 
     isAvailable = true;
     console.log('💾 SQLite Database initialized (Native)');
+
+    // Initial Import from JSON fallback if DB is empty
+    try {
+      const countRow = await db.get('SELECT COUNT(*) as count FROM trade_alerts');
+      if (countRow.count === 0 && fs.existsSync(JSON_DB_PATH)) {
+        console.log('📥 Importing initial alerts from JSON fallback...');
+        const jsonData = JSON.parse(fs.readFileSync(JSON_DB_PATH, 'utf8'));
+        if (jsonData.alerts && jsonData.alerts.length > 0) {
+          for (const alert of jsonData.alerts) {
+            await db.run(`
+                        INSERT OR IGNORE INTO trade_alerts (
+                            id, strategy, underlying, generated_at, status, alert_data,
+                            quality_score, quality_level, risk_level, quality_metadata, exit_criteria
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    `, [
+              alert.id, alert.strategy, alert.underlying, alert.generated_at, alert.status, alert.alert_data,
+              alert.quality_score, alert.quality_level, alert.risk_level, alert.quality_metadata, alert.exit_criteria
+            ]);
+          }
+          console.log(`✅ Imported ${jsonData.alerts.length} alerts to SQLite`);
+        }
+      }
+    } catch (importError) {
+      console.warn('⚠️ Initial import failed:', importError.message);
+    }
+
     return db;
   } catch (error) {
     console.warn('⚠️ Native SQLite failed, using JSON Fallback');
