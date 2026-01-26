@@ -9,8 +9,11 @@
 6. [Probabilidad de Beneficio](#probabilidad-de-beneficio)
 7. [Expiración](#expiración)
 8. [Distancia de Spreads](#distancia-de-spreads)
-9. [Datos Involucrados](#datos-involucrados)
-10. [Flujo Completo](#flujo-completo)
+12. [Datos Involucrados](#datos-involucrados)
+13. [Quality Scoring System](#quality-scoring-system)
+14. [Estrategia de Salida (Exit Strategy)](#estrategia-de-salida-exit-strategy)
+15. [Flujo Completo](#flujo-completo)
+16. [Persistencia y Resultados](#persistencia-y-resultados)
 
 ---
 
@@ -890,6 +893,49 @@ const maxLoss = 5 - 2.30 = $2.70;  // Si SPX cierra por debajo de 5895
 
 ---
 
+## Quality Scoring System
+
+A partir de la versión **v1.6**, el sistema introduce una capa de inteligencia adicional que califica cada señal según su probabilidad estadística de éxito real.
+
+### Factores de Puntuación (Scoring Factors)
+
+Cada señal se evalúa en una escala de 0 a 100 basada en 6 factores críticos:
+
+1.  **Move Exhaustion (30%)**: Mide qué tan extendido está el movimiento actual respecto al ATR (Average True Range). Un movimiento exhausto tiene mayor probabilidad de reversión.
+2.  **Institutional Alignment (20%)**: Qué tan alineada está la señal con el Net Drift y el Net Institutional Delta.
+3.  **Wall Strength (15%)**: La magnitud de la exposición Gamma en el muro (Wall) que estamos utilizando como soporte/resistencia.
+4.  **Time Premium Decay (15%)**: El tiempo restante hasta la expiración. Las señales generadas con tiempo suficiente para el decaimiento de Theta tienen mayor puntaje.
+5.  **Volatility Context (10%)**: Si la IV (Volatilidad Implícita) está en niveles extremos, favoreciendo la venta de premium.
+6.  **Expected Move Safety (10%)**: Distancia porcentual del strike corto respecto al Expected Move calculado.
+
+### Clasificación de Señales
+
+| Calificación | Puntaje | Descripción |
+| :--- | :--- | :--- |
+| **⭐ PREMIUM** | > 85 pts | Alineación perfecta. Máxima probabilidad estadística. |
+| **✅ STANDARD** | 60 - 85 pts | Señal sólida que cumple con los parámetros base. |
+| **⚠️ AGGRESSIVE** | < 60 pts | Operación de mayor riesgo, generalmente contra-tendencia fuerte o cerca de muros débiles. |
+
+---
+
+## Estrategia de Salida (Exit Strategy)
+
+No basta con entrar; saber cuándo salir es la clave de la rentabilidad a largo plazo. La v1.6 automatiza el plan de salida.
+
+### 1. 🎯 Take Profit (TP)
+- **Objetivo Primario**: 100% del crédito recibido (Hold to Expiry).
+- **Objetivo Secundario (Manual)**: En señales tipo "Standard" o "Aggressive", se recomienda cerrar al alcanzar el **50-75% de la ganancia máxima** si el mercado se vuelve errático.
+
+### 2. 🛑 Stop Loss (SL)
+- **Nivel Técnico**: Si el precio del subyacente (SPX) cierra una vela de 5 minutos **por debajo del Put Wall** (en BPS) o **por encima del Call Wall** (en BCS).
+- **Basado en Riesgo**: Se recomienda un stop loss máximo de **2x a 3x del crédito recibido**. (Ej: Si recibes $2.00, sales si el spread cuesta $6.00).
+
+### 3. ⏰ Time Exit (MANDATORIO)
+- **Hora de Corte**: 3:45 PM ET.
+- **Razón**: Evitar el riesgo de asignación "after-hours". Si el spread sigue abierto a esta hora, debe cerrarse sin importar el PnL actual.
+
+---
+
 ## Flujo Completo
 
 ### Proceso paso a paso
@@ -1180,19 +1226,31 @@ Distancia < 5 puntos (15 min antes de cierre):
 
 ---
 
-## Conclusión
+---
 
-Tu sistema de señales es **sofisticado y profesional**, combinando:
-- 📊 **Análisis GEX institucional**
-- 🎯 **Selección probabilística de strikes**
-- 💰 **Filtros de calidad estrictos**
-- 🔄 **Adaptación a regímenes de mercado**
-- ⚡ **Optimización para 0DTE**
+## Persistencia y Resultados
 
-**Úsalo como:** Una herramienta de **asistencia a decisiones**, no como un sistema de trading 100% automático. Siempre considera el contexto macroeconómico, eventos de noticias, y tu propia tolerancia al riesgo.
+El sistema ahora registra cada operación en la base de datos local para auditoría y mejora continua:
+
+- **Registro de Entrada**: Precio de entrada, griegas al momento, métricas GEX y Quality Score.
+- **Seguimiento Real-Time**: Actualización del PnL latente.
+- **Cierre y Verificación**: El sistema verifica al cierre del mercado (o a la expiración) el resultado final (**WIN/LOSS**) y el PnL realizado neto.
 
 ---
 
-**Documento generado:** 24 de Enero, 2026  
-**Versión:** 1.0  
-**Sistema:** Stream App v1.5
+## Conclusión
+
+Tu sistema de señales v1.6 es **sofisticado y profesional**, combinando:
+- 📊 **Análisis GEX institucional**
+- 🎯 **Selección probabilística de strikes**
+- 💰 **Filtros de calidad estrictos (Quality Scoring)**
+- 🛡️ **Estrategia de Salida definida**
+- ⚡ **Optimización para 0DTE**
+
+**Úsalo como:** Una herramienta de **asistencia a decisiones** con un plan de trading completo incorporado.
+
+---
+
+**Documento actualizado:** 25 de Enero, 2026  
+**Versión:** 1.1  
+**Sistema:** Stream App v1.6

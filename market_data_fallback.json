@@ -32,6 +32,71 @@
       "generated_at": "2026-01-24T20:54:11.266Z",
       "status": "ACTIVE",
       "alert_data": "{\"id\":\"TEST-BPS-1769288051266\",\"strategy\":\"BULL_PUT_SPREAD\",\"strategyLabel\":\"TEST: Bull Put Spread\",\"underlying\":\"SPX\",\"expiration\":\"2026-01-26\",\"legs\":[{\"action\":\"SELL\",\"type\":\"PUT\",\"strike\":5950,\"price\":12.5,\"delta\":-0.2},{\"action\":\"BUY\",\"type\":\"PUT\",\"strike\":5945,\"price\":10.2,\"delta\":-0.15}],\"netCredit\":2.3,\"maxLoss\":2.7,\"maxProfit\":2.3,\"probability\":78.5,\"riskReward\":\"1:1.2\",\"rationale\":\"El Put Wall en $5900 ofrece un soporte institucional masivo. El strike vendido ($5950) se encuentra protegido fuera del Movimiento Esperado (±45.5 pts), lo que sugiere un perfil de alta probabilidad bajo el actual régimen estable de Gamma Positiva.\",\"status\":\"ACTIVE\",\"gexContext\":{\"regime\":\"stable\",\"callWall\":6100,\"putWall\":5900,\"gammaFlip\":5950,\"currentPrice\":6020,\"netDrift\":0.85,\"expectedMove\":45.5},\"generatedAt\":\"2026-01-24T20:54:11.266Z\",\"validUntil\":\"2026-01-24T21:54:11.266Z\"}"
+    },
+    {
+      "id": "IC-2026-01-26-6935-6970",
+      "strategy": "IRON_CONDOR",
+      "underlying": "SPX",
+      "generated_at": "2026-01-26T17:02:29.488Z",
+      "status": "ACTIVE",
+      "alert_data": "{\"id\":\"IC-2026-01-26-6935-6970\",\"strategy\":\"IRON_CONDOR\",\"strategyLabel\":\"Iron Condor\",\"underlying\":\"SPX\",\"expiration\":\"2026-01-26\",\"legs\":[{\"action\":\"SELL\",\"type\":\"PUT\",\"strike\":6935,\"price\":1.9249999999999998,\"delta\":-0.168},{\"action\":\"BUY\",\"type\":\"PUT\",\"strike\":6930,\"price\":1.525,\"delta\":-0.132},{\"action\":\"SELL\",\"type\":\"CALL\",\"strike\":6970,\"price\":1.35,\"delta\":0.169},{\"action\":\"BUY\",\"type\":\"CALL\",\"strike\":6975,\"price\":0.725,\"delta\":0.102}],\"netCredit\":1.03,\"maxLoss\":3.97,\"maxProfit\":1.03,\"probability\":83.1,\"riskReward\":\"1:3.9\",\"rationale\":\"Ideal para captura de Theta en un régimen estable con Dealers en Gamma Positiva. El precio se proyecta contenido dentro del rango de Muros ($6000 - $7100). Esta estrategia aprovecha la compresión de volatilidad implícita y la defensa de los Market Makers en ambos extremos.\",\"status\":\"ACTIVE\",\"gexContext\":{\"regime\":\"stable\",\"callWall\":7100,\"putWall\":6000,\"gammaFlip\":6902.5,\"currentPrice\":6956.45,\"netDrift\":-25841.13592421422,\"expectedMove\":13.149999999999999,\"totalGEX\":235258095.61500004,\"openPrice\":6956.45,\"netCharm\":-15296.227120474092},\"generatedAt\":\"2026-01-26T17:02:29.488Z\",\"validUntil\":\"2026-01-26T19:02:29.488Z\"}",
+      "quality_score": null,
+      "quality_level": null,
+      "risk_level": null,
+      "quality_metadata": null,
+      "exit_criteria": null
+    },
+    {
+      "id": "BCS-2026-01-26-6970",
+      "strategy": "BEAR_CALL_SPREAD",
+      "underlying": "SPX",
+      "generated_at": "2026-01-26T17:02:29.488Z",
+      "status": "ACTIVE",
+      "alert_data": "{\"id\":\"BCS-2026-01-26-6970\",\"strategy\":\"BEAR_CALL_SPREAD\",\"strategyLabel\":\"Bear Call Spread\",\"underlying\":\"SPX\",\"expiration\":\"2026-01-26\",\"legs\":[{\"action\":\"SELL\",\"type\":\"CALL\",\"strike\":6970,\"price\":1.35,\"delta\":0.169},{\"action\":\"BUY\",\"type\":\"CALL\",\"strike\":6975,\"price\":0.725,\"delta\":0.102}],\"netCredit\":0.63,\"maxLoss\":4.38,\"maxProfit\":0.63,\"probability\":83.1,\"riskReward\":\"1:7.0\",\"rationale\":\"El Call Wall en $7100 representa la frontera superior de liquidez y es la resistencia estadística más importante del día. El strike vendido de $6970 está PROTEGIDO fuera del Movimiento Esperado (±$13.1). En este contexto de Gamma negativa para Dealers, el Call Wall suele actuar como un techo sólido que frena las subidas aceleradas. ADEMÁS, el Net Charm negativo sugiere que el paso del tiempo forzará ventas institucionales, favoreciendo tu posición bajista.\",\"status\":\"ACTIVE\",\"gexContext\":{\"regime\":\"stable\",\"callWall\":7100,\"putWall\":6000,\"gammaFlip\":6902.5,\"currentPrice\":6956.45,\"netDrift\":-25841.13592421422,\"expectedMove\":13.149999999999999,\"totalGEX\":235258095.61500004,\"openPrice\":6956.45,\"netCharm\":-15296.227120474092},\"generatedAt\":\"2026-01-26T17:02:29.488Z\",\"validUntil\":\"2026-01-26T19:02:29.488Z\",\"qualityScore\":15,\"qualityLevel\":\"AGGRESSIVE\",\"riskLevel\":\"MEDIUM\",\"qualityFactors\":{\"moveExhaustion\":10,\"expectedMoveUsage\":10,\"wallProximity\":1,\"timeRemaining\":9,\"regimeStrength\":10,\"driftAlignment\":10},\"metadata\":{\"openPrice\":6956.45,\"moveFromOpen\":0,\"movePercent\":0,\"moveRatio\":0,\"wallDistance\":130,\"hoursRemaining\":3.966666666666667,\"generatedAtPrice\":6956.45},\"exitCriteria\":{\"profitTarget\":\"100% (Dejar Expirar)\",\"stopLoss\":\"Cerrar si SPX sube a 6965 (Rompe Estructura)\",\"timeExit\":\"Cerrar a las 3:45 PM si SPX está a <10 pts del strike\"}}",
+      "quality_score": 15,
+      "quality_level": "AGGRESSIVE",
+      "risk_level": "MEDIUM",
+      "quality_metadata": "{\"openPrice\":6956.45,\"moveFromOpen\":0,\"movePercent\":0,\"moveRatio\":0,\"wallDistance\":130,\"hoursRemaining\":3.966666666666667,\"generatedAtPrice\":6956.45}",
+      "exit_criteria": "{\"profitTarget\":\"100% (Dejar Expirar)\",\"stopLoss\":\"Cerrar si SPX sube a 6965 (Rompe Estructura)\",\"timeExit\":\"Cerrar a las 3:45 PM si SPX está a <10 pts del strike\"}"
+    },
+    {
+      "id": "IC-2026-01-26-6940-6975",
+      "strategy": "IRON_CONDOR",
+      "underlying": "SPX",
+      "generated_at": "2026-01-26T17:08:32.708Z",
+      "status": "ACTIVE",
+      "alert_data": "{\"id\":\"IC-2026-01-26-6940-6975\",\"strategy\":\"IRON_CONDOR\",\"strategyLabel\":\"Iron Condor\",\"underlying\":\"SPX\",\"expiration\":\"2026-01-26\",\"legs\":[{\"action\":\"SELL\",\"type\":\"PUT\",\"strike\":6940,\"price\":1.875,\"delta\":-0.166},{\"action\":\"BUY\",\"type\":\"PUT\",\"strike\":6935,\"price\":1.475,\"delta\":-0.129},{\"action\":\"SELL\",\"type\":\"CALL\",\"strike\":6975,\"price\":1.1749999999999998,\"delta\":0.153},{\"action\":\"BUY\",\"type\":\"CALL\",\"strike\":6980,\"price\":0.725,\"delta\":0.099}],\"netCredit\":0.85,\"maxLoss\":4.15,\"maxProfit\":0.85,\"probability\":83.4,\"riskReward\":\"1:4.9\",\"rationale\":\"Ideal para captura de Theta en un régimen estable con Dealers en Gamma Positiva. El precio se proyecta contenido dentro del rango de Muros ($6000 - $7100). Esta estrategia aprovecha la compresión de volatilidad implícita y la defensa de los Market Makers en ambos extremos.\",\"status\":\"ACTIVE\",\"gexContext\":{\"regime\":\"stable\",\"callWall\":7100,\"putWall\":6000,\"gammaFlip\":6902.5,\"currentPrice\":6960.1,\"netDrift\":-29476.358098303193,\"expectedMove\":12.5,\"totalGEX\":283208557.0300001,\"openPrice\":6960.1,\"netCharm\":-18404.717658610287},\"generatedAt\":\"2026-01-26T17:08:32.708Z\",\"validUntil\":\"2026-01-26T19:08:32.708Z\"}",
+      "quality_score": null,
+      "quality_level": null,
+      "risk_level": null,
+      "quality_metadata": null,
+      "exit_criteria": null
+    },
+    {
+      "id": "BCS-2026-01-26-6975",
+      "strategy": "BEAR_CALL_SPREAD",
+      "underlying": "SPX",
+      "generated_at": "2026-01-26T17:08:32.709Z",
+      "status": "ACTIVE",
+      "alert_data": "{\"id\":\"BCS-2026-01-26-6975\",\"strategy\":\"BEAR_CALL_SPREAD\",\"strategyLabel\":\"Bear Call Spread\",\"underlying\":\"SPX\",\"expiration\":\"2026-01-26\",\"legs\":[{\"action\":\"SELL\",\"type\":\"CALL\",\"strike\":6975,\"price\":1.1749999999999998,\"delta\":0.153},{\"action\":\"BUY\",\"type\":\"CALL\",\"strike\":6980,\"price\":0.725,\"delta\":0.099}],\"netCredit\":0.45,\"maxLoss\":4.55,\"maxProfit\":0.45,\"probability\":84.7,\"riskReward\":\"1:10.1\",\"rationale\":\"El Call Wall en $7100 representa la frontera superior de liquidez y es la resistencia estadística más importante del día. El strike vendido de $6975 está PROTEGIDO fuera del Movimiento Esperado (±$12.5). En este contexto de Gamma negativa para Dealers, el Call Wall suele actuar como un techo sólido que frena las subidas aceleradas. ADEMÁS, el Net Charm negativo sugiere que el paso del tiempo forzará ventas institucionales, favoreciendo tu posición bajista.\",\"status\":\"ACTIVE\",\"gexContext\":{\"regime\":\"stable\",\"callWall\":7100,\"putWall\":6000,\"gammaFlip\":6902.5,\"currentPrice\":6960.1,\"netDrift\":-29476.358098303193,\"expectedMove\":12.5,\"totalGEX\":283208557.0300001,\"openPrice\":6960.1,\"netCharm\":-18404.717658610287},\"generatedAt\":\"2026-01-26T17:08:32.709Z\",\"validUntil\":\"2026-01-26T19:08:32.709Z\",\"qualityScore\":15,\"qualityLevel\":\"AGGRESSIVE\",\"riskLevel\":\"MEDIUM\",\"qualityFactors\":{\"moveExhaustion\":10,\"expectedMoveUsage\":10,\"wallProximity\":1,\"timeRemaining\":9,\"regimeStrength\":10,\"driftAlignment\":10},\"metadata\":{\"openPrice\":6960.1,\"moveFromOpen\":0,\"movePercent\":0,\"moveRatio\":0,\"wallDistance\":125,\"hoursRemaining\":3.8666666666666667,\"generatedAtPrice\":6960.1},\"exitCriteria\":{\"profitTarget\":\"100% (Dejar Expirar)\",\"stopLoss\":\"Cerrar si SPX sube a 6970 (Rompe Estructura)\",\"timeExit\":\"Cerrar a las 3:45 PM si SPX está a <10 pts del strike\"}}",
+      "quality_score": 15,
+      "quality_level": "AGGRESSIVE",
+      "risk_level": "MEDIUM",
+      "quality_metadata": "{\"openPrice\":6960.1,\"moveFromOpen\":0,\"movePercent\":0,\"moveRatio\":0,\"wallDistance\":125,\"hoursRemaining\":3.8666666666666667,\"generatedAtPrice\":6960.1}",
+      "exit_criteria": "{\"profitTarget\":\"100% (Dejar Expirar)\",\"stopLoss\":\"Cerrar si SPX sube a 6970 (Rompe Estructura)\",\"timeExit\":\"Cerrar a las 3:45 PM si SPX está a <10 pts del strike\"}"
+    },
+    {
+      "id": "IC-2026-01-26-6940-6970",
+      "strategy": "IRON_CONDOR",
+      "underlying": "SPX",
+      "generated_at": "2026-01-26T17:10:16.918Z",
+      "status": "ACTIVE",
+      "alert_data": "{\"id\":\"IC-2026-01-26-6940-6970\",\"strategy\":\"IRON_CONDOR\",\"strategyLabel\":\"Iron Condor\",\"underlying\":\"SPX\",\"expiration\":\"2026-01-26\",\"legs\":[{\"action\":\"SELL\",\"type\":\"PUT\",\"strike\":6940,\"price\":2.175,\"delta\":-0.191},{\"action\":\"BUY\",\"type\":\"PUT\",\"strike\":6935,\"price\":1.6749999999999998,\"delta\":-0.149},{\"action\":\"SELL\",\"type\":\"CALL\",\"strike\":6970,\"price\":1.55,\"delta\":0.196},{\"action\":\"BUY\",\"type\":\"CALL\",\"strike\":6975,\"price\":0.875,\"delta\":0.12}],\"netCredit\":1.18,\"maxLoss\":3.82,\"maxProfit\":1.18,\"probability\":80.4,\"riskReward\":\"1:3.2\",\"rationale\":\"Ideal para captura de Theta en un régimen estable con Dealers en Gamma Positiva. El precio se proyecta contenido dentro del rango de Muros ($6000 - $7100). Esta estrategia aprovecha la compresión de volatilidad implícita y la defensa de los Market Makers en ambos extremos.\",\"status\":\"ACTIVE\",\"gexContext\":{\"regime\":\"stable\",\"callWall\":7100,\"putWall\":6000,\"gammaFlip\":6902.5,\"currentPrice\":6957.65,\"netDrift\":-27479.93503553643,\"expectedMove\":12.350000000000001,\"totalGEX\":268689136.17,\"openPrice\":6957.65,\"netCharm\":-17423.611882724468},\"generatedAt\":\"2026-01-26T17:10:16.918Z\",\"validUntil\":\"2026-01-26T19:10:16.918Z\"}",
+      "quality_score": null,
+      "quality_level": null,
+      "risk_level": null,
+      "quality_metadata": null,
+      "exit_criteria": null
     }
   ]
 }

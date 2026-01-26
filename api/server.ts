@@ -1,11 +1,11 @@
+import './loadEnv.js';
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { createServer as createHttpsServer } from 'https';
 import fs from 'fs';
 import { WebSocketServer } from 'ws';
-import { SchwabService } from './services/schwabService.js';
+import { getSchwabService } from './services/schwabServiceSingleton.js';
 import { MarketDataService } from './services/marketDataService.js';
 import { WebSocketHandler } from './websocket/handler.js';
 import { setupRoutes } from './routes/index.js';
@@ -13,8 +13,6 @@ import { setupDatabase } from './database/setup.js';
 import { initializeDb } from './database/sqlite.js';
 import { initializePostgres } from './database/postgres.js';
 import { DataRecorderService } from './services/dataRecorderService.js';
-
-dotenv.config();
 
 const app = express();
 const server = createServer(app);
@@ -30,7 +28,7 @@ const __dirname = path.dirname(__filename);
 const distPath = path.join(__dirname, '../dist');
 
 // Initialize services
-const schwabService = new SchwabService();
+const schwabService = getSchwabService();
 const marketDataService = new MarketDataService(schwabService);
 const wsHandler = new WebSocketHandler(wss, marketDataService, schwabService);
 
@@ -82,9 +80,6 @@ server.on('upgrade', (request, socket, head) => {
   });
 });
 
-// Initialize services
-// Services initialized above
-
 // Setup routes and start server
 async function startServer() {
   try {
@@ -100,7 +95,6 @@ async function startServer() {
       console.log('✅ Postgres Connected');
     } catch (dbError) {
       console.warn('⚠️ Postgres connection failed - Historical Data features will be disabled.');
-      // Do not exit process, allow server to run without DB
     }
 
     // Setup Persistence DB (SQLite)
@@ -160,7 +154,6 @@ if (SSL_ENABLED) {
     }
     const httpsServer = createHttpsServer(httpsOptions, app);
 
-    // Attach WebSocket Upgrade to HTTPS Server too
     httpsServer.on('upgrade', (request, socket, head) => {
       wss.handleUpgrade(request, socket, head, (ws) => {
         wss.emit('connection', ws, request);
@@ -175,4 +168,3 @@ if (SSL_ENABLED) {
     console.error('❌ HTTPS server failed to start', e);
   }
 }
-

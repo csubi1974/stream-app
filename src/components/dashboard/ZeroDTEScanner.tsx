@@ -232,7 +232,7 @@ export function ZeroDTEScanner() {
             <GammaProfileChart
               data={stats.strikes}
               currentPrice={stats.currentPrice}
-              symbol={selectedSymbol}
+              symbol={(stats as any).fetchedSymbol || selectedSymbol}
             />
           </div>
         )

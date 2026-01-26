@@ -290,9 +290,18 @@ export class TradeAlertService {
             }
 
             // 3. Get options chain
-            const chain = await this.schwabService.getOptionsChain(symbol);
+            let searchSymbol = symbol.toUpperCase();
+            let chain = await this.schwabService.getOptionsChain(searchSymbol);
+
+            // Fallback for SPX to $SPX
+            if ((!chain || (!chain.callExpDateMap && !chain.putExpDateMap)) && searchSymbol === 'SPX') {
+                console.log('📡 TradeAlert: SPX Chain unavailable, trying $SPX...');
+                chain = await this.schwabService.getOptionsChain('$SPX');
+                if (chain) searchSymbol = '$SPX';
+            }
+
             if (!chain) {
-                console.warn('⚠️ No options chain available');
+                console.warn(`⚠️ No options chain available for ${symbol}`);
                 return [];
             }
 

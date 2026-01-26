@@ -22,8 +22,8 @@ export class SchwabService {
   private baseURL = process.env.SCHWAB_API_BASE || 'https://api.schwabapi.com';
   private accessToken: string | null = null;
   private refreshToken: string | null = null;
-  private authorizeURL = process.env.SCHWAB_AUTHORIZE_URL || 'https://api.schwabapi.com/oauth2/authorize';
-  private tokenURL = process.env.SCHWAB_TOKEN_URL || 'https://api.schwabapi.com/oauth2/token';
+  private authorizeURL = process.env.SCHWAB_AUTHORIZE_URL || 'https://api.schwabapi.com/v1/oauth/authorize';
+  private tokenURL = process.env.SCHWAB_TOKEN_URL || 'https://api.schwabapi.com/v1/oauth/token';
   private bookEndpoint = process.env.SCHWAB_ENDPOINT_BOOK || '/marketdata/v1/options/book';
   private chainEndpoint = process.env.SCHWAB_ENDPOINT_CHAIN || '/marketdata/v1/chains';
   private timeSalesEndpoint = process.env.SCHWAB_ENDPOINT_TIMESALES || '/marketdata/v1/options/timesales';
@@ -43,6 +43,8 @@ export class SchwabService {
           this.loadTokens();
         }
       });
+    } else {
+      console.warn(`⚠️ tokens.json not found at ${this.tokensPath}`);
     }
   }
 
@@ -52,10 +54,11 @@ export class SchwabService {
     const redirectUri = process.env.SCHWAB_REDIRECT_URI;
 
     if (!appKey || !secret || !redirectUri) {
-      console.warn('⚠️ Schwab API credentials not configured');
+      console.warn('⚠️ Schwab API credentials not configured in .env');
       return;
     }
 
+    console.log('🔐 Schwab credentials found, loading tokens...');
     this.loadTokens();
   }
 
@@ -67,7 +70,15 @@ export class SchwabService {
         const tokens = JSON.parse(fileContent);
         this.accessToken = tokens.accessToken;
         this.refreshToken = tokens.refreshToken;
-        console.log('✅ Schwab tokens loaded from disk');
+
+        if (this.accessToken) {
+          console.log('✅ Schwab tokens loaded successfully');
+          console.log(`   Access Token: ${this.accessToken.substring(0, 20)}...`);
+        } else {
+          console.warn('⚠️ Access token is empty in tokens.json');
+        }
+      } else {
+        console.warn(`⚠️ tokens.json file not found at: ${this.tokensPath}`);
       }
     } catch (error) {
       console.error('❌ Failed to load tokens:', error);
@@ -242,10 +253,41 @@ export class SchwabService {
     }
 
     try {
-      const data = await this.apiGet(this.chainEndpoint, { symbol: underlying });
+      const today = new Date();
+      const fromDate = today.toISOString().split('T')[0];
+      const future = new Date();
+      future.setDate(today.getDate() + 7);
+      const toDate = future.toISOString().split('T')[0];
+
+      const params: any = {
+        symbol: underlying,
+        contractType: 'ALL',
+        includeUnderlyingQuote: true,
+        strategy: 'SINGLE',
+        range: 'ALL',
+        fromDate,
+        toDate
+      };
+
+      console.log(`📡 Fetching Options Chain for ${underlying}...`);
+      const data = await this.apiGet(this.chainEndpoint, params);
+
+      if (data) {
+        console.log(`✅ Options Chain received for ${underlying}:`, {
+          hasCallMap: !!data.callExpDateMap,
+          hasPutMap: !!data.putExpDateMap,
+          underlyingPrice: data.underlying?.last || data.underlyingPrice,
+          status: data.status
+        });
+      }
+
       return data;
-    } catch (error) {
-      console.error(`❌ Failed to fetch real Options Chain for ${underlying}`, error);
+    } catch (error: any) {
+      console.error(`❌ Failed to fetch real Options Chain for ${underlying}:`, {
+        message: error.message,
+        status: error.response?.status,
+        data: JSON.stringify(error.response?.data)
+      });
       return null;
     }
   }

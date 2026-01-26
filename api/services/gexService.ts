@@ -27,23 +27,31 @@ export class GEXService {
     async calculateGEXMetrics(symbol: string = 'SPX'): Promise<GEXMetrics> {
         try {
             let searchSymbol = symbol.toUpperCase();
-            let chain = await this.schwabService.getOptionsChain(searchSymbol);
 
-            // Fallback for SPX
-            if ((!chain || (!chain.callExpDateMap && !chain.putExpDateMap)) && searchSymbol === 'SPX') {
-                console.log('⚠️ GEX: SPX Chain unavailable, trying SPXW...');
-                chain = await this.schwabService.getOptionsChain('SPXW');
-                if (chain) searchSymbol = 'SPXW';
+            // Si es SPX, intentamos con el prefijo $ que es estándar para índices en Schwab
+            let chain = null;
+            if (searchSymbol === 'SPX') {
+                console.log('📡 GEX: Trying $SPX index symbol first...');
+                chain = await this.schwabService.getOptionsChain('$SPX');
+                if (chain && (chain.callExpDateMap || chain.putExpDateMap)) {
+                    searchSymbol = '$SPX';
+                }
             }
 
-            // Fallback to SPY
-            if ((!chain || (!chain.callExpDateMap && !chain.putExpDateMap)) && (searchSymbol === 'SPX' || searchSymbol === 'SPXW')) {
-                console.log('⚠️ GEX: SPXW Chain unavailable, failing over to SPY...');
-                chain = await this.schwabService.getOptionsChain('SPY');
+            // Si no funcionó $SPX, intentamos con el símbolo original
+            if (!chain || (!chain.callExpDateMap && !chain.putExpDateMap)) {
+                chain = await this.schwabService.getOptionsChain(searchSymbol);
+            }
+
+            // Fallback for SPX to SPXW
+            if ((!chain || (!chain.callExpDateMap && !chain.putExpDateMap)) && searchSymbol.includes('SPX')) {
+                console.log('⚠️ GEX: SPX Chain unavailable, trying SPXW...');
+                chain = await this.schwabService.getOptionsChain('SPXW');
+                if (chain && (chain.callExpDateMap || chain.putExpDateMap)) searchSymbol = 'SPXW';
             }
 
             if (!chain || (!chain.callExpDateMap && !chain.calls)) {
-                console.warn(`⚠️ No options chain data available for GEX calculation (${symbol})`);
+                console.warn(`⚠️ No options chain data available for GEX calculation (${symbol}) after multiple attempts`);
                 return this.getDefaultMetrics();
             }
 
@@ -54,6 +62,8 @@ export class GEXService {
 
             if (currentPrice === 0) {
                 console.warn(`⚠️ GEX: Missing underlying price for ${symbol}`);
+            } else {
+                console.log(`✅ GEX: Using REAL market data for ${searchSymbol} at $${currentPrice.toFixed(2)}`);
             }
 
             const allOptions: any[] = [];
@@ -292,6 +302,77 @@ export class GEXService {
             regime: 'neutral',
             netVanna: 0,
             netCharm: 0
+        };
+    }
+
+    /**
+     * Retorna métricas MOCK realistas para demostración
+     */
+    private getMockMetrics(symbol: string): GEXMetrics {
+        const now = new Date();
+        const hour = now.getHours();
+
+        // Precios base por símbolo
+        const basePrices: Record<string, number> = {
+            'SPX': 6050.00,
+            'SPXW': 6050.00,
+            'SPY': 605.00,
+            'QQQ': 520.00,
+            'IWM': 230.00
+        };
+
+        const currentPrice = basePrices[symbol] || 6050.00;
+
+        // Simular variación intradiaria (más volatilidad cerca de la apertura y cierre)
+        const isVolatileHour = hour === 9 || hour === 10 || hour === 15 || hour === 16;
+        const priceVariation = isVolatileHour ? (Math.random() - 0.5) * 20 : (Math.random() - 0.5) * 10;
+        const adjustedPrice = currentPrice + priceVariation;
+
+        // GEX positivo durante horas normales, puede ser negativo en horas volátiles
+        const totalGEX = isVolatileHour
+            ? (Math.random() - 0.3) * 2000000  // Puede ser negativo
+            : Math.random() * 3000000 + 500000; // Siempre positivo
+
+        // Gamma Flip típicamente 0.5-1% por debajo del precio actual
+        const gammaFlip = adjustedPrice * (0.985 + Math.random() * 0.01);
+
+        // Net Institutional Delta con sesgo alcista leve
+        const netInstitutionalDelta = (Math.random() - 0.4) * 25000;
+
+        // Net Drift basado en el delta
+        const netDrift = (netInstitutionalDelta / adjustedPrice) * 100;
+
+        // Muros típicamente 1-2% del precio
+        const putWall = Math.round(adjustedPrice * 0.98 / 5) * 5; // Redondear a múltiplo de 5
+        const callWall = Math.round(adjustedPrice * 1.02 / 5) * 5;
+
+        // Expected Move típicamente 0.5-1% para 0DTE
+        const expectedMove = adjustedPrice * (0.005 + Math.random() * 0.005);
+
+        // Determinar régimen
+        let regime: 'stable' | 'volatile' | 'neutral' = 'stable';
+        if (totalGEX < 0) {
+            regime = 'volatile';
+        } else if (Math.abs(totalGEX) < 100000) {
+            regime = 'neutral';
+        }
+
+        // Vanna y Charm con valores realistas
+        const netVanna = (Math.random() - 0.5) * 50000;
+        const netCharm = (Math.random() - 0.5) * 10000;
+
+        return {
+            totalGEX,
+            gammaFlip,
+            netInstitutionalDelta,
+            netDrift,
+            callWall,
+            putWall,
+            currentPrice: adjustedPrice,
+            regime,
+            expectedMove,
+            netVanna,
+            netCharm
         };
     }
 

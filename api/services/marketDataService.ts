@@ -117,26 +117,38 @@ export class MarketDataService {
 
   async getZeroDTEOptions(symbol: string = 'SPX'): Promise<any> {
     try {
-      // Map SPX to include SPXW for more 0DTE options if needed
       let searchSymbol = symbol.toUpperCase();
-      if (searchSymbol === 'SPX') searchSymbol = 'SPX'; // Could also try SPXW
 
-      // Fetch Option Chain
-      let chain = await this.schwabService.getOptionsChain(searchSymbol);
+      // Intentar obtener la cadena de opciones
+      let chain = null;
 
-      // Fallback logic for indices
-      if ((!chain || (!chain.callExpDateMap && !chain.putExpDateMap)) && searchSymbol === 'SPX') {
-        console.log('⚠️ SPX Chain unavailable, trying SPXW...');
-        chain = await this.schwabService.getOptionsChain('SPXW');
+      // Si el símbolo es SPX, intentamos con $SPX primero (formato estándar para índices)
+      if (searchSymbol === 'SPX') {
+        console.log('📡 Scanner: Trying $SPX index symbol first...');
+        try {
+          chain = await this.schwabService.getOptionsChain('$SPX');
+          if (chain && (chain.callExpDateMap || chain.putExpDateMap)) {
+            searchSymbol = '$SPX';
+          }
+        } catch (e) {
+          console.warn('⚠️ Scanner: $SPX failed, will try original symbol');
+        }
       }
 
-      if ((!chain || (!chain.callExpDateMap && !chain.putExpDateMap)) && (searchSymbol === 'SPX' || searchSymbol === 'SPXW')) {
-        console.log('⚠️ SPXW Chain unavailable, failing over to SPY for Scanner/GEX');
-        chain = await this.schwabService.getOptionsChain('SPY');
+      // Si no tenemos cadena aún, intentamos con el símbolo original
+      if (!chain || (!chain.callExpDateMap && !chain.putExpDateMap)) {
+        chain = await this.schwabService.getOptionsChain(searchSymbol);
+      }
+
+      // Fallback for SPX to SPXW
+      if ((!chain || (!chain.callExpDateMap && !chain.putExpDateMap)) && searchSymbol.includes('SPX')) {
+        console.log('⚠️ Scanner: SPX Chain unavailable, trying SPXW...');
+        chain = await this.schwabService.getOptionsChain('SPXW');
+        if (chain && (chain.callExpDateMap || chain.putExpDateMap)) searchSymbol = 'SPXW';
       }
 
       if (!chain || (!chain.calls && !chain.puts && !chain.callExpDateMap && !chain.putExpDateMap)) {
-        console.log(`⚠️ Chain missing for ${symbol}`);
+        console.log(`⚠️ No options chain data available for ${symbol} after multiple attempts`);
         return { options: [], stats: null };
       }
 
@@ -310,7 +322,8 @@ export class MarketDataService {
           deltaTarget, // Add calculated target
           volatilityImplied, // Add for reference
           drift: changePercent, // Add for reference
-          vannaExposure // Net Vanna
+          vannaExposure, // Net Vanna
+          fetchedSymbol: searchSymbol
         }
       };
 

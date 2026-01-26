@@ -5,6 +5,7 @@ import { createSchwabAuthRouter } from './schwabAuth.js';
 import gexRouter from './gex.js';
 import alertsRouter from './alerts.js';
 import calendarRouter from './calendar.js';
+import testRouter from './test.js';
 
 export function setupRoutes(
   app: express.Application,
@@ -22,6 +23,9 @@ export function setupRoutes(
 
   // Mount Calendar & News Routes
   app.use('/api/calendar', calendarRouter);
+
+  // Mount Test Routes (for diagnostics)
+  app.use('/api/test', testRouter);
 
   // Legacy callback support (minimal)
   app.get(['/callback', '/'], async (req, res) => {

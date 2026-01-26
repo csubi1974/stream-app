@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { TradeAlertService } from '../services/tradeAlertService.js';
-import { SchwabService } from '../services/schwabService.js';
+import { getSchwabService } from '../services/schwabServiceSingleton.js';
 
 const router = Router();
-const schwabService = new SchwabService();
+const schwabService = getSchwabService();
 const tradeAlertService = new TradeAlertService(schwabService);
 
 /**
