@@ -526,22 +526,37 @@ export function Signals() {
                                                     <th className="text-left pb-3 font-medium">{t('Acción')}</th>
                                                     <th className="text-left pb-3 font-medium">{t('Tipo')}</th>
                                                     <th className="text-right pb-3 font-medium">{t('Strike')}</th>
+                                                    <th className="text-center pb-3 font-medium">{t('Estado')}</th>
                                                     <th className="text-right pb-3 font-medium">{t('Precio')}</th>
                                                     <th className="text-right pb-3 font-medium">Delta</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {alert.legs.map((leg, i) => (
-                                                    <tr key={i} className="border-b border-gray-800 last:border-0">
-                                                        <td className={`py-3 font-bold ${leg.action === 'SELL' ? 'text-red-400' : 'text-green-400'}`}>
-                                                            {leg.action}
-                                                        </td>
-                                                        <td className="py-3 text-gray-300">{leg.type}</td>
-                                                        <td className="py-3 text-right text-white font-mono font-bold">${leg.strike.toFixed(0)}</td>
-                                                        <td className="py-3 text-right text-gray-300 font-mono">${leg.price.toFixed(2)}</td>
-                                                        <td className="py-3 text-right text-gray-400 font-mono">{leg.delta.toFixed(3)}</td>
-                                                    </tr>
-                                                ))}
+                                                {alert.legs.map((leg, i) => {
+                                                    const isITM = leg.type === 'CALL'
+                                                        ? alert.gexContext.currentPrice > leg.strike
+                                                        : alert.gexContext.currentPrice < leg.strike;
+
+                                                    return (
+                                                        <tr key={i} className="border-b border-gray-800 last:border-0">
+                                                            <td className={`py-3 font-bold ${leg.action === 'SELL' ? 'text-red-400' : 'text-green-400'}`}>
+                                                                {leg.action}
+                                                            </td>
+                                                            <td className="py-3 text-gray-300">{leg.type}</td>
+                                                            <td className="py-3 text-right text-white font-mono font-bold">${leg.strike.toFixed(0)}</td>
+                                                            <td className="py-3 text-center">
+                                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${isITM
+                                                                        ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                                                                        : 'bg-green-500/20 text-green-400 border-green-500/30'
+                                                                    }`}>
+                                                                    {isITM ? 'ITM' : 'OTM'}
+                                                                </span>
+                                                            </td>
+                                                            <td className="py-3 text-right text-gray-300 font-mono">${leg.price.toFixed(2)}</td>
+                                                            <td className="py-3 text-right text-gray-400 font-mono">{leg.delta.toFixed(3)}</td>
+                                                        </tr>
+                                                    );
+                                                })}
                                             </tbody>
                                         </table>
                                     </div>
