@@ -60,6 +60,7 @@ export interface GEXMetrics {
   expectedMove?: number;               // Movimiento esperado del día (ATM Straddle)
   netVanna: number;                    // Exposición Vanna Neta (IV Drop -> Buy/Sell)
   netCharm: number;                    // Exposición Charm Neta (Delta Decay)
+  gammaProfile?: Array<{ price: number, netGex: number }>; // Curva teórica de Gamma
 }
 
 interface MarketStore {

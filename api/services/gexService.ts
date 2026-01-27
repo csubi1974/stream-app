@@ -12,6 +12,7 @@ export interface GEXMetrics {
     expectedMove?: number; // Expected daily move based on ATM straddle
     netVanna: number;      // Net Vanna exposure
     netCharm: number;      // Net Charm exposure (Delta decay)
+    gammaProfile: Array<{ price: number, netGex: number }>; // Data points for the Gamma Curve
 }
 
 export class GEXService {
@@ -254,7 +255,8 @@ export class GEXService {
                 regime,
                 expectedMove,
                 netVanna,
-                netCharm
+                netCharm,
+                gammaProfile: this.calculateGammaProfile(allOptions, currentPrice)
             };
 
         } catch (error) {
@@ -301,7 +303,8 @@ export class GEXService {
             currentPrice: 0,
             regime: 'neutral',
             netVanna: 0,
-            netCharm: 0
+            netCharm: 0,
+            gammaProfile: []
         };
     }
 
@@ -372,7 +375,8 @@ export class GEXService {
             regime,
             expectedMove,
             netVanna,
-            netCharm
+            netCharm,
+            gammaProfile: this.calculateMockGammaProfile(adjustedPrice, gammaFlip)
         };
     }
 
@@ -442,5 +446,77 @@ export class GEXService {
         } catch (error) {
             return 0;
         }
+    }
+
+    /**
+     * Calcula la curva teórica de Gamma Exposure
+     */
+    private calculateGammaProfile(options: any[], currentPrice: number): Array<{ price: number, netGex: number }> {
+        const profile: Array<{ price: number, netGex: number }> = [];
+        const range = 0.05; // +/- 5%
+        const steps = 40;
+        const stepSize = (currentPrice * range * 2) / steps;
+        const startPrice = currentPrice * (1 - range);
+
+        // Pre-recolectar datos relevantes para velocidad
+        const relevantOptions = options.map(opt => ({
+            strike: parseFloat(opt.strikePrice || opt.strike),
+            oi: opt.openInterest || 0,
+            iv: (opt.volatility || 20) / 100,
+            isCall: opt.putCall === 'CALL',
+            daysToExpiry: 1 / 365 // Asumimos 1 día o muy poco para 0DTE
+        })).filter(o => o.oi > 0 && o.strike > 0);
+
+        for (let i = 0; i <= steps; i++) {
+            const simulatedPrice = startPrice + i * stepSize;
+            let totalNetGex = 0;
+
+            for (const opt of relevantOptions) {
+                // Cálculo simplificado de Gamma usando Black-Scholes para la curva
+                const gamma = this.calculateBSGamma(simulatedPrice, opt.strike, opt.iv, opt.daysToExpiry);
+                const gex = gamma * opt.oi * 100 * simulatedPrice;
+
+                if (opt.isCall) {
+                    totalNetGex += gex;
+                } else {
+                    totalNetGex -= gex;
+                }
+            }
+
+            profile.push({
+                price: parseFloat(simulatedPrice.toFixed(2)),
+                netGex: totalNetGex
+            });
+        }
+
+        return profile;
+    }
+
+    private calculateBSGamma(S: number, K: number, sigma: number, T: number): number {
+        if (T <= 0 || sigma <= 0) return 0;
+        const d1 = (Math.log(S / K) + (0.04 + (sigma * sigma) / 2) * T) / (sigma * Math.sqrt(T));
+        const nPrimeD1 = (1 / Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * d1 * d1);
+        return nPrimeD1 / (S * sigma * Math.sqrt(T));
+    }
+
+    private calculateMockGammaProfile(currentPrice: number, flip: number): Array<{ price: number, netGex: number }> {
+        const profile = [];
+        const range = 0.05;
+        const steps = 40;
+        const stepSize = (currentPrice * range * 2) / steps;
+        const startPrice = currentPrice * (1 - range);
+
+        for (let i = 0; i <= steps; i++) {
+            const p = startPrice + i * stepSize;
+            // Función sigmoide/logística modificada para simular el perfil GEX
+            const x = (p - flip) / (currentPrice * 0.01);
+            const gex = (2 / (1 + Math.exp(-x)) - 1) * 1000000;
+
+            profile.push({
+                price: parseFloat(p.toFixed(2)),
+                netGex: gex
+            });
+        }
+        return profile;
     }
 }

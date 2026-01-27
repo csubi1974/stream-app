@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Activity, TrendingUp, TrendingDown, Shield, AlertTriangle, Target } from 'lucide-react';
+import { Activity, TrendingUp, TrendingDown, Shield, AlertTriangle, Target, ChevronDown, ChevronUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useMarketStore } from '../../stores/marketStore';
+import { useWebSocket } from '../../hooks/useWebSocket';
+import { GammaCurveChart } from '../charts/GammaCurveChart';
 
 interface GEXMetrics {
     totalGEX: number;         // Gamma Exposure Total
@@ -15,20 +17,53 @@ interface GEXMetrics {
     expectedMove?: number;    // Movimiento esperado del día
     netVanna: number;         // Exposición Vanna Neta
     netCharm: number;         // Exposición Charm Neta
+    gammaProfile?: Array<{ price: number, netGex: number }>; // Curva Gamma
 }
 
 export function GEXMetricsHUD() {
     const { t } = useTranslation();
     const { gexMetrics, selectedSymbol, setSelectedSymbol } = useMarketStore();
     const [loading, setLoading] = useState(true);
+    const [showProfile, setShowProfile] = useState(true);
+
+    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3002';
+
+    const { sendMessage } = useWebSocket({
+        url: wsUrl,
+        onMessage: (message) => {
+            if (message.type === 'option_trade') {
+                const trade = message.data;
+                const currentSymbol = selectedSymbol === 'SPX' ? '$SPX' : selectedSymbol;
+                if (trade.symbol === currentSymbol || trade.symbol === selectedSymbol) {
+                    useMarketStore.setState((state) => ({
+                        gexMetrics: state.gexMetrics ? { ...state.gexMetrics, currentPrice: trade.price } : null
+                    }));
+                }
+            }
+        }
+    });
 
     useEffect(() => {
+        const symbol = selectedSymbol || 'SPX';
         // Cargar métricas iniciales
-        fetchGEXMetrics(selectedSymbol || 'SPX');
+        fetchGEXMetrics(symbol);
+
+        // Subscribe to real-time price
+        const subSymbol = symbol === 'SPX' ? '$SPX' : symbol;
+        sendMessage({
+            type: 'subscribe',
+            symbols: [subSymbol]
+        });
 
         // Actualizar cada 10 segundos
-        const interval = setInterval(() => fetchGEXMetrics(selectedSymbol || 'SPX'), 10000);
-        return () => clearInterval(interval);
+        const interval = setInterval(() => fetchGEXMetrics(symbol), 10000);
+        return () => {
+            clearInterval(interval);
+            sendMessage({
+                type: 'unsubscribe',
+                symbols: [subSymbol]
+            });
+        };
     }, [selectedSymbol]);
 
     const fetchGEXMetrics = async (symbol: string) => {
@@ -286,6 +321,30 @@ export function GEXMetricsHUD() {
                     </div>
                 </div>
             </div>
+
+            {/* Gamma Curve Analysis - NEW */}
+            {gexMetrics.gammaProfile && gexMetrics.gammaProfile.length > 0 && (
+                <div className="mt-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div
+                        className="flex items-center justify-between mb-2 px-2 cursor-pointer group"
+                        onClick={() => setShowProfile(!showProfile)}
+                    >
+                        <div className="flex items-center space-x-2">
+                            <Activity className="h-4 w-4 text-blue-400" />
+                            <span className="text-xs font-bold text-gray-300 uppercase tracking-widest">{t('Gamma Curve Analysis (Theoretical Profile)')}</span>
+                        </div>
+                        {showProfile ? <ChevronUp className="h-4 w-4 text-gray-500 group-hover:text-white" /> : <ChevronDown className="h-4 w-4 text-gray-500 group-hover:text-white" />}
+                    </div>
+
+                    {showProfile && (
+                        <GammaCurveChart
+                            data={gexMetrics.gammaProfile}
+                            currentPrice={currentPrice}
+                            gammaFlip={gammaFlip}
+                        />
+                    )}
+                </div>
+            )}
 
             {/* Interpretation Guide */}
             <div className="mt-4 p-3 bg-gray-900 bg-opacity-50 rounded-lg border border-gray-700">

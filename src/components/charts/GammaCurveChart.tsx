@@ -1,0 +1,165 @@
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+
+interface GammaCurveChartProps {
+    data: Array<{ price: number; netGex: number }>;
+    currentPrice: number;
+    gammaFlip: number;
+}
+
+export function GammaCurveChart({ data, currentPrice, gammaFlip }: GammaCurveChartProps) {
+    const { t } = useTranslation();
+
+    // SVG Dimensions
+    const width = 800;
+    const height = 180;
+    const margin = { top: 15, right: 40, bottom: 25, left: 60 };
+    const graphWidth = width - margin.left - margin.right;
+    const graphHeight = height - margin.top - margin.bottom;
+
+    // Scales
+    const xMin = useMemo(() => Math.min(...data.map(d => d.price)), [data]);
+    const xMax = useMemo(() => Math.max(...data.map(d => d.price)), [data]);
+    const yMax = useMemo(() => Math.max(...data.map(d => Math.abs(d.netGex))), [data]);
+
+    const limit = yMax > 0 ? yMax * 1.2 : 1000000;
+
+    const getX = (price: number) => ((price - xMin) / (xMax - xMin)) * graphWidth;
+    const getY = (gex: number) => graphHeight / 2 - (gex / limit) * (graphHeight / 2);
+
+    const zeroY = getY(0);
+
+    // Path generation for the area
+    const areaPath = useMemo(() => {
+        if (data.length < 2) return '';
+
+        let path = `M ${getX(data[0].price)} ${getY(data[0].netGex)}`;
+        for (let i = 1; i < data.length; i++) {
+            path += ` L ${getX(data[i].price)} ${getY(data[i].netGex)}`;
+        }
+
+        // Close the path along the zero line
+        const lastX = getX(data[data.length - 1].price);
+        const firstX = getX(data[0].price);
+        path += ` L ${lastX} ${zeroY} L ${firstX} ${zeroY} Z`;
+
+        return path;
+    }, [data, zeroY]);
+
+    const linePath = useMemo(() => {
+        if (data.length < 2) return '';
+        let path = `M ${getX(data[0].price)} ${getY(data[0].netGex)}`;
+        for (let i = 1; i < data.length; i++) {
+            path += ` L ${getX(data[i].price)} ${getY(data[i].netGex)}`;
+        }
+        return path;
+    }, [data]);
+
+    const formatValue = (val: number) => {
+        const v = Math.abs(val);
+        if (v >= 1e9) return `${(val / 1e9).toFixed(1)}B`;
+        if (v >= 1e6) return `${(val / 1e6).toFixed(1)}M`;
+        return `${(val / 1e3).toFixed(0)}K`;
+    };
+
+    return (
+        <div className="w-full bg-gray-900/50 rounded-xl border border-gray-800 p-3">
+            <div className="flex justify-between items-center mb-2">
+                <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    {t('Theoretical Gamma Curve')}
+                </h4>
+                <div className="flex space-x-3 text-[9px] uppercase font-bold">
+                    <div className="flex items-center">
+                        <div className="w-2 h-2 bg-green-500/20 border border-green-500 mr-1.5 rounded-sm"></div>
+                        <span className="text-green-500/80">{t('Positive Gamma')}</span>
+                    </div>
+                    <div className="flex items-center">
+                        <div className="w-2 h-2 bg-red-500/20 border border-red-500 mr-1.5 rounded-sm"></div>
+                        <span className="text-red-500/80">{t('Negative Gamma')}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="relative h-[140px]">
+                <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible">
+                    <defs>
+                        <linearGradient id="curveGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#4ade80" stopOpacity="0.3" />
+                            <stop offset="50%" stopColor="#4ade80" stopOpacity="0.05" />
+                            <stop offset="50%" stopColor="#ef4444" stopOpacity="0.05" />
+                            <stop offset="100%" stopColor="#ef4444" stopOpacity="0.3" />
+                        </linearGradient>
+
+                        <clipPath id="clip-above">
+                            <rect x="0" y="0" width={width} height={zeroY} />
+                        </clipPath>
+                        <clipPath id="clip-below">
+                            <rect x="0" y={zeroY} width={width} height={height - zeroY} />
+                        </clipPath>
+                    </defs>
+
+                    <g transform={`translate(${margin.left}, ${margin.top})`}>
+                        {/* Grid lines */}
+                        <line x1={0} y1={zeroY} x2={graphWidth} y2={zeroY} stroke="#374151" strokeWidth="1" />
+
+                        {/* The Curved Area - Above Zero (Green) */}
+                        <path d={areaPath} fill="#22c55e" fillOpacity="0.15" clipPath="url(#clip-above)" />
+
+                        {/* The Curved Area - Below Zero (Red) */}
+                        <path d={areaPath} fill="#ef4444" fillOpacity="0.15" clipPath="url(#clip-below)" />
+
+                        {/* The Main Line */}
+                        <path d={linePath} fill="none" stroke="#9ca3af" strokeWidth="2" strokeOpacity="0.5" />
+
+                        {/* Current Price Marker */}
+                        <line
+                            x1={getX(currentPrice)} y1={0}
+                            x2={getX(currentPrice)} y2={graphHeight}
+                            stroke="#3b82f6" strokeWidth="2" strokeDasharray="4 2"
+                        />
+                        <circle cx={getX(currentPrice)} cy={getY(data.find(d => Math.abs(d.price - currentPrice) < 10)?.netGex || 0)} r="4" fill="#3b82f6" />
+
+                        {/* Gamma Flip Marker */}
+                        <line
+                            x1={getX(gammaFlip)} y1={0}
+                            x2={getX(gammaFlip)} y2={graphHeight}
+                            stroke="#f59e0b" strokeWidth="1" strokeDasharray="2 2"
+                        />
+
+                        {/* X-Axis Ticks */}
+                        {[xMin, (xMin + xMax) / 2, xMax].map((tick, i) => (
+                            <text
+                                key={i} x={getX(tick)} y={graphHeight + 15}
+                                textAnchor="middle" fill="#4b5563" fontSize="9" fontFamily="monospace"
+                            >
+                                ${tick.toFixed(0)}
+                            </text>
+                        ))}
+
+                        {/* Y-Axis Ticks */}
+                        {[limit, 0, -limit].map((tick, i) => (
+                            <text
+                                key={i} x={-8} y={getY(tick)}
+                                textAnchor="end" dominantBaseline="middle" fill="#4b5563" fontSize="8" fontFamily="monospace"
+                            >
+                                {formatValue(tick)}
+                            </text>
+                        ))}
+
+                        {/* Labels */}
+                        <text x={getX(currentPrice)} y={-5} textAnchor="middle" fill="#3b82f6" fontSize="9" fontWeight="bold">
+                            SPOT: ${currentPrice.toFixed(0)}
+                        </text>
+                        <text x={getX(gammaFlip)} y={graphHeight + 32} textAnchor="middle" fill="#f59e0b" fontSize="9" fontWeight="bold">
+                            FLIP: ${gammaFlip.toFixed(0)}
+                        </text>
+                    </g>
+                </svg>
+            </div>
+
+            <div className="mt-2 flex justify-between text-[10px] text-gray-500 font-mono italic">
+                <span>* Dinámica teórica del GEX en base a cambios en el Spot</span>
+            </div>
+        </div>
+    );
+}
