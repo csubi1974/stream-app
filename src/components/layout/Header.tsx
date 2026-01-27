@@ -125,7 +125,7 @@ export function Header() {
             </div>
 
             <div className="flex items-center space-x-2">
-              <span className="text-xs text-gray-500 font-mono">v1.8.0</span>
+              <span className="text-xs text-gray-500 font-mono">{t('Version')}</span>
             </div>
           </div>
         </div>
