@@ -40,8 +40,6 @@ export function ZeroDTEScanner() {
     },
     onMessage: (message) => {
       if (message.type === '0dte_options') {
-        // Backend now returns { options: [], stats: {} }
-        // Handle both old array format (just in case) and new object format
         if (Array.isArray(message.data)) {
           setZeroDTEOptions(message.data);
         } else {
@@ -49,16 +47,45 @@ export function ZeroDTEScanner() {
           setStats(message.data.stats);
         }
       }
+
+      if (message.type === 'option_trade') {
+        const trade = message.data;
+        // Check if this trade is for our current underlying
+        // For indexes, we might be watching SPX but receiving quotes for $SPX or similar
+        const currentSymbol = selectedSymbol === 'SPX' ? '$SPX' : selectedSymbol;
+        if (trade.symbol === currentSymbol || trade.symbol === selectedSymbol) {
+          setStats(prev => prev ? { ...prev, currentPrice: trade.price } : null);
+        }
+      }
     }
   });
 
   useEffect(() => {
+    setStats(null);
+    setLoading(true);
     fetchZeroDTEOptions();
+
+    // Subscribe to real-time price for the underline
+    const subSymbol = selectedSymbol === 'SPX' ? '$SPX' : selectedSymbol;
+    sendMessage({
+      type: 'subscribe',
+      symbols: [subSymbol]
+    });
+
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(fetchZeroDTEOptions, 30000);
+    return () => {
+      clearInterval(interval);
+      sendMessage({
+        type: 'unsubscribe',
+        symbols: [subSymbol]
+      });
+    };
   }, [selectedSymbol]);
 
   const fetchZeroDTEOptions = async () => {
     try {
-      setLoading(true);
+      if (!stats) setLoading(true);
       const response = await fetch(`/api/scanner/0dte?symbol=${selectedSymbol}`);
       const data = await response.json();
 
