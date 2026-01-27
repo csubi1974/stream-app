@@ -523,7 +523,8 @@ export class TradeAlertService {
                 expectedMove,
                 totalGEX,  // Add totalGEX for quality scoring
                 openPrice,  // Add openPrice for move exhaustion calculation
-                netCharm   // Add netCharm for time decay bonus
+                netCharm,   // Add netCharm for time decay bonus
+                symbol      // Add actual symbol
             };
 
 
@@ -581,7 +582,7 @@ export class TradeAlertService {
                     maxProfit: 0,
                     probability: 0,
                     riskReward: 'N/A',
-                    rationale: 'El mercado está en régimen volátil. Los dealers amplifican movimientos. Evitar venta de premium o usar tamaño reducido.',
+                    rationale: `El mercado está en régimen volátil con un Total GEX de ${(totalGEX / 1e6).toFixed(2)}M. Los dealers están en gamma negativa y amplificarán cualquier movimiento del precio en lugar de amortiguarlo. El precio está a ${((Math.abs(currentPrice - gammaFlip) / currentPrice) * 100).toFixed(2)}% del Gamma Flip ($${gammaFlip.toFixed(0)}), lo que aumenta la inestabilidad. Se recomienda EVITAR la venta de premium.`,
                     status: 'WATCH',
                     gexContext,
                     generatedAt: new Date().toISOString(),
@@ -683,15 +684,15 @@ export class TradeAlertService {
             const stopPrice = expectedMove ? Math.max(lowerBound, shortStrike + 5) : shortStrike + 5;
             const exitCriteria = {
                 profitTarget: "100% (Dejar Expirar)",
-                stopLoss: `Cerrar si SPX baja a ${stopPrice.toFixed(0)} (Risk Zone)`,
-                timeExit: "Cerrar a las 3:45 PM si SPX está a <10 pts del strike"
+                stopLoss: `Cerrar si ${gexContext.symbol || 'SPX'} baja de ${stopPrice.toFixed(0)} (${((Math.abs(currentPrice - stopPrice) / currentPrice) * 100).toFixed(1)}% de distancia)`,
+                timeExit: `Cerrar a las 3:45 PM si ${gexContext.symbol || 'SPX'} está a menos de 10 pts del strike corto ($${shortStrike})`
             };
 
             return {
                 id: alertId,
                 strategy: 'BULL_PUT_SPREAD',
                 strategyLabel: 'Bull Put Spread',
-                underlying: 'SPX',
+                underlying: gexContext.symbol || 'SPX',
                 expiration,
                 legs: [
                     {
@@ -716,7 +717,7 @@ export class TradeAlertService {
                 riskReward: `1:${(maxLoss / netCredit).toFixed(1)}`,
                 rationale: trigger === 'vanna_crush'
                     ? `ESTRATEGIA VANNA CRUSH: El Net Vanna es altamente positivo (${(gexMetrics.netVanna / 1e6).toFixed(1)}M), lo que significa que un colapso de volatilidad (IV Crush) forzará a los Dealers a comprar acciones, empujando el precio al alza independientemente del drift actual. Se vende premium aprovechando este viento a favor institucional.`
-                    : `El Put Wall en $${putWall.toFixed(0)} actúa como un imán y soporte institucional clave para el mercado hoy. El strike corto de $${shortStrike.toFixed(0)} se ha seleccionado para estar ${expectedMove ? (shortStrike < lowerBound ? `FUERA de las fronteras del Movimiento Esperado (±$${expectedMove.toFixed(1)})` : `DENTRO del rango del Movimiento Esperado`) : 'en una zona técnica de alta probabilidad'}. Bajo este régimen ${gexContext.regime === 'stable' ? 'estable' : 'volátil'}, los Dealers tienden a amortiguar las caídas cerca de estos niveles de soporte.${gexMetrics.netCharm > 1000 ? ` ADEMÁS, el Net Charm positivo (+${(gexMetrics.netCharm / 100).toFixed(1)}K/min) sugiere que el paso del tiempo obligará a los Dealers a comprar acciones para cubrir sus deltas, lo que protege tu posición.` : ''}`,
+                    : `El Put Wall en $${putWall.toFixed(0)} actúa como un imán y soporte institucional clave para el mercado hoy. El strike corto de $${shortStrike.toFixed(0)} se ha seleccionado para estar ${expectedMove ? (shortStrike < lowerBound ? `FUERA de las fronteras del Movimiento Esperado (±$${expectedMove.toFixed(1)})` : `DENTRO del rango del Movimiento Esperado`) : 'en una zona técnica de alta probabilidad'}. Bajo este régimen ${gexContext.regime === 'stable' ? 'estable' : 'volátil'}, los Dealers tienden a amortiguar las caídas cerca de estos niveles de soporte.${gexMetrics.netCharm > 1000 ? ` ADEMÁS, el Net Charm positivo (+${(gexMetrics.netCharm / 1000).toFixed(1)}K/min) sugiere que el paso del tiempo obligará a los Dealers a comprar acciones para cubrir sus deltas, lo que protege tu posición.` : ''}`,
                 status,
                 gexContext,
                 generatedAt: new Date().toISOString(),
@@ -815,15 +816,15 @@ export class TradeAlertService {
             const stopPrice = expectedMove ? Math.min(upperBound, shortStrike - 5) : shortStrike - 5;
             const exitCriteria = {
                 profitTarget: "100% (Dejar Expirar)",
-                stopLoss: `Cerrar si SPX sube a ${stopPrice.toFixed(0)} (Rompe Estructura)`,
-                timeExit: "Cerrar a las 3:45 PM si SPX está a <10 pts del strike"
+                stopLoss: `Cerrar si ${gexContext.symbol || 'SPX'} sube de ${stopPrice.toFixed(0)} (${((Math.abs(currentPrice - stopPrice) / currentPrice) * 100).toFixed(1)}% de distancia)`,
+                timeExit: `Cerrar a las 3:45 PM si ${gexContext.symbol || 'SPX'} está a menos de 10 pts del strike corto ($${shortStrike})`
             };
 
             return {
                 id: alertId,
                 strategy: 'BEAR_CALL_SPREAD',
                 strategyLabel: 'Bear Call Spread',
-                underlying: 'SPX',
+                underlying: gexContext.symbol || 'SPX',
                 expiration,
                 legs: [
                     {
@@ -848,7 +849,7 @@ export class TradeAlertService {
                 riskReward: `1:${(maxLoss / netCredit).toFixed(1)}`,
                 rationale: trigger === 'vanna_crush'
                     ? `ESTRATEGIA VANNA CRUSH: El Net Vanna es negativo (${(gexMetrics.netVanna / 1e6).toFixed(1)}M). Un colapso de volatilidad (IV Crush) resultará en ventas institucionales por cobertura, presionando el precio a la baja. Se vende Bear Call Spread para capturar este movimiento estructural.`
-                    : `El Call Wall en $${callWall.toFixed(0)} representa la frontera superior de liquidez y es la resistencia estadística más importante del día. El strike vendido de $${shortStrike.toFixed(0)} está ${expectedMove ? (shortStrike > upperBound ? `PROTEGIDO fuera del Movimiento Esperado (±$${expectedMove.toFixed(1)})` : `DENTRO del rango proyectado del Movimiento Esperado`) : 'en una zona de fuerte resistencia de gamma'}. En este contexto de Gamma negativa para Dealers, el Call Wall suele actuar como un techo sólido que frena las subidas aceleradas.${gexMetrics.netCharm < -1000 ? ` ADEMÁS, el Net Charm negativo sugiere que el paso del tiempo forzará ventas institucionales, favoreciendo tu posición bajista.` : ''}`,
+                    : `El Call Wall en $${callWall.toFixed(0)} representa la frontera superior de liquidez y es la resistencia estadística más importante del día. El strike vendido de $${shortStrike.toFixed(0)} está ${expectedMove ? (shortStrike > upperBound ? `PROTEGIDO fuera del Movimiento Esperado (±$${expectedMove.toFixed(1)})` : `DENTRO del rango proyectado del Movimiento Esperado`) : 'en una zona de fuerte resistencia de gamma'}. Bajo este régimen ${gexContext.regime === 'stable' ? 'estable' : 'volátil'}, el Call Wall suele actuar como un techo sólido que frena las subidas aceleradas.${gexMetrics.netCharm < -1000 ? ` ADEMÁS, el Net Charm negativo (-${(Math.abs(gexMetrics.netCharm) / 1000).toFixed(1)}K/min) sugiere que el paso del tiempo forzará ventas institucionales, favoreciendo tu posición bajista.` : ''}`,
                 status,
                 gexContext,
                 generatedAt: new Date().toISOString(),
@@ -896,7 +897,7 @@ export class TradeAlertService {
                 id: alertId,
                 strategy: 'IRON_CONDOR',
                 strategyLabel: 'Iron Condor',
-                underlying: 'SPX',
+                underlying: gexContext.symbol || 'SPX',
                 expiration,
                 legs: combinedLegs,
                 netCredit: parseFloat(totalCredit.toFixed(2)),
@@ -904,7 +905,7 @@ export class TradeAlertService {
                 maxProfit: parseFloat(totalCredit.toFixed(2)),
                 probability: parseFloat(probability.toFixed(1)),
                 riskReward: `1:${(maxLoss / totalCredit).toFixed(1)}`,
-                rationale: `Ideal para captura de Theta en un régimen ${gexContext.regime === 'stable' ? 'estable con Dealers en Gamma Positiva' : 'neutral'}. El precio se proyecta contenido dentro del rango de Muros ($${gexContext.putWall.toFixed(0)} - $${gexContext.callWall.toFixed(0)}). Esta estrategia aprovecha la compresión de volatilidad implícita y la defensa de los Market Makers en ambos extremos.`,
+                rationale: `Ideal para captura de Theta en un régimen ${gexContext.regime === 'stable' ? `estable con un Total GEX de ${(gexContext.totalGEX / 1e6).toFixed(1)}M (Gamma Positiva)` : 'neutral'}. El precio se proyecta contenido dentro del rango de Muros ($${gexContext.putWall.toFixed(0)} - $${gexContext.callWall.toFixed(0)}). Con un Net Drift de ${gexContext.netDrift.toFixed(2)}, esta estrategia aprovecha la compresión de volatilidad implícita y la defensa mecánica de los Market Makers en ambos extremos del rango esperado.`,
                 status: 'ACTIVE',
                 gexContext,
                 generatedAt: new Date().toISOString(),
