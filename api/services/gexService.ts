@@ -256,29 +256,39 @@ export class GEXService {
 
             try {
                 // Find option symbols for the walls
-                const callWallOpt = allOptions.find(o => o.putCall === 'CALL' && parseFloat(o.strikePrice || o.strike) === callWallStrike);
-                const putWallOpt = allOptions.find(o => o.putCall === 'PUT' && parseFloat(o.strikePrice || o.strike) === putWallStrike);
+                const callWallOpt = allOptions.find(o => o.putCall === 'CALL' && Math.abs(parseFloat(o.strikePrice || o.strike) - callWallStrike) < 0.1);
+                const putWallOpt = allOptions.find(o => o.putCall === 'PUT' && Math.abs(parseFloat(o.strikePrice || o.strike) - putWallStrike) < 0.1);
 
                 if (callWallOpt) {
-                    const book = await this.schwabService.getOptionsBook(callWallOpt.symbol);
-                    // For Call Wall (Resistance), we look at ASK liquidity (intent to sell)
-                    callWallLiquidity = book.asks.reduce((acc, a) => acc + a.size, 0);
-                    // Heuristic: If liquidity > average chain size or some threshold
+                    // Use askSize from the chain data (Top of Book liquidity to sell)
+                    callWallLiquidity = callWallOpt.askSize || 0;
+
                     if (callWallLiquidity > 500) callWallStrength = 'solid';
-                    else if (callWallLiquidity < 100 && callWallLiquidity > 0) callWallStrength = 'weak';
-                    else if (callWallLiquidity > 0) callWallStrength = 'solid'; // Default to solid if we have some data
+                    else if (callWallLiquidity > 0 && callWallLiquidity < 100) callWallStrength = 'weak';
+                    else if (callWallLiquidity > 0) callWallStrength = 'solid';
                 }
 
                 if (putWallOpt) {
-                    const book = await this.schwabService.getOptionsBook(putWallOpt.symbol);
-                    // For Put Wall (Support), we look at BID liquidity (intent to buy)
-                    putWallLiquidity = book.bids.reduce((acc, b) => acc + b.size, 0);
+                    // Use bidSize from the chain data (Top of Book liquidity to buy)
+                    putWallLiquidity = putWallOpt.bidSize || 0;
+
                     if (putWallLiquidity > 500) putWallStrength = 'solid';
-                    else if (putWallLiquidity < 100 && putWallLiquidity > 0) putWallStrength = 'weak';
+                    else if (putWallLiquidity > 0 && putWallLiquidity < 100) putWallStrength = 'weak';
                     else if (putWallLiquidity > 0) putWallStrength = 'solid';
                 }
+
+                // If market is closed, don't flag as "weak" just because liquidity is 0
+                const now = new Date();
+                const marketClose = new Date(now);
+                marketClose.setUTCHours(21, 0, 0); // 4:00 PM ET is 21:00 UTC (approx)
+                if (now > marketClose || callWallLiquidity === 0) {
+                    if (callWallLiquidity === 0) callWallStrength = 'uncertain';
+                }
+                if (now > marketClose || putWallLiquidity === 0) {
+                    if (putWallLiquidity === 0) putWallStrength = 'uncertain';
+                }
             } catch (err) {
-                console.warn('⚠️ GEX: Level 2 Wall validation failed:', err);
+                console.warn('⚠️ GEX: Wall validation error:', err);
             }
 
             return {
