@@ -61,35 +61,81 @@ export function Academy() {
                         {t('Market Pinning occurs when the gravity of a specific strike (usually a convergent Call/Put Wall) "traps" the price during the final hours of trading.')}
                     </p>
 
+                    <div className="space-y-6 mb-8">
+                        <div className="p-5 bg-gray-800/30 border border-gray-700/50 rounded-2xl">
+                            <h3 className="text-xl font-bold mb-3 text-blue-300">1. {t('The Critical Window: Last 90 Minutes')}</h3>
+                            <p className="text-gray-400 leading-relaxed mb-4">
+                                {t('Pinning does not happen at once; it has an optimal time window where data shifts from "noisy" to "predictive".')}
+                            </p>
+                            <ul className="space-y-3">
+                                <li className="flex items-start space-x-3">
+                                    <span className="px-2 py-0.5 bg-red-900/40 text-red-400 rounded text-xs font-mono font-bold mt-1">10:00 AM - 1:00 PM</span>
+                                    <span className="text-gray-400 text-sm">
+                                        <strong className="text-gray-300">{t('Unreliable.')}</strong> {t('Market still has directional volume. GEX walls exist but can be broken by news or order flow.')}
+                                    </span>
+                                </li>
+                                <li className="flex items-start space-x-3">
+                                    <span className="px-2 py-0.5 bg-yellow-900/40 text-yellow-400 rounded text-xs font-mono font-bold mt-1">1:00 PM - 2:30 PM</span>
+                                    <span className="text-gray-400 text-sm">
+                                        <strong className="text-gray-300">{t('Magnets Emerge.')}</strong> {t('Start watching the Pinning Target. If consistent, real confidence is higher than displayed.')}
+                                    </span>
+                                </li>
+                                <li className="flex items-start space-x-3">
+                                    <span className="px-2 py-0.5 bg-green-900/40 text-green-400 rounded text-xs font-mono font-bold mt-1">2:30 PM - 3:30 PM</span>
+                                    <span className="text-gray-400 text-sm">
+                                        <strong className="text-gray-300">{t('Golden Window.')}</strong> {t('Institutional decisions are made. Gamma grows exponentially. If confidence >70%, high probability.')}
+                                    </span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div className="p-5 bg-gray-800/30 border border-gray-700/50 rounded-2xl">
+                            <h3 className="text-xl font-bold mb-3 text-purple-300">2. {t('The Final Magnet Effect (3:30 PM - Close)')}</h3>
+                            <p className="text-gray-400 leading-relaxed">
+                                {t('In the last 30 minutes, sharp moves often occur as the market is "sucked" into the Pinning Target.')}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-start space-x-4 p-5 bg-gradient-to-r from-blue-900/20 to-transparent border-l-4 border-blue-500 rounded-r-xl mb-8">
+                        <Info className="h-6 w-6 text-blue-400 flex-shrink-0 mt-1" />
+                        <div>
+                            <h4 className="text-blue-400 font-bold text-sm uppercase tracking-wider mb-1">{t('Pro Tip')}</h4>
+                            <p className="text-gray-300 text-sm leading-relaxed">
+                                {t('If at 3:45 PM price is slightly off the Pinning Target but HUD shows SOLID confidence, that is an opportunity for a mean reversion trade toward the wall strike.')}
+                            </p>
+                        </div>
+                    </div>
+
                     <div className="overflow-hidden border border-gray-800 rounded-2xl">
                         <table className="w-full text-left">
                             <thead className="bg-gray-800/50 text-gray-300 text-sm uppercase">
                                 <tr>
-                                    <th className="px-6 py-4">{t('Time Window (ET)')}</th>
-                                    <th className="px-6 py-4">{t('Confidence')}</th>
-                                    <th className="px-6 py-4">{t('Market Behavior')}</th>
+                                    <th className="px-6 py-4">{t('Time (ET)')}</th>
+                                    <th className="px-6 py-4">{t('What to Expect')}</th>
+                                    <th className="px-6 py-4">{t('Action')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-800 text-gray-400">
                                 <tr className="hover:bg-gray-800/20 transition-colors">
-                                    <td className="px-6 py-4 font-mono text-blue-400">10:00 AM - 1:00 PM</td>
-                                    <td className="px-6 py-4 text-red-500 font-bold">LOW</td>
-                                    <td className="px-6 py-4">{t('High directional volume. GEX walls can be broken easily.')}</td>
+                                    <td className="px-6 py-4 font-mono text-blue-400">{t('Open')}</td>
+                                    <td className="px-6 py-4">{t('Noise and volatility.')}</td>
+                                    <td className="px-6 py-4 text-red-400 font-bold">{t('Ignore Pinning Target.')}</td>
                                 </tr>
                                 <tr className="hover:bg-gray-800/20 transition-colors">
-                                    <td className="px-6 py-4 font-mono text-blue-400">1:00 PM - 2:30 PM</td>
-                                    <td className="px-6 py-4 text-yellow-500 font-bold">MEDIUM</td>
-                                    <td className="px-6 py-4">{t('Magnets begin to emerge. Start watching for convergent walls.')}</td>
+                                    <td className="px-6 py-4 font-mono text-blue-400">1:30 PM</td>
+                                    <td className="px-6 py-4">{t('HUD detects convergence.')}</td>
+                                    <td className="px-6 py-4 text-yellow-500 font-bold">{t('Identify Target.')}</td>
                                 </tr>
                                 <tr className="hover:bg-gray-800/20 transition-colors bg-blue-500/5">
-                                    <td className="px-6 py-4 font-mono text-blue-400">2:30 PM - 3:30 PM</td>
-                                    <td className="px-6 py-4 text-green-500 font-bold underline">HIGH</td>
-                                    <td className="px-6 py-4 font-bold text-gray-200">{t('Golden Window. Institutional positions are locked. Gamma acceleration is at peak.')}</td>
+                                    <td className="px-6 py-4 font-mono text-blue-400">2:30 PM</td>
+                                    <td className="px-6 py-4 font-bold text-gray-200">{t('Walls become "SOLID".')}</td>
+                                    <td className="px-6 py-4 text-green-500 font-bold">{t('Validate Price Respect.')}</td>
                                 </tr>
                                 <tr className="hover:bg-gray-800/20 transition-colors">
-                                    <td className="px-6 py-4 font-mono text-blue-400">3:30 PM - 4:00 PM</td>
-                                    <td className="px-6 py-4 text-green-400 font-bold">EXTREME</td>
-                                    <td className="px-6 py-4">{t('The Magnet Effect. Price is mechanically sucked into the strike.')}</td>
+                                    <td className="px-6 py-4 font-mono text-blue-400">3:30 PM</td>
+                                    <td className="px-6 py-4">{t('Max Gamma Acceleration.')}</td>
+                                    <td className="px-6 py-4 text-green-400 font-bold">{t('Execute if Valid.')}</td>
                                 </tr>
                             </tbody>
                         </table>
