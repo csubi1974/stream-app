@@ -237,7 +237,7 @@ export class GEXService {
 
             // Ajustar si estamos cerca del gamma flip
             const distanceToFlip = Math.abs(currentPrice - gammaFlip) / currentPrice;
-            if (distanceToFlip < 0.005) { // Menos de 0.5%
+            if (distanceToFlip < 0.002) { // Menos de 0.2% (Más preciso para activos de alto precio)
                 regime = 'neutral'; // Cerca del flip = mayor incertidumbre
             }
 
