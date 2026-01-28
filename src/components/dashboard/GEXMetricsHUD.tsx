@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Activity, TrendingUp, TrendingDown, Shield, AlertTriangle, Target, ChevronDown, ChevronUp } from 'lucide-react';
+import { Activity, TrendingUp, TrendingDown, Shield, AlertTriangle, Target, ChevronDown, ChevronUp, CheckCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useMarketStore } from '../../stores/marketStore';
 import { useWebSocket } from '../../hooks/useWebSocket';
@@ -17,6 +17,10 @@ interface GEXMetrics {
     expectedMove?: number;    // Movimiento esperado del día
     netVanna: number;         // Exposición Vanna Neta
     netCharm: number;         // Exposición Charm Neta
+    callWallStrength?: 'solid' | 'weak' | 'uncertain';
+    putWallStrength?: 'solid' | 'weak' | 'uncertain';
+    callWallLiquidity?: number;
+    putWallLiquidity?: number;
     gammaProfile?: Array<{ price: number, netGex: number }>; // Curva Gamma
 }
 
@@ -122,7 +126,11 @@ export function GEXMetricsHUD() {
         regime,
         expectedMove,
         netVanna,
-        netCharm
+        netCharm,
+        callWallStrength,
+        putWallStrength,
+        callWallLiquidity,
+        putWallLiquidity
     } = gexMetrics;
 
     // Determinar color del Total GEX
@@ -291,6 +299,8 @@ export function GEXMetricsHUD() {
                     valueColor="text-green-400"
                     subtitle={t('Support Level')}
                     trend="support"
+                    strength={putWallStrength}
+                    liquidity={putWallLiquidity}
                     highlight={Math.abs(currentPrice - putWall) / currentPrice < 0.01}
                     tooltip={t('El Strike con mayor exposición de Gamma en Puts. Actúa como el soporte más sólido. Es donde los Dealers compran agresivamente para frenar la caída.')}
                 />
@@ -303,6 +313,8 @@ export function GEXMetricsHUD() {
                     valueColor="text-red-400"
                     subtitle={t('Resistance Level')}
                     trend="resistance"
+                    strength={callWallStrength}
+                    liquidity={callWallLiquidity}
                     highlight={Math.abs(currentPrice - callWall) / currentPrice < 0.01}
                     tooltip={t('El Strike con mayor exposición de Gamma en Calls. Actúa como un imán que frena las subidas. Es la resistencia estadística más fuerte del día.')}
                 />
@@ -388,9 +400,12 @@ interface MetricCardProps {
     trend?: 'up' | 'down' | 'stable' | 'volatile' | 'resistance' | 'support';
     highlight?: boolean;
     tooltip?: string;
+    strength?: 'solid' | 'weak' | 'uncertain';
+    liquidity?: number;
 }
 
-function MetricCard({ icon, label, value, valueColor, subtitle, trend, highlight, tooltip }: MetricCardProps) {
+function MetricCard({ icon, label, value, valueColor, subtitle, trend, highlight, tooltip, strength, liquidity }: MetricCardProps) {
+    const { t } = useTranslation();
     const getIconColor = () => {
         if (trend === 'up') return 'text-green-500';
         if (trend === 'down') return 'text-red-500';
@@ -399,6 +414,26 @@ function MetricCard({ icon, label, value, valueColor, subtitle, trend, highlight
         if (trend === 'resistance') return 'text-red-500';
         if (trend === 'support') return 'text-green-500';
         return 'text-gray-500';
+    };
+
+    const getStrengthBadge = () => {
+        if (!strength || strength === 'uncertain') return null;
+
+        if (strength === 'solid') {
+            return (
+                <div className="flex items-center bg-green-900/40 border border-green-500/50 px-1.5 py-0.5 rounded text-[8px] font-black text-green-400 uppercase animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.3)]">
+                    <CheckCircle className="h-2 w-2 mr-1" />
+                    SOLID WALL
+                </div>
+            );
+        }
+
+        return (
+            <div className="flex items-center bg-red-900/40 border border-red-500/50 px-1.5 py-0.5 rounded text-[8px] font-black text-red-400 uppercase animate-bounce shadow-[0_0_8px_rgba(239,68,68,0.3)]">
+                <AlertTriangle className="h-2 w-2 mr-1" />
+                WEAK WALL
+            </div>
+        );
     };
 
     return (
@@ -411,6 +446,12 @@ function MetricCard({ icon, label, value, valueColor, subtitle, trend, highlight
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-black/95 text-white text-[11px] rounded-xl border border-gray-700 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-2xl backdrop-blur-sm leading-relaxed">
                     <div className="font-bold text-blue-400 mb-1 border-b border-gray-800 pb-1">{label}</div>
                     {tooltip}
+                    {liquidity !== undefined && (
+                        <div className="mt-2 pt-2 border-t border-gray-800 flex justify-between items-center">
+                            <span className="text-gray-500">L2 Liquidity (Size):</span>
+                            <span className="text-white font-mono">{liquidity} contracts</span>
+                        </div>
+                    )}
                     {/* Arrow */}
                     <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-black/95"></div>
                 </div>
@@ -420,6 +461,7 @@ function MetricCard({ icon, label, value, valueColor, subtitle, trend, highlight
                 <div className={getIconColor()}>
                     {icon}
                 </div>
+                {getStrengthBadge()}
             </div>
             <div className="text-[10px] uppercase text-gray-500 font-bold tracking-wider mb-1">
                 {label}
@@ -427,8 +469,11 @@ function MetricCard({ icon, label, value, valueColor, subtitle, trend, highlight
             <div className={`text-lg font-bold ${valueColor} mb-1 font-mono truncate`}>
                 {value}
             </div>
-            <div className="text-[10px] text-gray-400">
-                {subtitle}
+            <div className="text-[10px] text-gray-400 flex justify-between items-center">
+                <span>{subtitle}</span>
+                {liquidity !== undefined && liquidity > 0 && (
+                    <span className="text-[8px] font-mono text-gray-600">L2: {liquidity}</span>
+                )}
             </div>
         </div>
     );

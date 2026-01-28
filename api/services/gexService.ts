@@ -12,6 +12,10 @@ export interface GEXMetrics {
     expectedMove?: number; // Expected daily move based on ATM straddle
     netVanna: number;      // Net Vanna exposure
     netCharm: number;      // Net Charm exposure (Delta decay)
+    callWallStrength?: 'solid' | 'weak' | 'uncertain';
+    putWallStrength?: 'solid' | 'weak' | 'uncertain';
+    callWallLiquidity?: number; // Total contracts sitting at the wall in Level 2
+    putWallLiquidity?: number;  // Total contracts sitting at the wall in Level 2
     gammaProfile: Array<{ price: number, netGex: number }>; // Data points for the Gamma Curve
 }
 
@@ -244,6 +248,39 @@ export class GEXService {
             // 6. Calculate Expected Move (ATM Straddle)
             const expectedMove = this.calculateExpectedMove(allOptions, currentPrice);
 
+            // 7. LEVEL 2 WALL VALIDATION (NEW)
+            let callWallStrength: 'solid' | 'weak' | 'uncertain' = 'uncertain';
+            let putWallStrength: 'solid' | 'weak' | 'uncertain' = 'uncertain';
+            let callWallLiquidity = 0;
+            let putWallLiquidity = 0;
+
+            try {
+                // Find option symbols for the walls
+                const callWallOpt = allOptions.find(o => o.putCall === 'CALL' && parseFloat(o.strikePrice || o.strike) === callWallStrike);
+                const putWallOpt = allOptions.find(o => o.putCall === 'PUT' && parseFloat(o.strikePrice || o.strike) === putWallStrike);
+
+                if (callWallOpt) {
+                    const book = await this.schwabService.getOptionsBook(callWallOpt.symbol);
+                    // For Call Wall (Resistance), we look at ASK liquidity (intent to sell)
+                    callWallLiquidity = book.asks.reduce((acc, a) => acc + a.size, 0);
+                    // Heuristic: If liquidity > average chain size or some threshold
+                    if (callWallLiquidity > 500) callWallStrength = 'solid';
+                    else if (callWallLiquidity < 100 && callWallLiquidity > 0) callWallStrength = 'weak';
+                    else if (callWallLiquidity > 0) callWallStrength = 'solid'; // Default to solid if we have some data
+                }
+
+                if (putWallOpt) {
+                    const book = await this.schwabService.getOptionsBook(putWallOpt.symbol);
+                    // For Put Wall (Support), we look at BID liquidity (intent to buy)
+                    putWallLiquidity = book.bids.reduce((acc, b) => acc + b.size, 0);
+                    if (putWallLiquidity > 500) putWallStrength = 'solid';
+                    else if (putWallLiquidity < 100 && putWallLiquidity > 0) putWallStrength = 'weak';
+                    else if (putWallLiquidity > 0) putWallStrength = 'solid';
+                }
+            } catch (err) {
+                console.warn('⚠️ GEX: Level 2 Wall validation failed:', err);
+            }
+
             return {
                 totalGEX,
                 gammaFlip,
@@ -251,6 +288,10 @@ export class GEXService {
                 netDrift,
                 callWall: callWallStrike,
                 putWall: putWallStrike,
+                callWallStrength,
+                putWallStrength,
+                callWallLiquidity,
+                putWallLiquidity,
                 currentPrice,
                 regime,
                 expectedMove,
@@ -304,6 +345,10 @@ export class GEXService {
             regime: 'neutral',
             netVanna: 0,
             netCharm: 0,
+            callWallStrength: 'uncertain',
+            putWallStrength: 'uncertain',
+            callWallLiquidity: 0,
+            putWallLiquidity: 0,
             gammaProfile: []
         };
     }
@@ -376,6 +421,10 @@ export class GEXService {
             expectedMove,
             netVanna,
             netCharm,
+            callWallStrength: Math.random() > 0.3 ? 'solid' : 'weak',
+            putWallStrength: Math.random() > 0.3 ? 'solid' : 'weak',
+            callWallLiquidity: Math.floor(Math.random() * 2000),
+            putWallLiquidity: Math.floor(Math.random() * 2000),
             gammaProfile: this.calculateMockGammaProfile(adjustedPrice, gammaFlip)
         };
     }
