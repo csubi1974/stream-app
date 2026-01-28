@@ -448,8 +448,8 @@ function MetricCard({ icon, label, value, valueColor, subtitle, trend, highlight
                     {tooltip}
                     {liquidity !== undefined && (
                         <div className="mt-2 pt-2 border-t border-gray-800 flex justify-between items-center">
-                            <span className="text-gray-500">L2 Liquidity (Size):</span>
-                            <span className="text-white font-mono">{liquidity} contracts</span>
+                            <span className="text-gray-500">Open Interest:</span>
+                            <span className="text-white font-mono">{liquidity.toLocaleString()} contracts</span>
                         </div>
                     )}
                     {/* Arrow */}
@@ -473,7 +473,7 @@ function MetricCard({ icon, label, value, valueColor, subtitle, trend, highlight
                 <div className="flex justify-between items-center">
                     <span>{subtitle}</span>
                     {liquidity !== undefined && liquidity > 0 && (
-                        <span className="text-[8px] font-mono text-gray-600">L2: {liquidity}</span>
+                        <span className="text-[8px] font-mono text-gray-600">OI: {liquidity.toLocaleString()}</span>
                     )}
                 </div>
                 {strength === 'weak' && (

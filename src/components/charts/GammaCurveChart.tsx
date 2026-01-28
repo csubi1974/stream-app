@@ -180,8 +180,8 @@ export function GammaCurveChart({ data, currentPrice, gammaFlip, callWall, putWa
                             </text>
                         ))}
 
-                        {/* Labels */}
-                        <text x={getX(currentPrice)} y={-22} textAnchor="middle" fill="#3b82f6" fontSize="11" fontWeight="bold">
+                        {/* Labels with vertical staggering logic to avoid overlap */}
+                        <text x={getX(currentPrice)} y={-25} textAnchor="middle" fill="#3b82f6" fontSize="11" fontWeight="bold">
                             SPOT: ${currentPrice.toFixed(0)}
                         </text>
 
@@ -190,13 +190,29 @@ export function GammaCurveChart({ data, currentPrice, gammaFlip, callWall, putWa
                         </text>
 
                         {putWall && (
-                            <text x={getX(putWall)} y={-10} textAnchor="middle" fill="#22c55e" fontSize="10" fontWeight="bold">
+                            <text
+                                x={getX(putWall)}
+                                y={Math.abs(getX(putWall) - getX(currentPrice)) < 30 ? -12 : -10}
+                                textAnchor="end"
+                                fill="#22c55e"
+                                fontSize="9"
+                                fontWeight="bold"
+                                dx="-5"
+                            >
                                 PUT WALL: ${putWall.toFixed(0)}
                             </text>
                         )}
 
                         {callWall && (
-                            <text x={getX(callWall)} y={-10} textAnchor="middle" fill="#ef4444" fontSize="10" fontWeight="bold">
+                            <text
+                                x={getX(callWall)}
+                                y={Math.abs(getX(callWall) - getX(currentPrice)) < 30 ? -12 : -10}
+                                textAnchor="start"
+                                fill="#ef4444"
+                                fontSize="9"
+                                fontWeight="bold"
+                                dx="5"
+                            >
                                 CALL WALL: ${callWall.toFixed(0)}
                             </text>
                         )}

@@ -90,8 +90,8 @@ export class GEXService {
                 netCharm: number;
             }>();
 
-            let maxCallOI = 0;
-            let maxPutOI = 0;
+            let maxCallGEX = 0;
+            let maxPutGEX = 0;
             let callWallStrike = 0;
             let putWallStrike = 0;
 
@@ -138,9 +138,9 @@ export class GEXService {
                     metrics.netVanna += vannaContribution; // Calls have positive Vanna
 
 
-                    // Actualizar Call Wall
-                    if (metrics.callOI > maxCallOI) {
-                        maxCallOI = metrics.callOI;
+                    // Actualizar Call Wall (Strike con mayor Call GEX positivo)
+                    if (metrics.callGEX > maxCallGEX) {
+                        maxCallGEX = metrics.callGEX;
                         callWallStrike = strike;
                     }
                 } else {
@@ -151,9 +151,9 @@ export class GEXService {
                     metrics.netVanna -= vannaContribution; // Puts have negative Vanna for dealers (short puts)
 
 
-                    // Actualizar Put Wall
-                    if (metrics.putOI > maxPutOI) {
-                        maxPutOI = metrics.putOI;
+                    // Actualizar Put Wall (Strike con mayor Put GEX negativo - buscamos el valor más bajo)
+                    if (metrics.putGEX < maxPutGEX) {
+                        maxPutGEX = metrics.putGEX;
                         putWallStrike = strike;
                     }
                 }
@@ -265,21 +265,42 @@ export class GEXService {
                     Math.abs(Number(o.strikePrice || o.strike) - putWallStrike) < 0.5
                 );
 
-                if (callWallOpt) {
-                    // Try multiple property names for liquidity (Schwab sometimes varies)
-                    callWallLiquidity = callWallOpt.askSize || callWallOpt.askQuantity || 0;
+                console.log('🔍 GEX Wall Debug:', {
+                    callWallStrike,
+                    putWallStrike,
+                    callFound: !!callWallOpt,
+                    putFound: !!putWallOpt
+                });
 
-                    if (callWallLiquidity > 500) callWallStrength = 'solid';
-                    else if (callWallLiquidity > 0 && callWallLiquidity < 100) callWallStrength = 'weak';
+                if (callWallOpt) {
+                    // Use Open Interest as the true measure of wall strength
+                    // OI represents total open contracts, which is what creates the GEX wall
+                    callWallLiquidity = callWallOpt.openInterest || 0;
+
+                    console.log('📊 Call Wall:', {
+                        strike: callWallOpt.strikePrice || callWallOpt.strike,
+                        openInterest: callWallOpt.openInterest,
+                        liquidity: callWallLiquidity
+                    });
+
+                    // Thresholds adjusted for OI (typically much higher than bid/ask size)
+                    if (callWallLiquidity > 5000) callWallStrength = 'solid';
+                    else if (callWallLiquidity > 0 && callWallLiquidity < 1000) callWallStrength = 'weak';
                     else if (callWallLiquidity > 0) callWallStrength = 'solid';
                 }
 
                 if (putWallOpt) {
-                    // For Put Wall (Support), we look at BID liquidity (intent to buy)
-                    putWallLiquidity = putWallOpt.bidSize || putWallOpt.bidQuantity || 0;
+                    // Use Open Interest for Put Wall as well
+                    putWallLiquidity = putWallOpt.openInterest || 0;
 
-                    if (putWallLiquidity > 500) putWallStrength = 'solid';
-                    else if (putWallLiquidity > 0 && putWallLiquidity < 100) putWallStrength = 'weak';
+                    console.log('📊 Put Wall:', {
+                        strike: putWallOpt.strikePrice || putWallOpt.strike,
+                        openInterest: putWallOpt.openInterest,
+                        liquidity: putWallLiquidity
+                    });
+
+                    if (putWallLiquidity > 5000) putWallStrength = 'solid';
+                    else if (putWallLiquidity > 0 && putWallLiquidity < 1000) putWallStrength = 'weak';
                     else if (putWallLiquidity > 0) putWallStrength = 'solid';
                 }
 
