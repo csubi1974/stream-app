@@ -64,7 +64,10 @@ export interface GEXMetrics {
   putWallStrength?: 'solid' | 'weak' | 'uncertain';
   callWallLiquidity?: number;
   putWallLiquidity?: number;
-  gammaProfile?: Array<{ price: number, netGex: number }>; // Curva teórica de Gamma
+  pinningTarget?: number;
+  pinningConfidence?: number;
+  pinningRationale?: string;
+  gammaProfile?: Array<{ price: number, netGex: number }>;
 }
 
 interface MarketStore {

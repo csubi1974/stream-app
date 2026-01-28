@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Activity, TrendingUp, TrendingDown, Shield, AlertTriangle, Target, ChevronDown, ChevronUp, CheckCircle } from 'lucide-react';
+import { Activity, TrendingUp, TrendingDown, Shield, AlertTriangle, Target, ChevronDown, ChevronUp, CheckCircle, BookOpen } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { useMarketStore } from '../../stores/marketStore';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { GammaCurveChart } from '../charts/GammaCurveChart';
@@ -15,13 +16,16 @@ interface GEXMetrics {
     currentPrice: number;     // Precio actual del subyacente
     regime: 'stable' | 'volatile' | 'neutral'; // Régimen de volatilidad
     expectedMove?: number;    // Movimiento esperado del día
-    netVanna: number;         // Exposición Vanna Neta
-    netCharm: number;         // Exposición Charm Neta
+    netVanna: number;
+    netCharm: number;
     callWallStrength?: 'solid' | 'weak' | 'uncertain';
     putWallStrength?: 'solid' | 'weak' | 'uncertain';
     callWallLiquidity?: number;
     putWallLiquidity?: number;
-    gammaProfile?: Array<{ price: number, netGex: number }>; // Curva Gamma
+    pinningTarget?: number;
+    pinningConfidence?: number;
+    pinningRationale?: string;
+    gammaProfile?: Array<{ price: number, netGex: number }>;
 }
 
 export function GEXMetricsHUD() {
@@ -130,7 +134,10 @@ export function GEXMetricsHUD() {
         callWallStrength,
         putWallStrength,
         callWallLiquidity,
-        putWallLiquidity
+        putWallLiquidity,
+        pinningTarget,
+        pinningConfidence,
+        pinningRationale
     } = gexMetrics;
 
     // Determinar color del Total GEX
@@ -167,6 +174,9 @@ export function GEXMetricsHUD() {
                     <h2 className="text-xl font-bold text-white flex items-center">
                         <Activity className="h-6 w-6 mr-2 text-blue-500" />
                         {t('GEX Market Intelligence HUD')}
+                        <Link to="/academy" className="ml-2 p-1 text-gray-500 hover:text-blue-400 transition-colors" title={t('Academy Guide')}>
+                            <BookOpen className="h-4 w-4" />
+                        </Link>
                     </h2>
 
                     {/* Symbol Selector - MASTER CONTROL */}
@@ -212,7 +222,7 @@ export function GEXMetricsHUD() {
             </div>
 
             {/* Main Metrics Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-9 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 2xl:grid-cols-10 gap-3">
 
                 {/* Total GEX */}
                 <MetricCard
@@ -318,6 +328,19 @@ export function GEXMetricsHUD() {
                     highlight={Math.abs(currentPrice - callWall) / currentPrice < 0.01}
                     tooltip={t('El Strike con mayor exposición de Gamma en Calls. Actúa como un imán que frena las subidas. Es la resistencia estadística más fuerte del día.')}
                 />
+
+                {/* Pinning Target - NEW */}
+                <MetricCard
+                    icon={<Target className="h-5 w-5 text-yellow-400" />}
+                    label={t('Pinning Target')}
+                    value={pinningTarget ? `$${pinningTarget.toFixed(0)}` : '--'}
+                    valueColor="text-yellow-400"
+                    subtitle={t('Estimated Closes')}
+                    confidence={pinningConfidence}
+                    rationale={pinningRationale}
+                    highlight={pinningConfidence ? pinningConfidence > 70 : false}
+                    tooltip={t('El nivel de precio donde es más probable que el mercado cierre hoy. Se basa en el punto de convergencia de los muros de GEX y la atracción del imán institucional.')}
+                />
             </div>
 
             {/* Additional Context Bar */}
@@ -402,9 +425,13 @@ interface MetricCardProps {
     tooltip?: string;
     strength?: 'solid' | 'weak' | 'uncertain';
     liquidity?: number;
+    confidence?: number;
+    rationale?: string;
 }
 
-function MetricCard({ icon, label, value, valueColor, subtitle, trend, highlight, tooltip, strength, liquidity }: MetricCardProps) {
+function MetricCard({
+    icon, label, value, valueColor, subtitle, trend, highlight, tooltip, strength, liquidity, confidence, rationale
+}: MetricCardProps) {
     const { t } = useTranslation();
     const getIconColor = () => {
         if (trend === 'up') return 'text-green-500';
@@ -476,6 +503,25 @@ function MetricCard({ icon, label, value, valueColor, subtitle, trend, highlight
                         <span className="text-[8px] font-mono text-gray-600">OI: {liquidity.toLocaleString()}</span>
                     )}
                 </div>
+                {confidence !== undefined && (
+                    <div className="flex flex-col space-y-1">
+                        <div className="flex justify-between items-center text-[8px] font-black uppercase">
+                            <span>{t('Confidenza')}:</span>
+                            <span className={confidence > 70 ? 'text-green-400' : 'text-yellow-500'}>{confidence}%</span>
+                        </div>
+                        <div className="w-full h-1 bg-gray-800 rounded-full overflow-hidden border border-gray-700/50 shadow-inner">
+                            <div
+                                className={`h-full transition-all duration-1000 ${confidence > 70 ? 'bg-gradient-to-r from-green-600 to-green-400 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-gradient-to-r from-yellow-600 to-yellow-400 shadow-[0_0_8px_rgba(234,179,8,0.4)]'}`}
+                                style={{ width: `${confidence}%` }}
+                            ></div>
+                        </div>
+                    </div>
+                )}
+                {rationale && (
+                    <div className="text-[8px] text-gray-600 italic leading-tight border-t border-gray-800/50 pt-1 mt-1 truncate group-hover:whitespace-normal group-hover:bg-gray-900 group-hover:z-10 group-hover:absolute group-hover:left-0 group-hover:right-0 group-hover:p-2 group-hover:rounded-b-lg group-hover:border group-hover:border-gray-700 transition-all duration-300">
+                        {t(rationale)}
+                    </div>
+                )}
                 {strength === 'weak' && (
                     <div className="text-[9px] text-red-400 font-bold leading-tight mt-1 border-t border-red-900/30 pt-1 animate-pulse">
                         ⚠️ {t('Muro Teórico sin Liquidez Real - Posible Ruptura')}

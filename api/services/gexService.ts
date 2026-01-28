@@ -16,7 +16,10 @@ export interface GEXMetrics {
     putWallStrength?: 'solid' | 'weak' | 'uncertain';
     callWallLiquidity?: number; // Total contracts sitting at the wall in Level 2
     putWallLiquidity?: number;  // Total contracts sitting at the wall in Level 2
-    gammaProfile: Array<{ price: number, netGex: number }>; // Data points for the Gamma Curve
+    pinningTarget?: number;
+    pinningConfidence?: number;
+    pinningRationale?: string;
+    gammaProfile: Array<{ price: number, netGex: number }>;
 }
 
 export class GEXService {
@@ -323,6 +326,36 @@ export class GEXService {
                 console.warn('⚠️ GEX: Wall validation error:', err);
             }
 
+            // 8. MARKET PINNING PREDICTION (NEW)
+            let pinningTarget = callWallStrike;
+            let pinningConfidence = 0;
+            let pinningRationale = '';
+
+            if (callWallStrike === putWallStrike) {
+                pinningTarget = callWallStrike;
+                pinningConfidence = (callWallStrength === 'solid' && putWallStrength === 'solid') ? 85 : 65;
+                pinningRationale = 'High Concentration: Dealers Pinning Target (Convergent Walls)';
+            } else {
+                // Find strike with highest net absolute GEX near current price
+                const activeRange = strikeMetrics.values();
+                let maxImpact = 0;
+                for (const m of activeRange) {
+                    if (Math.abs(m.netGEX) > maxImpact) {
+                        maxImpact = Math.abs(m.netGEX);
+                        // Simplified picking
+                    }
+                }
+                pinningTarget = Math.abs(currentPrice - callWallStrike) < Math.abs(currentPrice - putWallStrike) ? callWallStrike : putWallStrike;
+                pinningConfidence = 45;
+                pinningRationale = 'Gamma Magnet: Nearest Major Liquidity Wall';
+            }
+
+            // Adjustment for negative gamma
+            if (regime === 'volatile') {
+                pinningConfidence -= 20;
+                pinningRationale = 'Low Confidence: Negative Gamma Regime (No Anchor)';
+            }
+
             return {
                 totalGEX,
                 gammaFlip,
@@ -334,6 +367,9 @@ export class GEXService {
                 putWallStrength,
                 callWallLiquidity,
                 putWallLiquidity,
+                pinningTarget,
+                pinningConfidence,
+                pinningRationale,
                 currentPrice,
                 regime,
                 expectedMove,
@@ -391,6 +427,9 @@ export class GEXService {
             putWallStrength: 'uncertain',
             callWallLiquidity: 0,
             putWallLiquidity: 0,
+            pinningTarget: 0,
+            pinningConfidence: 0,
+            pinningRationale: 'Waiting for data...',
             gammaProfile: []
         };
     }
@@ -465,8 +504,11 @@ export class GEXService {
             netCharm,
             callWallStrength: Math.random() > 0.3 ? 'solid' : 'weak',
             putWallStrength: Math.random() > 0.3 ? 'solid' : 'weak',
-            callWallLiquidity: Math.floor(Math.random() * 2000),
-            putWallLiquidity: Math.floor(Math.random() * 2000),
+            callWallLiquidity: Math.floor(Math.random() * 20000),
+            putWallLiquidity: Math.floor(Math.random() * 20000),
+            pinningTarget: Math.round(adjustedPrice / 5) * 5,
+            pinningConfidence: 75,
+            pinningRationale: 'Mock Prediction: Index Pinning near major strike',
             gammaProfile: this.calculateMockGammaProfile(adjustedPrice, gammaFlip)
         };
     }
