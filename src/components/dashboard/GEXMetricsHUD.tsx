@@ -469,10 +469,17 @@ function MetricCard({ icon, label, value, valueColor, subtitle, trend, highlight
             <div className={`text-lg font-bold ${valueColor} mb-1 font-mono truncate`}>
                 {value}
             </div>
-            <div className="text-[10px] text-gray-400 flex justify-between items-center">
-                <span>{subtitle}</span>
-                {liquidity !== undefined && liquidity > 0 && (
-                    <span className="text-[8px] font-mono text-gray-600">L2: {liquidity}</span>
+            <div className="text-[10px] text-gray-400 flex flex-col space-y-1">
+                <div className="flex justify-between items-center">
+                    <span>{subtitle}</span>
+                    {liquidity !== undefined && liquidity > 0 && (
+                        <span className="text-[8px] font-mono text-gray-600">L2: {liquidity}</span>
+                    )}
+                </div>
+                {strength === 'weak' && (
+                    <div className="text-[9px] text-red-400 font-bold leading-tight mt-1 border-t border-red-900/30 pt-1 animate-pulse">
+                        ⚠️ {t('Muro Teórico sin Liquidez Real - Posible Ruptura')}
+                    </div>
                 )}
             </div>
         </div>

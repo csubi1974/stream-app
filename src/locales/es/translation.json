@@ -8,7 +8,7 @@
     "MARKET OPEN": "MERCADO ABIERTO",
     "MARKET CLOSED": "MERCADO CERRADO",
     "TapeReading": "Flujo Institucional",
-    "Version": "v1.9.4",
+    "Version": "v1.9.5",
     "TapeReading Platform": "Terminal de Flujo Institucional",
     "Real-time analysis": "Análisis avanzado de microestructura y posicionamiento de Market Makers en tiempo real",
     "Connected to market data": "Conectado a datos de mercado",
@@ -278,5 +278,6 @@
     "Theoretical Gamma Curve": "Curva Teórica de Gamma",
     "Positive Gamma (Stable)": "Gamma Positiva (Estable)",
     "Negative Gamma (Volatile)": "Gamma Negativa (Volátil)",
-    "Gamma Curve Analysis (Theoretical Profile)": "Análisis de Curva Gamma (Perfil Teórico)"
+    "Gamma Curve Analysis (Theoretical Profile)": "Análisis de Curva Gamma (Perfil Teórico)",
+    "Muro Teórico sin Liquidez Real - Posible Ruptura": "Muro Teórico sin Liquidez Real - Posible Ruptura"
 }
