@@ -238,7 +238,7 @@ export class GEXService {
             // Ajustar si estamos cerca del gamma flip
             const distanceToFlip = Math.abs(currentPrice - gammaFlip) / currentPrice;
             if (distanceToFlip < 0.005) { // Menos de 0.5%
-                regime = 'volatile'; // Cerca del flip = mayor incertidumbre
+                regime = 'neutral'; // Cerca del flip = mayor incertidumbre
             }
 
             // 6. Calculate Expected Move (ATM Straddle)
