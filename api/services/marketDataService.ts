@@ -180,8 +180,13 @@ export class MarketDataService {
         allOptions.push(...chain.puts);
       }
 
-      // Calculate Walls & GEX
-      const strikes = new Map<number, { callOi: number; putOi: number; callGex: number; putGex: number }>();
+      // Calculate Walls, GEX, Vanna & DEX
+      const strikes = new Map<number, {
+        callOi: number; putOi: number;
+        callGex: number; putGex: number;
+        callVanna: number; putVanna: number;
+        callDex: number; putDex: number;
+      }>();
       let callWall = { strike: 0, oi: 0 };
       let putWall = { strike: 0, oi: 0 };
 
@@ -222,20 +227,37 @@ export class MarketDataService {
         const strike = parseFloat(opt.strikePrice || opt.strike);
         const oi = opt.openInterest || 0;
         const gamma = opt.gamma || 0;
+        const vega = opt.vega || 0;
 
-        if (!strikes.has(strike)) strikes.set(strike, { callOi: 0, putOi: 0, callGex: 0, putGex: 0 });
+        if (!strikes.has(strike)) strikes.set(strike, {
+          callOi: 0, putOi: 0,
+          callGex: 0, putGex: 0,
+          callVanna: 0, putVanna: 0,
+          callDex: 0, putDex: 0
+        });
         const stat = strikes.get(strike)!;
+        const delta = opt.delta || 0;
 
         // GEX = Gamma * OI * 100 * Spot Price
         const gexValue = gamma * oi * 100 * (currentPrice || strike);
 
+        // Vanna Exposure = Vega * OI * 100 (Simplified institutional exposure)
+        const vannaValue = vega * oi * 100;
+
+        // Delta Exposure = Delta * OI * 100
+        const dexValue = delta * oi * 100;
+
         if (opt.putCall === 'CALL') {
           stat.callOi += oi;
           stat.callGex += gexValue;
+          stat.callVanna += vannaValue;
+          stat.callDex += dexValue;
           if (stat.callOi > callWall.oi) callWall = { strike, oi: stat.callOi };
         } else {
           stat.putOi += oi;
           stat.putGex -= gexValue; // Negative GEX for Puts for visualization
+          stat.putVanna -= vannaValue; // Negative Vanna for Puts for visualization
+          stat.putDex += dexValue; // DEX for puts is typically negative because put delta is negative
           if (stat.putOi > putWall.oi) putWall = { strike, oi: stat.putOi };
         }
       });
@@ -273,6 +295,10 @@ export class MarketDataService {
           strike,
           callGex: data.callGex,
           putGex: data.putGex,
+          callVanna: data.callVanna,
+          putVanna: data.putVanna,
+          callDex: data.callDex,
+          putDex: data.putDex,
           callOi: data.callOi,
           putOi: data.putOi
         }))

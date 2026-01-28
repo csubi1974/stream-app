@@ -5,26 +5,42 @@ interface GammaCurveChartProps {
     data: Array<{ price: number; netGex: number }>;
     currentPrice: number;
     gammaFlip: number;
+    callWall?: number;
+    putWall?: number;
 }
 
-export function GammaCurveChart({ data, currentPrice, gammaFlip }: GammaCurveChartProps) {
+export function GammaCurveChart({ data, currentPrice, gammaFlip, callWall, putWall }: GammaCurveChartProps) {
     const { t } = useTranslation();
 
     // SVG Dimensions
     const width = 800;
-    const height = 180;
-    const margin = { top: 15, right: 40, bottom: 25, left: 60 };
+    const height = 240;
+    const margin = { top: 30, right: 40, bottom: 25, left: 60 };
     const graphWidth = width - margin.left - margin.right;
     const graphHeight = height - margin.top - margin.bottom;
 
     // Scales
-    const xMin = useMemo(() => Math.min(...data.map(d => d.price)), [data]);
-    const xMax = useMemo(() => Math.max(...data.map(d => d.price)), [data]);
+    const { xMin, xMax } = useMemo(() => {
+        const prices = data.map(d => d.price);
+        if (callWall) prices.push(callWall);
+        if (putWall) prices.push(putWall);
+        if (currentPrice) prices.push(currentPrice);
+        if (gammaFlip) prices.push(gammaFlip);
+
+        return {
+            xMin: Math.min(...prices),
+            xMax: Math.max(...prices)
+        };
+    }, [data, callWall, putWall, currentPrice, gammaFlip]);
+
     const yMax = useMemo(() => Math.max(...data.map(d => Math.abs(d.netGex))), [data]);
 
     const limit = yMax > 0 ? yMax * 1.2 : 1000000;
 
-    const getX = (price: number) => ((price - xMin) / (xMax - xMin)) * graphWidth;
+    const getX = (price: number) => {
+        if (xMax === xMin) return 0;
+        return ((price - xMin) / (xMax - xMin)) * graphWidth;
+    };
     const getY = (gex: number) => graphHeight / 2 - (gex / limit) * (graphHeight / 2);
 
     const zeroY = getY(0);
@@ -44,7 +60,7 @@ export function GammaCurveChart({ data, currentPrice, gammaFlip }: GammaCurveCha
         path += ` L ${lastX} ${zeroY} L ${firstX} ${zeroY} Z`;
 
         return path;
-    }, [data, zeroY]);
+    }, [data, zeroY, xMin, xMax]);
 
     const linePath = useMemo(() => {
         if (data.length < 2) return '';
@@ -53,7 +69,7 @@ export function GammaCurveChart({ data, currentPrice, gammaFlip }: GammaCurveCha
             path += ` L ${getX(data[i].price)} ${getY(data[i].netGex)}`;
         }
         return path;
-    }, [data]);
+    }, [data, xMin, xMax]);
 
     const formatValue = (val: number) => {
         const v = Math.abs(val);
@@ -80,7 +96,7 @@ export function GammaCurveChart({ data, currentPrice, gammaFlip }: GammaCurveCha
                 </div>
             </div>
 
-            <div className="relative h-[140px]">
+            <div className="relative h-[200px]">
                 <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible">
                     <defs>
                         <linearGradient id="curveGradient" x1="0" y1="0" x2="0" y2="1">
@@ -126,11 +142,29 @@ export function GammaCurveChart({ data, currentPrice, gammaFlip }: GammaCurveCha
                             stroke="#f59e0b" strokeWidth="1" strokeDasharray="2 2"
                         />
 
+                        {/* Put Wall Marker (Support) */}
+                        {putWall && (
+                            <line
+                                x1={getX(putWall)} y1={0}
+                                x2={getX(putWall)} y2={graphHeight}
+                                stroke="#22c55e" strokeWidth="2" strokeDasharray="5 3"
+                            />
+                        )}
+
+                        {/* Call Wall Marker (Resistance) */}
+                        {callWall && (
+                            <line
+                                x1={getX(callWall)} y1={0}
+                                x2={getX(callWall)} y2={graphHeight}
+                                stroke="#ef4444" strokeWidth="2" strokeDasharray="5 3"
+                            />
+                        )}
+
                         {/* X-Axis Ticks */}
                         {[xMin, (xMin + xMax) / 2, xMax].map((tick, i) => (
                             <text
-                                key={i} x={getX(tick)} y={graphHeight + 15}
-                                textAnchor="middle" fill="#4b5563" fontSize="9" fontFamily="monospace"
+                                key={i} x={getX(tick)} y={graphHeight + 18}
+                                textAnchor="middle" fill="#9ca3af" fontSize="11" fontFamily="monospace"
                             >
                                 ${tick.toFixed(0)}
                             </text>
@@ -139,20 +173,33 @@ export function GammaCurveChart({ data, currentPrice, gammaFlip }: GammaCurveCha
                         {/* Y-Axis Ticks */}
                         {[limit, 0, -limit].map((tick, i) => (
                             <text
-                                key={i} x={-8} y={getY(tick)}
-                                textAnchor="end" dominantBaseline="middle" fill="#4b5563" fontSize="8" fontFamily="monospace"
+                                key={i} x={-10} y={getY(tick)}
+                                textAnchor="end" dominantBaseline="middle" fill="#9ca3af" fontSize="10" fontFamily="monospace"
                             >
                                 {formatValue(tick)}
                             </text>
                         ))}
 
                         {/* Labels */}
-                        <text x={getX(currentPrice)} y={-5} textAnchor="middle" fill="#3b82f6" fontSize="9" fontWeight="bold">
+                        <text x={getX(currentPrice)} y={-22} textAnchor="middle" fill="#3b82f6" fontSize="11" fontWeight="bold">
                             SPOT: ${currentPrice.toFixed(0)}
                         </text>
-                        <text x={getX(gammaFlip)} y={graphHeight + 32} textAnchor="middle" fill="#f59e0b" fontSize="9" fontWeight="bold">
+
+                        <text x={getX(gammaFlip)} y={graphHeight + 35} textAnchor="middle" fill="#f59e0b" fontSize="10" fontWeight="bold">
                             FLIP: ${gammaFlip.toFixed(0)}
                         </text>
+
+                        {putWall && (
+                            <text x={getX(putWall)} y={-10} textAnchor="middle" fill="#22c55e" fontSize="10" fontWeight="bold">
+                                PUT WALL: ${putWall.toFixed(0)}
+                            </text>
+                        )}
+
+                        {callWall && (
+                            <text x={getX(callWall)} y={-10} textAnchor="middle" fill="#ef4444" fontSize="10" fontWeight="bold">
+                                CALL WALL: ${callWall.toFixed(0)}
+                            </text>
+                        )}
                     </g>
                 </svg>
             </div>

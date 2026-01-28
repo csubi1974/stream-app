@@ -29,8 +29,8 @@ export function AlertToast({ alert, onClose }: AlertToastProps) {
       case 'unusual_volume':
         return <AlertTriangle className="h-5 w-5 text-orange-500" />;
       case 'price_alert':
-        return alert.side === 'BUY' ? 
-          <TrendingUp className="h-5 w-5 text-green-500" /> : 
+        return alert.side === 'BUY' ?
+          <TrendingUp className="h-5 w-5 text-green-500" /> :
           <TrendingDown className="h-5 w-5 text-red-500" />;
       case 'vwap_break':
         return <TrendingUp className="h-5 w-5 text-blue-500" />;
@@ -46,8 +46,8 @@ export function AlertToast({ alert, onClose }: AlertToastProps) {
       case 'unusual_volume':
         return 'border-orange-500 bg-orange-900';
       case 'price_alert':
-        return alert.side === 'BUY' ? 
-          'border-green-500 bg-green-900' : 
+        return alert.side === 'BUY' ?
+          'border-green-500 bg-green-900' :
           'border-red-500 bg-red-900';
       case 'vwap_break':
         return 'border-blue-500 bg-blue-900';
@@ -57,6 +57,9 @@ export function AlertToast({ alert, onClose }: AlertToastProps) {
   };
 
   const formatTime = (timestamp: string) => {
+    // If it's already a formatted time string (HH:MM:SS), return it
+    if (timestamp.includes(':')) return timestamp;
+
     return new Date(timestamp).toLocaleTimeString('en-US', {
       hour12: false,
       hour: '2-digit',
@@ -67,48 +70,52 @@ export function AlertToast({ alert, onClose }: AlertToastProps) {
 
   return (
     <div className={`
-      relative p-4 rounded-lg border-2 shadow-lg transform transition-all duration-300 ease-in-out
+      relative p-4 rounded-lg border-2 shadow-lg backdrop-blur-md transform transition-all duration-300 ease-in-out hover:scale-105
       ${getAlertColor()}
     `}>
       <div className="flex items-start space-x-3">
-        <div className="flex-shrink-0">
+        <div className="flex-shrink-0 bg-black/20 p-1.5 rounded-md">
           {getAlertIcon()}
         </div>
-        
+
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium text-white mb-1">
+          <div className="text-sm font-black text-white mb-1 uppercase tracking-tight">
             {alert.message}
           </div>
-          
-          <div className="flex items-center space-x-4 text-xs text-gray-300">
-            <span>{alert.symbol}</span>
-            <span>${alert.price.toFixed(2)}</span>
-            <span>{alert.size} contracts</span>
-            <span>{formatTime(alert.timestamp)}</span>
+
+          <div className="flex items-center space-x-3 text-[10px] font-bold text-white/70">
+            <span className="bg-white/10 px-1.5 py-0.5 rounded">{alert.symbol}</span>
+            <span className="bg-white/10 px-1.5 py-0.5 rounded">${alert.price.toFixed(2)}</span>
+            <span className="bg-white/10 px-1.5 py-0.5 rounded">{alert.size} contracts</span>
           </div>
-          
-          {alert.exchange && (
-            <div className="text-xs text-gray-400 mt-1">
-              Exchange: {alert.exchange}
-            </div>
-          )}
+
+          <div className="flex items-center justify-between mt-2">
+            <span className="text-[10px] text-white/40 font-mono">
+              {formatTime(alert.timestamp)}
+            </span>
+            {alert.exchange && (
+              <span className="text-[10px] text-white/40 uppercase tracking-widest font-black italic">
+                {alert.exchange}
+              </span>
+            )}
+          </div>
         </div>
-        
+
         <div className="flex-shrink-0">
           <button
             onClick={() => onClose(alert.id)}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="text-white/40 hover:text-white transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
       </div>
-      
+
       {/* Progress bar for auto-dismiss */}
-      <div className="absolute bottom-0 left-0 h-1 bg-white bg-opacity-20 animate-pulse" style={{
+      <div className="absolute bottom-0 left-0 h-1 bg-white bg-opacity-30 rounded-full" style={{
         animation: 'progress 5s linear forwards'
       }}></div>
-      
+
       <style>{`
         @keyframes progress {
           from { width: 100%; }
@@ -124,36 +131,38 @@ interface AlertContainerProps {
 }
 
 export function AlertContainer({ position = 'top-right' }: AlertContainerProps) {
-  const { sweepAlerts } = useMarketStore();
-  
+  const { sweepAlerts, removeSweepAlert } = useMarketStore();
+
   const positionClasses = {
-    'top-right': 'top-4 right-4',
-    'top-left': 'top-4 left-4',
-    'bottom-right': 'bottom-4 right-4',
-    'bottom-left': 'bottom-4 left-4'
+    'top-right': 'top-20 right-6',
+    'top-left': 'top-20 left-6',
+    'bottom-right': 'bottom-6 right-6',
+    'bottom-left': 'bottom-6 left-6'
   };
 
-  const handleCloseAlert = (id: string) => {
-    // In a real app, you'd have a method to remove alerts from the store
-    console.log('Closing alert:', id);
+  const handleCloseAlert = (timestamp: string, symbol: string) => {
+    removeSweepAlert(timestamp, symbol);
   };
 
   if (sweepAlerts.length === 0) {
     return null;
   }
 
+  // Show only the 3 most recent alerts to avoid cluttering the screen
+  const visibleAlerts = sweepAlerts.slice(0, 3);
+
   return (
-    <div className={`fixed z-50 space-y-2 max-w-sm ${positionClasses[position]}`}>
-      {sweepAlerts.map((alert, index) => (
+    <div className={`fixed z-[100] space-y-3 w-80 ${positionClasses[position]}`}>
+      {visibleAlerts.map((alert, index) => (
         <AlertToast
           key={`${alert.symbol}-${alert.timestamp}-${index}`}
           alert={{
             ...alert,
-            id: `${alert.symbol}-${alert.timestamp}-${Math.random()}`,
+            id: `${alert.symbol}-${alert.timestamp}-${index}`,
             type: 'sweep',
-            message: `🚨 SWEEP: ${alert.size} contracts @ $${alert.price.toFixed(2)}`
+            message: `🚨 SWEEP DETECTED`
           }}
-          onClose={handleCloseAlert}
+          onClose={() => handleCloseAlert(alert.timestamp, alert.symbol)}
         />
       ))}
     </div>
@@ -163,7 +172,7 @@ export function AlertContainer({ position = 'top-right' }: AlertContainerProps) 
 // Hook for creating alerts
 export function useAlertSystem() {
   const { addSweepAlert } = useMarketStore();
-  
+
   const createSweepAlert = (trade: TradeData) => {
     const alert = {
       ...trade,
@@ -172,25 +181,25 @@ export function useAlertSystem() {
       message: `🚨 SWEEP: ${trade.size} contracts @ $${trade.price.toFixed(2)}`,
       timestamp: new Date().toISOString()
     };
-    
+
     addSweepAlert(trade);
-    
+
     // Optional: Play sound
     if (typeof window !== 'undefined' && window.AudioContext) {
       try {
         const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
         const oscillator = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
-        
+
         oscillator.connect(gainNode);
         gainNode.connect(audioContext.destination);
-        
+
         oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
         oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.1);
-        
+
         gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
         gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
-        
+
         oscillator.start(audioContext.currentTime);
         oscillator.stop(audioContext.currentTime + 0.1);
       } catch (error) {
@@ -198,7 +207,7 @@ export function useAlertSystem() {
       }
     }
   };
-  
+
   const createUnusualVolumeAlert = (symbol: string, volume: number, rvol: number) => {
     const alert = {
       symbol,
@@ -211,11 +220,11 @@ export function useAlertSystem() {
       type: 'unusual_volume' as const,
       message: `📊 Unusual volume: ${symbol} RVOL ${rvol.toFixed(1)}x`
     };
-    
+
     // Add to store (you'd need to add a method for this)
     console.log('Volume alert:', alert);
   };
-  
+
   return {
     createSweepAlert,
     createUnusualVolumeAlert

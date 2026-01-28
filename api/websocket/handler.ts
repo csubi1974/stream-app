@@ -170,7 +170,7 @@ export class WebSocketHandler {
     if (!connection) return;
 
     try {
-      const options = await this.marketDataService.getZeroDTEOptions();
+      const options = await this.marketDataService.getZeroDTEOptions(underlying);
       connection.ws.send(JSON.stringify({
         type: '0dte_options',
         underlying,

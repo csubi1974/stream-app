@@ -161,20 +161,37 @@ export function GEXMetricsHUD() {
                         {t('GEX Market Intelligence HUD')}
                     </h2>
 
-                    {/* Symbol Selector */}
-                    <div className="flex bg-gray-900/50 p-1 rounded-lg border border-gray-700">
-                        {['SPX', 'SPY', 'QQQ', 'IWM'].map((sym) => (
-                            <button
-                                key={sym}
-                                onClick={() => setSelectedSymbol(sym)}
-                                className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${(selectedSymbol === sym || (!selectedSymbol && sym === 'SPX'))
-                                    ? 'bg-blue-600 text-white shadow-lg'
-                                    : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
-                                    }`}
-                            >
-                                {sym}
-                            </button>
-                        ))}
+                    {/* Symbol Selector - MASTER CONTROL */}
+                    <div className="flex items-center bg-gray-900/80 p-1 rounded-lg border border-gray-700 shadow-inner">
+                        <div className="flex space-x-1 mr-2 border-r border-gray-700 pr-2">
+                            {['SPX', 'SPY', 'QQQ', 'IWM', 'AAPL', 'NVDA', 'TSLA', 'AMD'].map((sym) => (
+                                <button
+                                    key={sym}
+                                    onClick={() => setSelectedSymbol(sym)}
+                                    className={`px-2.5 py-1 text-[10px] font-black rounded-md transition-all uppercase tracking-tighter ${(selectedSymbol === sym || (!selectedSymbol && sym === 'SPX'))
+                                        ? 'bg-blue-600 text-white shadow-[0_0_10px_rgba(37,99,235,0.4)]'
+                                        : 'text-gray-500 hover:text-gray-200 hover:bg-gray-800'
+                                        }`}
+                                >
+                                    {sym}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="relative flex items-center">
+                            <input
+                                type="text"
+                                placeholder="CUSTOM..."
+                                className="bg-transparent border-none text-[10px] font-black text-blue-400 w-16 px-2 focus:outline-none focus:ring-0 placeholder-gray-700 uppercase"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        setSelectedSymbol(e.currentTarget.value.toUpperCase());
+                                        e.currentTarget.value = '';
+                                    }
+                                }}
+                            />
+                            <Target className="h-3 w-3 text-gray-700 mr-1" />
+                        </div>
                     </div>
                 </div>
 
@@ -341,6 +358,8 @@ export function GEXMetricsHUD() {
                             data={gexMetrics.gammaProfile}
                             currentPrice={currentPrice}
                             gammaFlip={gammaFlip}
+                            callWall={callWall}
+                            putWall={putWall}
                         />
                     )}
                 </div>

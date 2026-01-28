@@ -95,6 +95,7 @@ interface MarketStore {
   addSubscribedSymbol: (symbol: string) => void;
   removeSubscribedSymbol: (symbol: string) => void;
   clearSweepAlerts: () => void;
+  removeSweepAlert: (timestamp: string, symbol: string) => void;
 }
 
 export const useMarketStore = create<MarketStore>((set, get) => ({
@@ -160,5 +161,8 @@ export const useMarketStore = create<MarketStore>((set, get) => ({
     subscribedSymbols: state.subscribedSymbols.filter(s => s !== symbol)
   })),
 
-  clearSweepAlerts: () => set({ sweepAlerts: [] })
+  clearSweepAlerts: () => set({ sweepAlerts: [] }),
+  removeSweepAlert: (timestamp, symbol) => set((state) => ({
+    sweepAlerts: state.sweepAlerts.filter(a => a.timestamp !== timestamp || a.symbol !== symbol)
+  }))
 }));
