@@ -180,21 +180,45 @@ export class MarketDataService {
         allOptions.push(...chain.puts);
       }
 
-      // Calculate Walls, GEX, Vanna & DEX
-      const strikes = new Map<number, {
-        callOi: number; putOi: number;
-        callGex: number; putGex: number;
-        callVanna: number; putVanna: number;
-        callDex: number; putDex: number;
-      }>();
-      let callWall = { strike: 0, oi: 0 };
-      let putWall = { strike: 0, oi: 0 };
-
       // Robust price detection
       const currentPrice = chain.underlying?.last ||
         chain.underlying?.lastPrice ||
         chain.underlyingPrice ||
         (allOptions.length > 0 ? parseFloat(allOptions[0].strikePrice || allOptions[0].strike) : 0);
+
+      // 1. Calculate GLOBAL Walls using ALL options (to match HUD)
+      const globalStrikeMetrics = new Map<number, { callGex: number; putGex: number }>();
+      let globalMaxCallGex = 0;
+      let globalMaxPutGex = 0;
+      let globalCallWallStrike = 0;
+      let globalPutWallStrike = 0;
+
+      allOptions.forEach((opt: any) => {
+        const strike = parseFloat(opt.strikePrice || opt.strike);
+        const oi = opt.openInterest || 0;
+        const gamma = opt.gamma || 0;
+        const isCall = opt.putCall === 'CALL';
+
+        if (!globalStrikeMetrics.has(strike)) {
+          globalStrikeMetrics.set(strike, { callGex: 0, putGex: 0 });
+        }
+        const metrics = globalStrikeMetrics.get(strike)!;
+        const gexContribution = gamma * oi * 100 * (currentPrice || strike);
+
+        if (isCall) {
+          metrics.callGex += gexContribution;
+          if (metrics.callGex > globalMaxCallGex) {
+            globalMaxCallGex = metrics.callGex;
+            globalCallWallStrike = strike;
+          }
+        } else {
+          metrics.putGex -= gexContribution;
+          if (metrics.putGex < globalMaxPutGex) {
+            globalMaxPutGex = metrics.putGex;
+            globalPutWallStrike = strike;
+          }
+        }
+      });
 
       // Extract all available expirations
       const availableDates = new Set<string>();
@@ -220,8 +244,16 @@ export class MarketDataService {
         console.warn(`⚠️ No expiry dates found for ${symbol}`);
       }
 
+      // 2. Calculate 0DTE specific GEX, Vanna & DEX for the chart and list
+      const strikes = new Map<number, {
+        callOi: number; putOi: number;
+        callGex: number; putGex: number;
+        callVanna: number; putVanna: number;
+        callDex: number; putDex: number;
+      }>();
+
       allOptions.forEach((opt: any) => {
-        // Filter by our smart target date
+        // Filter by our smart target date for the detailed stats
         if (!opt.expirationDate?.startsWith(targetDate)) return;
 
         const strike = parseFloat(opt.strikePrice || opt.strike);
@@ -252,13 +284,11 @@ export class MarketDataService {
           stat.callGex += gexValue;
           stat.callVanna += vannaValue;
           stat.callDex += dexValue;
-          if (stat.callOi > callWall.oi) callWall = { strike, oi: stat.callOi };
         } else {
           stat.putOi += oi;
-          stat.putGex -= gexValue; // Negative GEX for Puts for visualization
-          stat.putVanna -= vannaValue; // Negative Vanna for Puts for visualization
-          stat.putDex += dexValue; // DEX for puts is typically negative because put delta is negative
-          if (stat.putOi > putWall.oi) putWall = { strike, oi: stat.putOi };
+          stat.putGex -= gexValue;
+          stat.putVanna -= vannaValue;
+          stat.putDex += dexValue;
         }
       });
 
@@ -340,8 +370,8 @@ export class MarketDataService {
       return {
         options: topOptions,
         stats: {
-          callWall: callWall.strike,
-          putWall: putWall.strike,
+          callWall: globalCallWallStrike,
+          putWall: globalPutWallStrike,
           currentPrice,
           strikes: strikesArray,
           targetDate, // Send back which date we used

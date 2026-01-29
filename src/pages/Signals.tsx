@@ -546,8 +546,8 @@ export function Signals() {
                                                             <td className="py-3 text-right text-white font-mono font-bold">${leg.strike.toFixed(0)}</td>
                                                             <td className="py-3 text-center">
                                                                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${isITM
-                                                                        ? 'bg-red-500/20 text-red-400 border-red-500/30'
-                                                                        : 'bg-green-500/20 text-green-400 border-green-500/30'
+                                                                    ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                                                                    : 'bg-green-500/20 text-green-400 border-green-500/30'
                                                                     }`}>
                                                                     {isITM ? 'ITM' : 'OTM'}
                                                                 </span>
