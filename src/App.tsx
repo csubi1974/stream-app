@@ -2,7 +2,6 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Dashboard } from './pages/Dashboard';
 import { OptionsLadderPage } from './pages/OptionsLadder';
 import { SwingScanner } from './pages/SwingScanner';
-import { Watchlist } from './pages/Watchlist';
 import { Backtest } from './pages/Backtest';
 import { Settings } from './pages/Settings';
 import { StreamMarketEngine } from './pages/StreamMarketEngine';
@@ -20,7 +19,6 @@ function App() {
         <Route path="/academy" element={<Academy />} />
         <Route path="/signals" element={<Signals />} />
         <Route path="/calendar" element={<Calendar />} />
-        <Route path="/watchlist" element={<Watchlist />} />
         <Route path="/backtest" element={<Backtest />} />
         <Route path="/settings" element={<Settings />} />
       </Routes>

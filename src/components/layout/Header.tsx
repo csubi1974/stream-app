@@ -56,7 +56,6 @@ export function Header() {
     { path: '/engine', label: t('Market Engine'), icon: Zap },
     { path: '/academy', label: t('Trading Academy'), icon: BookOpen },
     { path: '/calendar', label: t('Calendar'), icon: Calendar },
-    { path: '/watchlist', label: t('Watchlist'), icon: Bell },
     { path: '/backtest', label: t('Backtest'), icon: Clock },
     { path: '/settings', label: t('Settings'), icon: Settings },
   ];
