@@ -517,62 +517,72 @@ export class TradeAlertService {
                 regime,
                 callWall,
                 putWall,
+                callWallStrength: gexMetrics.callWallStrength,
+                putWallStrength: gexMetrics.putWallStrength,
                 gammaFlip,
                 currentPrice,
                 netDrift,
                 expectedMove,
-                totalGEX,  // Add totalGEX for quality scoring
-                openPrice,  // Add openPrice for move exhaustion calculation
-                netCharm,   // Add netCharm for time decay bonus
-                symbol      // Add actual symbol
+                totalGEX,
+                openPrice,
+                netCharm,
+                symbol
             };
 
+            // --- Strategy Selection ---
 
-            // Strategy Selection based on Regime
-            if (regime === 'stable') {
-                // Stable regime: Iron Condor (sell premium on both sides)
-                const ironCondor = this.generateIronCondor(options, gexMetrics, targetExpiration, gexContext);
-                if (ironCondor) alerts.push(ironCondor);
+            // 1. REVERSION A MUROS (Estrategia de Rebote Técnica)
+            const wallProximityThreshold = currentPrice * 0.005;
+
+            // Caso A: Rebote en Put Wall (Soporte Sólido)
+            if (gexMetrics.putWallStrength === 'solid' && (currentPrice - putWall) < wallProximityThreshold && (currentPrice > putWall)) {
+                const wallReversion = this.generateBullPutSpread(options, gexMetrics, targetExpiration, gexContext, 'wall');
+                if (wallReversion) {
+                    wallReversion.strategyLabel = 'Wall Reversion (Support)';
+                    alerts.push(wallReversion);
+                }
             }
 
-            // Directional strategies based on Net Drift
-            if (netDrift > 0.5) {
-                // Bullish bias: Bull Put Spread
-                const bullPut = this.generateBullPutSpread(options, gexMetrics, targetExpiration, gexContext);
-                if (bullPut) alerts.push(bullPut);
+            // Caso B: Rebote en Call Wall (Resistencia Sólida)
+            if (gexMetrics.callWallStrength === 'solid' && (callWall - currentPrice) < wallProximityThreshold && (currentPrice < callWall)) {
+                const wallReversion = this.generateBearCallSpread(options, gexMetrics, targetExpiration, gexContext, 'wall');
+                if (wallReversion) {
+                    wallReversion.strategyLabel = 'Wall Reversion (Resistance)';
+                    alerts.push(wallReversion);
+                }
             }
 
-            if (netDrift < -0.5) {
-                // Bearish bias: Bear Call Spread
-                const bearCall = this.generateBearCallSpread(options, gexMetrics, targetExpiration, gexContext);
-                if (bearCall) alerts.push(bearCall);
+            // 2. ESTRATEGIAS BASADAS EN RÉGIMEN Y DERIVA
+            if (alerts.length === 0) {
+                if (regime === 'stable' && Math.abs(netDrift) <= 0.5) {
+                    const ironCondor = this.generateIronCondor(options, gexMetrics, targetExpiration, gexContext);
+                    if (ironCondor) alerts.push(ironCondor);
+                }
+
+                if (netDrift > 0.5) {
+                    const bullPut = this.generateBullPutSpread(options, gexMetrics, targetExpiration, gexContext, 'drift');
+                    if (bullPut) alerts.push(bullPut);
+                } else if (netDrift < -0.5) {
+                    const bearCall = this.generateBearCallSpread(options, gexMetrics, targetExpiration, gexContext, 'drift');
+                    if (bearCall) alerts.push(bearCall);
+                }
             }
 
-            // 3. Vanna Crush Play (Independent of Drift)
+            // 3. VANNA CRUSH PLAYS
             if (gexMetrics.netVanna > 15000000 && regime !== 'volatile') {
-                const bullPut = this.generateBullPutSpread(options, gexMetrics, targetExpiration, gexContext, 'vanna_crush');
-                if (bullPut && !alerts.find(a => a.id === bullPut.id)) alerts.push(bullPut);
+                const vannaPlay = this.generateBullPutSpread(options, gexMetrics, targetExpiration, gexContext, 'vanna_crush');
+                if (vannaPlay && !alerts.find(a => a.id === vannaPlay.id)) alerts.push(vannaPlay);
             }
-
             if (gexMetrics.netVanna < -10000000 && regime !== 'volatile') {
-                const bearCall = this.generateBearCallSpread(options, gexMetrics, targetExpiration, gexContext, 'vanna_crush');
-                if (bearCall && !alerts.find(a => a.id === bearCall.id)) alerts.push(bearCall);
-            }
-
-            // Neutral drift but stable: Also suggest spreads near walls
-            if (Math.abs(netDrift) <= 0.5 && regime === 'stable') {
-                const bullPut = this.generateBullPutSpread(options, gexMetrics, targetExpiration, gexContext);
-                if (bullPut && !alerts.find(a => a.id === bullPut.id)) alerts.push(bullPut);
-
-                const bearCall = this.generateBearCallSpread(options, gexMetrics, targetExpiration, gexContext);
-                if (bearCall && !alerts.find(a => a.id === bearCall.id)) alerts.push(bearCall);
+                const vannaPlay = this.generateBearCallSpread(options, gexMetrics, targetExpiration, gexContext, 'vanna_crush');
+                if (vannaPlay && !alerts.find(a => a.id === vannaPlay.id)) alerts.push(vannaPlay);
             }
 
             // Volatile regime warning
             if (regime === 'volatile') {
                 alerts.push({
                     id: `warning-${Date.now()}`,
-                    strategy: 'BEAR_CALL_SPREAD', // placeholder
+                    strategy: 'BEAR_CALL_SPREAD',
                     strategyLabel: '⚠️ Régimen Volátil Detectado',
                     underlying: symbol,
                     expiration: targetExpiration,
@@ -582,11 +592,16 @@ export class TradeAlertService {
                     maxProfit: 0,
                     probability: 0,
                     riskReward: 'N/A',
-                    rationale: `El mercado está en régimen volátil con un Total GEX de ${(totalGEX / 1e6).toFixed(2)}M. Los dealers están en gamma negativa y amplificarán cualquier movimiento del precio en lugar de amortiguarlo. El precio está a ${((Math.abs(currentPrice - gammaFlip) / currentPrice) * 100).toFixed(2)}% del Gamma Flip ($${gammaFlip.toFixed(0)}), lo que aumenta la inestabilidad. Se recomienda EVITAR la venta de premium.`,
+                    rationale: `El mercado está en régimen volátil con un Total GEX de ${(totalGEX / 1e6).toFixed(2)}M. Los dealers están en gamma negativa y amplificarán cualquier movimiento del precio. Se recomienda EVITAR la venta de premium hasta que el GEX regrese a niveles estables.`,
                     status: 'WATCH',
                     gexContext,
                     generatedAt: new Date().toISOString(),
-                    validUntil: this.getValidUntil()
+                    validUntil: this.getValidUntil(),
+                    qualityScore: 0,
+                    qualityLevel: 'AGGRESSIVE',
+                    riskLevel: 'HIGH',
+                    qualityFactors: { moveExhaustion: 0, expectedMoveUsage: 0, wallProximity: 0, timeRemaining: 0, regimeStrength: 0, driftAlignment: 0 },
+                    metadata: { openPrice: 0, moveFromOpen: 0, movePercent: 0, moveRatio: 0, wallDistance: 0, hoursRemaining: 0, generatedAtPrice: currentPrice }
                 });
             }
 
@@ -623,16 +638,24 @@ export class TradeAlertService {
 
             console.log(`📍 Bull Put Spread: Expected Range $${lowerBound.toFixed(0)} - $${upperBound.toFixed(0)}`);
 
-            // Find short put candidates: Below current price, near put wall, delta around 0.15-0.25
+            // Find short put candidates
             const shortPutCandidates = puts
                 .filter(p => {
                     const strike = parseFloat(p.strikePrice || p.strike);
                     const delta = Math.abs(p.delta || 0);
+
+                    // Si es por Wall Reversion, queremos vender MUY cerca del muro para máximo crédito
+                    if (trigger === 'wall') {
+                        return strike < currentPrice &&
+                            strike >= putWall - 10 && strike <= putWall + 10 &&
+                            delta >= 0.20 && delta <= 0.35; // Más agresivo cerca del muro
+                    }
+
                     return strike < currentPrice &&
                         strike >= putWall - 20 &&
                         delta >= 0.15 && delta <= 0.25;
                 })
-                .sort((a, b) => Math.abs(a.delta) - Math.abs(b.delta));
+                .sort((a, b) => trigger === 'wall' ? Math.abs(b.delta) - Math.abs(a.delta) : Math.abs(a.delta) - Math.abs(b.delta));
 
             if (shortPutCandidates.length === 0) return null;
 
@@ -641,7 +664,7 @@ export class TradeAlertService {
             const longStrike = shortStrike - this.SPREAD_WIDTH;
 
             // Generate unique deterministic ID
-            const alertId = `BPS-${expiration}-${shortStrike}`.replace(/:/g, '-');
+            const alertId = `BPS-${expiration}-${shortStrike}-${trigger || 'drift'}`.replace(/:/g, '-');
 
             // Find long put
             const longPut = puts.find(p => {
@@ -655,18 +678,15 @@ export class TradeAlertService {
             const longPrice = (longPut.bid + longPut.ask) / 2 || longPut.last || 0;
             const netCredit = shortPrice - longPrice;
 
-            if (netCredit <= 0.20) return null; // Minimum credit threshold
+            if (netCredit <= 0.20) return null;
 
             const maxLoss = this.SPREAD_WIDTH - netCredit;
             const probability = 1 - Math.abs(shortPut.delta || 0.25);
 
             // Determine status based on expected move
             let status: 'ACTIVE' | 'WATCH' = 'ACTIVE';
-            let riskWarning = '';
-
-            if (expectedMove && shortStrike >= lowerBound) {
+            if (expectedMove && shortStrike >= lowerBound && trigger !== 'wall') {
                 status = 'WATCH';
-                riskWarning = ' ⚠️ DENTRO del rango esperado - Mayor riesgo';
             }
 
             // Calculate quality score
@@ -681,54 +701,45 @@ export class TradeAlertService {
             );
 
             // Calculate Exit Criteria
-            const stopPrice = expectedMove ? Math.max(lowerBound, shortStrike + 5) : shortStrike + 5;
+            const stopPrice = trigger === 'wall' ? putWall - 5 : (expectedMove ? Math.max(lowerBound, shortStrike + 5) : shortStrike + 5);
             const exitCriteria = {
                 profitTarget: "100% (Dejar Expirar)",
-                stopLoss: `Cerrar si ${gexContext.symbol || 'SPX'} baja de ${stopPrice.toFixed(0)} (${((Math.abs(currentPrice - stopPrice) / currentPrice) * 100).toFixed(1)}% de distancia)`,
-                timeExit: `Cerrar a las 3:45 PM si ${gexContext.symbol || 'SPX'} está a menos de 10 pts del strike corto ($${shortStrike})`
+                stopLoss: trigger === 'wall'
+                    ? `Cerrar inmediatamente si el Put Wall ($${putWall}) se rompe (Precio < ${stopPrice.toFixed(0)})`
+                    : `Cerrar si ${gexContext.symbol || 'SPX'} baja de ${stopPrice.toFixed(0)}`,
+                timeExit: `Cerrar a las 3:45 PM si está en riesgo`
             };
 
             return {
                 id: alertId,
                 strategy: 'BULL_PUT_SPREAD',
-                strategyLabel: 'Bull Put Spread',
+                strategyLabel: trigger === 'wall' ? 'Wall Reversion (Support)' : 'Bull Put Spread',
                 underlying: gexContext.symbol || 'SPX',
                 expiration,
                 legs: [
-                    {
-                        action: 'SELL',
-                        type: 'PUT',
-                        strike: shortStrike,
-                        price: shortPrice,
-                        delta: shortPut.delta || 0
-                    },
-                    {
-                        action: 'BUY',
-                        type: 'PUT',
-                        strike: longStrike,
-                        price: longPrice,
-                        delta: longPut.delta || 0
-                    }
+                    { action: 'SELL', type: 'PUT', strike: shortStrike, price: shortPrice, delta: shortPut.delta || 0 },
+                    { action: 'BUY', type: 'PUT', strike: longStrike, price: longPrice, delta: longPut.delta || 0 }
                 ],
                 netCredit: parseFloat(netCredit.toFixed(2)),
                 maxLoss: parseFloat(maxLoss.toFixed(2)),
                 maxProfit: parseFloat(netCredit.toFixed(2)),
                 probability: parseFloat((probability * 100).toFixed(1)),
                 riskReward: `1:${(maxLoss / netCredit).toFixed(1)}`,
-                rationale: trigger === 'vanna_crush'
-                    ? `ESTRATEGIA VANNA CRUSH: El Net Vanna es altamente positivo (${(gexMetrics.netVanna / 1e6).toFixed(1)}M), lo que significa que un colapso de volatilidad (IV Crush) forzará a los Dealers a comprar acciones, empujando el precio al alza independientemente del drift actual. Se vende premium aprovechando este viento a favor institucional.`
-                    : `El Put Wall en $${putWall.toFixed(0)} actúa como un imán y soporte institucional clave para el mercado hoy. El strike corto de $${shortStrike.toFixed(0)} se ha seleccionado para estar ${expectedMove ? (shortStrike < lowerBound ? `FUERA de las fronteras del Movimiento Esperado (±$${expectedMove.toFixed(1)})` : `DENTRO del rango del Movimiento Esperado`) : 'en una zona técnica de alta probabilidad'}. Bajo este régimen ${gexContext.regime === 'stable' ? 'estable' : 'volátil'}, los Dealers tienden a amortiguar las caídas cerca de estos niveles de soporte.${gexMetrics.netCharm > 1000 ? ` ADEMÁS, el Net Charm positivo (+${(gexMetrics.netCharm / 1000).toFixed(1)}K/min) sugiere que el paso del tiempo obligará a los Dealers a comprar acciones para cubrir sus deltas, lo que protege tu posición.` : ''}`,
+                rationale: trigger === 'wall'
+                    ? `ESTRATEGIA REVERSION: El precio está testeando un Put Wall SÓLIDO en $${putWall.toFixed(0)}. El crédito es ALTO debido a la cercanía del muro. El riesgo es que si el muro se rompe, el soporte desaparece, por lo que el Stop Loss es estricto justo debajo del muro.`
+                    : trigger === 'vanna_crush'
+                        ? `ESTRATEGIA VANNA CRUSH: El Net Vanna es positivo (${(gexMetrics.netVanna / 1e6).toFixed(1)}M). Un colapso de IV forzará compras de Dealers.`
+                        : `El Put Wall en $${putWall.toFixed(0)} actúa como soporte clave. Se vende premium aprovechando la defensa institucional en este nivel.`,
                 status,
                 gexContext,
                 generatedAt: new Date().toISOString(),
                 validUntil: this.getValidUntil(),
-                // Quality Scoring
-                qualityScore: quality.qualityScore,
+                qualityScore: trigger === 'wall' ? Math.max(quality.qualityScore, 75) : quality.qualityScore, // Boost score for technical wall plays
                 qualityLevel: quality.qualityLevel,
-                riskLevel: quality.riskLevel,
+                riskLevel: trigger === 'wall' ? 'MEDIUM' : quality.riskLevel,
                 qualityFactors: quality.qualityFactors,
                 metadata: quality.metadata,
-                exitCriteria // New field
+                exitCriteria
             };
         } catch (error) {
             console.error('Error generating Bull Put Spread:', error);
@@ -757,16 +768,23 @@ export class TradeAlertService {
 
             console.log(`📍 Bear Call Spread: Expected Range $${lowerBound.toFixed(0)} - $${upperBound.toFixed(0)}`);
 
-            // Find short call candidates: Above current price, near call wall, delta around 0.15-0.25
+            // Find short call candidates
             const shortCallCandidates = calls
                 .filter(c => {
                     const strike = parseFloat(c.strikePrice || c.strike);
                     const delta = Math.abs(c.delta || 0);
+
+                    if (trigger === 'wall') {
+                        return strike > currentPrice &&
+                            strike >= callWall - 10 && strike <= callWall + 10 &&
+                            delta >= 0.20 && delta <= 0.35;
+                    }
+
                     return strike > currentPrice &&
                         strike <= callWall + 20 &&
                         delta >= 0.15 && delta <= 0.25;
                 })
-                .sort((a, b) => Math.abs(a.delta) - Math.abs(b.delta));
+                .sort((a, b) => trigger === 'wall' ? Math.abs(b.delta) - Math.abs(a.delta) : Math.abs(a.delta) - Math.abs(b.delta));
 
             if (shortCallCandidates.length === 0) return null;
 
@@ -775,7 +793,7 @@ export class TradeAlertService {
             const longStrike = shortStrike + this.SPREAD_WIDTH;
 
             // Generate unique deterministic ID
-            const alertId = `BCS-${expiration}-${shortStrike}`.replace(/:/g, '-');
+            const alertId = `BCS-${expiration}-${shortStrike}-${trigger || 'drift'}`.replace(/:/g, '-');
 
             // Find long call
             const longCall = calls.find(c => {
@@ -796,8 +814,7 @@ export class TradeAlertService {
 
             // Determine status based on expected move
             let status: 'ACTIVE' | 'WATCH' = 'ACTIVE';
-
-            if (expectedMove && shortStrike <= upperBound) {
+            if (expectedMove && shortStrike <= upperBound && trigger !== 'wall') {
                 status = 'WATCH';
             }
 
@@ -813,54 +830,45 @@ export class TradeAlertService {
             );
 
             // Calculate Exit Criteria
-            const stopPrice = expectedMove ? Math.min(upperBound, shortStrike - 5) : shortStrike - 5;
+            const stopPrice = trigger === 'wall' ? callWall + 5 : (expectedMove ? Math.min(upperBound, shortStrike - 5) : shortStrike - 5);
             const exitCriteria = {
                 profitTarget: "100% (Dejar Expirar)",
-                stopLoss: `Cerrar si ${gexContext.symbol || 'SPX'} sube de ${stopPrice.toFixed(0)} (${((Math.abs(currentPrice - stopPrice) / currentPrice) * 100).toFixed(1)}% de distancia)`,
-                timeExit: `Cerrar a las 3:45 PM si ${gexContext.symbol || 'SPX'} está a menos de 10 pts del strike corto ($${shortStrike})`
+                stopLoss: trigger === 'wall'
+                    ? `Cerrar inmediatamente si el Call Wall ($${callWall}) se rompe (Precio > ${stopPrice.toFixed(0)})`
+                    : `Cerrar si ${gexContext.symbol || 'SPX'} sube de ${stopPrice.toFixed(0)}`,
+                timeExit: `Cerrar a las 3:45 PM si está en riesgo`
             };
 
             return {
                 id: alertId,
                 strategy: 'BEAR_CALL_SPREAD',
-                strategyLabel: 'Bear Call Spread',
+                strategyLabel: trigger === 'wall' ? 'Wall Reversion (Resistance)' : 'Bear Call Spread',
                 underlying: gexContext.symbol || 'SPX',
                 expiration,
                 legs: [
-                    {
-                        action: 'SELL',
-                        type: 'CALL',
-                        strike: shortStrike,
-                        price: shortPrice,
-                        delta: shortCall.delta || 0
-                    },
-                    {
-                        action: 'BUY',
-                        type: 'CALL',
-                        strike: longStrike,
-                        price: longPrice,
-                        delta: longCall.delta || 0
-                    }
+                    { action: 'SELL', type: 'CALL', strike: shortStrike, price: shortPrice, delta: shortCall.delta || 0 },
+                    { action: 'BUY', type: 'CALL', strike: longStrike, price: longPrice, delta: longCall.delta || 0 }
                 ],
                 netCredit: parseFloat(netCredit.toFixed(2)),
                 maxLoss: parseFloat(maxLoss.toFixed(2)),
                 maxProfit: parseFloat(netCredit.toFixed(2)),
                 probability: parseFloat((probability * 100).toFixed(1)),
                 riskReward: `1:${(maxLoss / netCredit).toFixed(1)}`,
-                rationale: trigger === 'vanna_crush'
-                    ? `ESTRATEGIA VANNA CRUSH: El Net Vanna es negativo (${(gexMetrics.netVanna / 1e6).toFixed(1)}M). Un colapso de volatilidad (IV Crush) resultará en ventas institucionales por cobertura, presionando el precio a la baja. Se vende Bear Call Spread para capturar este movimiento estructural.`
-                    : `El Call Wall en $${callWall.toFixed(0)} representa la frontera superior de liquidez y es la resistencia estadística más importante del día. El strike vendido de $${shortStrike.toFixed(0)} está ${expectedMove ? (shortStrike > upperBound ? `PROTEGIDO fuera del Movimiento Esperado (±$${expectedMove.toFixed(1)})` : `DENTRO del rango proyectado del Movimiento Esperado`) : 'en una zona de fuerte resistencia de gamma'}. Bajo este régimen ${gexContext.regime === 'stable' ? 'estable' : 'volátil'}, el Call Wall suele actuar como un techo sólido que frena las subidas aceleradas.${gexMetrics.netCharm < -1000 ? ` ADEMÁS, el Net Charm negativo (-${(Math.abs(gexMetrics.netCharm) / 1000).toFixed(1)}K/min) sugiere que el paso del tiempo forzará ventas institucionales, favoreciendo tu posición bajista.` : ''}`,
+                rationale: trigger === 'wall'
+                    ? `ESTRATEGIA REVERSION: El precio se acerca al Call Wall SÓLIDO en $${callWall.toFixed(0)}. Aprovechamos el crédito ALTO por la proximidad técnica. El riesgo es un breakout del muro, por lo que el Stop Loss se sitúa justo por encima de este nivel de liquidez.`
+                    : trigger === 'vanna_crush'
+                        ? `ESTRATEGIA VANNA CRUSH: El Net Vanna es negativo (${(gexMetrics.netVanna / 1e6).toFixed(1)}M). Un colapso de IV causará ventas de Dealers.`
+                        : `El Call Wall en $${callWall.toFixed(0)} es la resistencia estadística clave. Se vende premium confiando en la defensa mecánica de este nivel institucional.`,
                 status,
                 gexContext,
                 generatedAt: new Date().toISOString(),
                 validUntil: this.getValidUntil(),
-                // Quality Scoring
-                qualityScore: quality.qualityScore,
+                qualityScore: trigger === 'wall' ? Math.max(quality.qualityScore, 75) : quality.qualityScore,
                 qualityLevel: quality.qualityLevel,
-                riskLevel: quality.riskLevel,
+                riskLevel: trigger === 'wall' ? 'MEDIUM' : quality.riskLevel,
                 qualityFactors: quality.qualityFactors,
                 metadata: quality.metadata,
-                exitCriteria // New field
+                exitCriteria
             };
         } catch (error) {
             console.error('Error generating Bear Call Spread:', error);
