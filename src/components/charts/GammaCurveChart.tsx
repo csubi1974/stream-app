@@ -173,7 +173,7 @@ export function GammaCurveChart({ data, currentPrice, gammaFlip, callWall, putWa
                                 key={i} x={getX(tick)} y={graphHeight + 18}
                                 textAnchor="middle" fill="#9ca3af" fontSize="11" fontFamily="monospace"
                             >
-                                ${tick.toFixed(0)}
+                                ${tick != null ? tick.toFixed(0) : '--'}
                             </text>
                         ))}
 
@@ -189,11 +189,11 @@ export function GammaCurveChart({ data, currentPrice, gammaFlip, callWall, putWa
 
                         {/* Labels with vertical staggering logic to avoid overlap */}
                         <text x={getX(currentPrice)} y={-25} textAnchor="middle" fill="#3b82f6" fontSize="11" fontWeight="bold">
-                            SPOT: ${currentPrice.toFixed(0)}
+                            SPOT: ${currentPrice != null ? currentPrice.toFixed(0) : '--'}
                         </text>
 
                         <text x={getX(gammaFlip)} y={graphHeight + 35} textAnchor="middle" fill="#f59e0b" fontSize="10" fontWeight="bold">
-                            FLIP: ${gammaFlip.toFixed(0)}
+                            FLIP: ${gammaFlip != null ? gammaFlip.toFixed(0) : '--'}
                         </text>
 
                         {putWall && (
@@ -206,7 +206,7 @@ export function GammaCurveChart({ data, currentPrice, gammaFlip, callWall, putWa
                                 fontWeight="bold"
                                 dx="-5"
                             >
-                                PUT WALL: ${putWall.toFixed(0)}
+                                PUT WALL: ${putWall != null ? putWall.toFixed(0) : '--'}
                             </text>
                         )}
 
@@ -220,7 +220,7 @@ export function GammaCurveChart({ data, currentPrice, gammaFlip, callWall, putWa
                                 fontWeight="bold"
                                 dx="5"
                             >
-                                CALL WALL: ${callWall.toFixed(0)}
+                                CALL WALL: ${callWall != null ? callWall.toFixed(0) : '--'}
                             </text>
                         )}
                     </g>

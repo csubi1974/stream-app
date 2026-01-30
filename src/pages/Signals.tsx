@@ -354,7 +354,8 @@ export function Signals() {
                                 </div>
                                 {alerts.length > 0 && alerts[0].gexContext.expectedMove && alerts[0].gexContext.currentPrice > 0 && (
                                     <div className="text-xs text-gray-500 mt-1">
-                                        {((alerts[0].gexContext.expectedMove / alerts[0].gexContext.currentPrice) * 100).toFixed(2)}%
+                                        {alerts[0]?.gexContext?.expectedMove && alerts[0]?.gexContext?.currentPrice ?
+                                            ((alerts[0].gexContext.expectedMove / alerts[0].gexContext.currentPrice) * 100).toFixed(2) : '--'}%
                                     </div>
                                 )}
                             </div>
@@ -723,12 +724,12 @@ export function Signals() {
                                         <div>
                                             <span className="text-gray-500">{t('Net Drift')}:</span>
                                             <span className={`ml-2 font-medium ${alert.gexContext.netDrift > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                {alert.gexContext.netDrift > 0 ? '+' : ''}{alert.gexContext.netDrift.toFixed(2)}
+                                                {alert.gexContext.netDrift > 0 ? '+' : ''}{alert.gexContext.netDrift != null ? alert.gexContext.netDrift.toFixed(2) : '--'}
                                             </span>
                                         </div>
                                         <div>
                                             <span className="text-gray-500">{t('Spot')}:</span>
-                                            <span className="ml-2 font-medium text-white">${alert.gexContext.currentPrice.toFixed(2)}</span>
+                                            <span className="ml-2 font-medium text-white">${alert.gexContext.currentPrice != null ? alert.gexContext.currentPrice.toFixed(2) : '--'}</span>
                                         </div>
                                         <div>
                                             <span className="text-gray-500">{t('Walls')}:</span>

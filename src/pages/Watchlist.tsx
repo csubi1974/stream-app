@@ -161,8 +161,12 @@ export function Watchlist() {
     saveWatchlist(updated);
   };
 
-  const formatPrice = (price: number) => `$${price.toFixed(2)}`;
-  const formatVolume = (volume: number) => {
+  const formatPrice = (price: number | null | undefined) => {
+    if (price === null || price === undefined) return '$--';
+    return `$${price.toFixed(2)}`;
+  };
+  const formatVolume = (volume: number | null | undefined) => {
+    if (volume === null || volume === undefined) return '--';
     if (volume >= 1e9) return `${(volume / 1e9).toFixed(1)}B`;
     if (volume >= 1e6) return `${(volume / 1e6).toFixed(1)}M`;
     if (volume >= 1e3) return `${(volume / 1e3).toFixed(1)}K`;
@@ -262,8 +266,8 @@ export function Watchlist() {
                             <TrendingDown className="h-4 w-4 mr-1" />
                           )}
                           <span>
-                            {item.change >= 0 ? '+' : ''}{item.change.toFixed(2)}
-                            ({item.changePercent >= 0 ? '+' : ''}{item.changePercent.toFixed(2)}%)
+                            {item.change >= 0 ? '+' : ''}{item.change != null ? item.change.toFixed(2) : '--'}
+                            ({item.changePercent >= 0 ? '+' : ''}{item.changePercent != null ? item.changePercent.toFixed(2) : '--'}%)
                           </span>
                         </div>
                       </td>
@@ -271,7 +275,7 @@ export function Watchlist() {
                         <div className="text-gray-300 text-sm">{formatVolume(item.volume)}</div>
                       </td>
                       <td className="py-3 px-4">
-                        {item.alertPrice ? (
+                        {item.alertPrice != null ? (
                           <div className="text-yellow-400 text-sm">
                             ${item.alertPrice.toFixed(2)}
                           </div>

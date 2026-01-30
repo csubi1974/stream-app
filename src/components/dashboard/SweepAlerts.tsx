@@ -68,7 +68,7 @@ export function SweepAlerts() {
                 {alert.size} {t('contracts')} {alert.symbol}
               </div>
               <div className="text-yellow-200">
-                @ ${alert.price.toFixed(2)} {t('on')} {alert.exchange}
+                @ ${alert.price != null ? alert.price.toFixed(2) : '--'} {t('on')} {alert.exchange}
               </div>
               <div className={`text-xs mt-1 ${alert.side === 'BUY' ? 'text-green-400' : 'text-red-400'
                 }`}>

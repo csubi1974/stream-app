@@ -142,6 +142,7 @@ export function GEXMetricsHUD() {
 
     // Determinar color del Total GEX
     const getTotalGEXColor = () => {
+        if (!totalGEX) return 'text-gray-400';
         if (totalGEX > 0) return 'text-green-400';
         if (totalGEX < 0) return 'text-red-400';
         return 'text-gray-400';
@@ -159,7 +160,8 @@ export function GEXMetricsHUD() {
         }
     };
 
-    const formatNumber = (num: number, decimals: number = 2) => {
+    const formatNumber = (num: number | null | undefined, decimals: number = 2) => {
+        if (num === null || num === undefined) return '--';
         if (Math.abs(num) >= 1e9) return `${(num / 1e9).toFixed(decimals)}B`;
         if (Math.abs(num) >= 1e6) return `${(num / 1e6).toFixed(decimals)}M`;
         if (Math.abs(num) >= 1e3) return `${(num / 1e3).toFixed(decimals)}K`;
@@ -239,10 +241,10 @@ export function GEXMetricsHUD() {
                 <MetricCard
                     icon={<Target className="h-5 w-5" />}
                     label={t('Gamma Flip')}
-                    value={`$${gammaFlip.toFixed(2)}`}
-                    valueColor={currentPrice < gammaFlip ? 'text-red-400' : 'text-green-400'}
-                    subtitle={currentPrice < gammaFlip ? t('Below - High Vol') : t('Above - Stable')}
-                    trend={currentPrice < gammaFlip ? 'volatile' : 'stable'}
+                    value={gammaFlip !== null && gammaFlip !== undefined ? `$${gammaFlip.toFixed(2)}` : '--'}
+                    valueColor={currentPrice && gammaFlip && currentPrice < gammaFlip ? 'text-red-400' : 'text-green-400'}
+                    subtitle={currentPrice && gammaFlip ? (currentPrice < gammaFlip ? t('Below - High Vol') : t('Above - Stable')) : '--'}
+                    trend={currentPrice && gammaFlip ? (currentPrice < gammaFlip ? 'volatile' : 'stable') : 'stable'}
                     tooltip={t('El nivel de precio donde el mercado cambia de régimen estable a volátil. Por debajo de este nivel, los Dealers venden cuando el mercado cae, aumentando la volatilidad.')}
                 />
 
@@ -305,13 +307,13 @@ export function GEXMetricsHUD() {
                 <MetricCard
                     icon={<Shield className="h-5 w-5 rotate-180" />}
                     label={t('Put Wall')}
-                    value={`$${putWall.toFixed(0)}`}
+                    value={putWall !== null && putWall !== undefined ? `$${putWall.toFixed(0)}` : '--'}
                     valueColor="text-green-400"
                     subtitle={t('Support Level')}
                     trend="support"
                     strength={putWallStrength}
                     liquidity={putWallLiquidity}
-                    highlight={Math.abs(currentPrice - putWall) / currentPrice < 0.01}
+                    highlight={currentPrice && putWall ? Math.abs(currentPrice - putWall) / currentPrice < 0.01 : false}
                     tooltip={t('El Strike con mayor exposición de Gamma en Puts. Actúa como el soporte más sólido. Es donde los Dealers compran agresivamente para frenar la caída.')}
                 />
 
@@ -319,13 +321,13 @@ export function GEXMetricsHUD() {
                 <MetricCard
                     icon={<Shield className="h-5 w-5" />}
                     label={t('Call Wall')}
-                    value={`$${callWall.toFixed(0)}`}
+                    value={callWall !== null && callWall !== undefined ? `$${callWall.toFixed(0)}` : '--'}
                     valueColor="text-red-400"
                     subtitle={t('Resistance Level')}
                     trend="resistance"
                     strength={callWallStrength}
                     liquidity={callWallLiquidity}
-                    highlight={Math.abs(currentPrice - callWall) / currentPrice < 0.01}
+                    highlight={currentPrice && callWall ? Math.abs(currentPrice - callWall) / currentPrice < 0.01 : false}
                     tooltip={t('El Strike con mayor exposición de Gamma en Calls. Actúa como un imán que frena las subidas. Es la resistencia estadística más fuerte del día.')}
                 />
 
@@ -351,15 +353,15 @@ export function GEXMetricsHUD() {
                     <div className="flex items-center space-x-2">
                         <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
                         <span className="text-gray-400">{t('Current Price')}:</span>
-                        <span className="text-white font-bold">${currentPrice.toFixed(2)}</span>
+                        <span className="text-white font-bold">${currentPrice ? currentPrice.toFixed(2) : '--'}</span>
                     </div>
 
                     {/* Distance to Gamma Flip */}
                     <div className="flex items-center space-x-2">
-                        <AlertTriangle className={`h-4 w-4 ${Math.abs(currentPrice - gammaFlip) / currentPrice < 0.01 ? 'text-orange-500 animate-pulse' : 'text-gray-500'}`} />
+                        <AlertTriangle className={`h-4 w-4 ${currentPrice && gammaFlip && Math.abs(currentPrice - gammaFlip) / currentPrice < 0.01 ? 'text-orange-500 animate-pulse' : 'text-gray-500'}`} />
                         <span className="text-gray-400">{t('Distance to Flip')}:</span>
-                        <span className={`font-mono ${Math.abs(currentPrice - gammaFlip) / currentPrice < 0.01 ? 'text-orange-400 font-bold' : 'text-gray-300'}`}>
-                            {((currentPrice - gammaFlip) / currentPrice * 100).toFixed(2)}%
+                        <span className={`font-mono ${currentPrice && gammaFlip && Math.abs(currentPrice - gammaFlip) / currentPrice < 0.01 ? 'text-orange-400 font-bold' : 'text-gray-300'}`}>
+                            {currentPrice && gammaFlip ? `${((currentPrice - gammaFlip) / currentPrice * 100).toFixed(2)}%` : '--'}
                         </span>
                     </div>
 
@@ -368,7 +370,7 @@ export function GEXMetricsHUD() {
                         <Target className="h-4 w-4 text-purple-500" />
                         <span className="text-gray-400">{t('Wall Range')}:</span>
                         <span className="text-white font-mono">
-                            ${putWall.toFixed(0)} - ${callWall.toFixed(0)}
+                            ${putWall ? putWall.toFixed(0) : '--'} - ${callWall ? callWall.toFixed(0) : '--'}
                         </span>
                     </div>
                 </div>

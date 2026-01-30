@@ -90,7 +90,8 @@ export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX' }: 
 
     const yTicks = [limit, limit / 2, 0, -limit / 2, -limit];
 
-    const formatValue = (val: number, isOi: boolean = false) => {
+    const formatValue = (val: number | null | undefined, isOi: boolean = false) => {
+        if (val === null || val === undefined) return '--';
         const v = Math.abs(val);
         const prefix = ((mode === 'GEX' || mode === 'DEX') && !isOi) ? '$' : '';
         if (v >= 1e9) return `${prefix}${(val / 1e9).toFixed(2)}B`;
@@ -181,7 +182,9 @@ export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX' }: 
                     {currentPrice && (
                         <div className="text-right border-l border-gray-800 pl-8">
                             <span className="block text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">Current Spot</span>
-                            <span className="text-2xl text-white font-mono font-black drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">${currentPrice.toFixed(2)}</span>
+                            <span className="text-2xl text-white font-mono font-black drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
+                                ${currentPrice != null ? currentPrice.toFixed(2) : '--'}
+                            </span>
                         </div>
                     )}
                 </div>
@@ -379,9 +382,9 @@ export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX' }: 
                             <div className="pt-2 mt-2 border-t border-gray-800 flex justify-between items-center text-[10px]">
                                 <span className="text-gray-400 uppercase">Net Diff</span>
                                 <span className={`font-mono font-bold ${(mode === 'GEX' ? (hoveredData.callGex + hoveredData.putGex) :
-                                        mode === 'VEX' ? ((hoveredData.callVanna || 0) + (hoveredData.putVanna || 0)) :
-                                            mode === 'DEX' ? (((hoveredData as any).callDex || 0) + ((hoveredData as any).putDex || 0)) :
-                                                (hoveredData.callOi! - hoveredData.putOi!)) >= 0 ? 'text-green-500' : 'text-red-500'
+                                    mode === 'VEX' ? ((hoveredData.callVanna || 0) + (hoveredData.putVanna || 0)) :
+                                        mode === 'DEX' ? (((hoveredData as any).callDex || 0) + ((hoveredData as any).putDex || 0)) :
+                                            (hoveredData.callOi! - hoveredData.putOi!)) >= 0 ? 'text-green-500' : 'text-red-500'
                                     }`}>
                                     {formatValue(
                                         mode === 'GEX' ? (hoveredData.callGex + hoveredData.putGex) :
@@ -446,7 +449,7 @@ export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX' }: 
                                             {netVal > 0
                                                 ? ` Un descenso en la IV provocará que los dealers COMPREN underlying para re-balancear, impulsando el precio al alza.`
                                                 : ` Un descenso en la IV provocará que los dealers VENDAN underlying, lo que podría acelerar caídas incluso en ausencia de malas noticias.`}
-                                            {currentPrice && mostValuable && ` El spot ($${currentPrice.toFixed(0)}) está cerca del strike de mayor exposición (${mostValuable.strike}).`}
+                                            {currentPrice != null && mostValuable && ` El spot ($${currentPrice.toFixed(0)}) está cerca del strike de mayor exposición (${mostValuable.strike}).`}
                                         </>
                                     );
                                 }

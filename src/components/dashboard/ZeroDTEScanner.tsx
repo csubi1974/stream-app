@@ -185,7 +185,8 @@ export function ZeroDTEScanner() {
     return strike ? `$${strike.toFixed(0)}` : '-';
   };
 
-  const formatGreek = (value: number) => {
+  const formatGreek = (value: number | null | undefined) => {
+    if (value === null || value === undefined) return '0.000';
     return value.toFixed(3);
   };
 
@@ -292,7 +293,7 @@ export function ZeroDTEScanner() {
                   <span className="text-white font-mono text-sm font-bold">{formatStrike(stats.putWall)}</span>
                 </div>
 
-                {stats.currentPrice && (
+                {stats.currentPrice != null && (
                   <>
                     <div className="w-[1px] bg-gray-800"></div>
                     <div className="text-center min-w-[80px]">
@@ -302,7 +303,7 @@ export function ZeroDTEScanner() {
                   </>
                 )}
 
-                {stats.deltaTarget !== undefined && (
+                {stats.deltaTarget != null && (
                   <>
                     <div className="w-[1px] bg-gray-800"></div>
                     <div className="text-center min-w-[60px]">

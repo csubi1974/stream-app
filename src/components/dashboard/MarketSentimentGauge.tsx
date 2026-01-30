@@ -83,7 +83,7 @@ export function MarketSentimentGauge({ value, label }: MarketSentimentGaugeProps
 
             <div className="mt-2 text-center">
                 <span className={`text-2xl font-black font-mono tracking-tighter ${color}`}>
-                    {value.toFixed(0)}
+                    {value != null ? value.toFixed(0) : '--'}
                 </span>
                 <span className="text-gray-600 text-[10px] ml-1 uppercase font-bold tracking-widest">Index</span>
             </div>

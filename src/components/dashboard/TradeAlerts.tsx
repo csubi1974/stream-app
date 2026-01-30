@@ -221,8 +221,8 @@ export function TradeAlerts() {
                                                                 {isITM ? 'ITM' : 'OTM'}
                                                             </span>
                                                         </td>
-                                                        <td className="py-2 text-right text-gray-300">${leg.price.toFixed(2)}</td>
-                                                        <td className="py-2 text-right text-gray-400">{leg.delta.toFixed(2)}</td>
+                                                        <td className="py-2 text-right text-gray-300">${leg.price != null ? leg.price.toFixed(2) : '--'}</td>
+                                                        <td className="py-2 text-right text-gray-400">{leg.delta != null ? leg.delta.toFixed(2) : '--'}</td>
                                                     </tr>
                                                 );
                                             })}
@@ -239,7 +239,7 @@ export function TradeAlerts() {
                                         <div className="flex justify-between items-center mb-2">
                                             <span className="text-[10px] text-gray-500 uppercase font-black tracking-widest">{t('Quality Score')}</span>
                                             <span className={`text-[10px] font-black px-2 py-0.5 rounded ${alert.qualityLevel === 'PREMIUM' ? 'bg-green-500/20 text-green-400' :
-                                                    alert.qualityLevel === 'STANDARD' ? 'bg-blue-500/20 text-blue-400' : 'bg-orange-500/20 text-orange-400'
+                                                alert.qualityLevel === 'STANDARD' ? 'bg-blue-500/20 text-blue-400' : 'bg-orange-500/20 text-orange-400'
                                                 }`}>
                                                 {alert.qualityLevel}
                                             </span>
@@ -248,7 +248,7 @@ export function TradeAlerts() {
                                             <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
                                                 <div
                                                     className={`h-full transition-all duration-1000 ${alert.qualityScore >= 80 ? 'bg-green-500' :
-                                                            alert.qualityScore >= 60 ? 'bg-blue-500' : 'bg-orange-500'
+                                                        alert.qualityScore >= 60 ? 'bg-blue-500' : 'bg-orange-500'
                                                         }`}
                                                     style={{ width: `${alert.qualityScore}%` }}
                                                 ></div>
@@ -264,10 +264,10 @@ export function TradeAlerts() {
                                         <div className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-2">{t('Risk Level')}</div>
                                         <div className="flex items-center space-x-2">
                                             <AlertTriangle className={`w-4 h-4 ${alert.riskLevel === 'HIGH' ? 'text-red-500' :
-                                                    alert.riskLevel === 'MEDIUM' ? 'text-orange-500' : 'text-green-500'
+                                                alert.riskLevel === 'MEDIUM' ? 'text-orange-500' : 'text-green-500'
                                                 }`} />
                                             <span className={`text-sm font-black ${alert.riskLevel === 'HIGH' ? 'text-red-400' :
-                                                    alert.riskLevel === 'MEDIUM' ? 'text-orange-400' : 'text-green-400'
+                                                alert.riskLevel === 'MEDIUM' ? 'text-orange-400' : 'text-green-400'
                                                 }`}>{alert.riskLevel}</span>
                                         </div>
                                     </div>
@@ -290,19 +290,19 @@ export function TradeAlerts() {
                                         <div>
                                             <div className="text-[10px] text-gray-500 uppercase">{t('Unrealized PnL')}</div>
                                             <div className={`text-lg font-mono font-bold ${alert.performance.unrealizedPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                {alert.performance.unrealizedPnL >= 0 ? '+' : ''}${alert.performance.unrealizedPnL.toFixed(0)}
+                                                {alert.performance.unrealizedPnL >= 0 ? '+' : ''}${alert.performance.unrealizedPnL != null ? alert.performance.unrealizedPnL.toFixed(0) : '--'}
                                             </div>
                                         </div>
                                         <div>
                                             <div className="text-[10px] text-gray-500 uppercase">{t('Return (ROI)')}</div>
                                             <div className={`text-lg font-mono font-bold ${alert.performance.unrealizedPnLPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                {alert.performance.unrealizedPnLPercent >= 0 ? '+' : ''}{alert.performance.unrealizedPnLPercent.toFixed(1)}%
+                                                {alert.performance.unrealizedPnLPercent >= 0 ? '+' : ''}{alert.performance.unrealizedPnLPercent != null ? alert.performance.unrealizedPnLPercent.toFixed(1) : '--'}%
                                             </div>
                                         </div>
                                         <div className="text-right">
                                             <div className="text-[10px] text-gray-500 uppercase font-mono tracking-tighter">Cost to Close</div>
                                             <div className="text-lg font-mono font-bold text-white">
-                                                ${alert.performance.currentPrice.toFixed(2)}
+                                                ${alert.performance.currentPrice != null ? alert.performance.currentPrice.toFixed(2) : '--'}
                                             </div>
                                         </div>
                                     </div>
@@ -328,11 +328,11 @@ export function TradeAlerts() {
                                 <div className="grid grid-cols-4 gap-4 mb-4 opacity-75 grayscale hover:filter-none hover:opacity-100 transition-all">
                                     <div className="bg-gray-800 rounded-lg p-3 text-center border border-gray-700">
                                         <div className="text-[10px] text-gray-500 uppercase mb-1">{t('Entry Credit')}</div>
-                                        <div className="text-green-400 font-bold text-sm">${alert.netCredit.toFixed(2)}</div>
+                                        <div className="text-green-400 font-bold text-sm">${alert.netCredit != null ? alert.netCredit.toFixed(2) : '--'}</div>
                                     </div>
                                     <div className="bg-gray-800 rounded-lg p-3 text-center border border-gray-700">
                                         <div className="text-[10px] text-gray-500 uppercase mb-1">{t('Max Risk')}</div>
-                                        <div className="text-red-400 font-bold text-sm">${alert.maxLoss.toFixed(2)}</div>
+                                        <div className="text-red-400 font-bold text-sm">${alert.maxLoss != null ? alert.maxLoss.toFixed(2) : '--'}</div>
                                     </div>
                                     <div className="bg-gray-800 rounded-lg p-3 text-center border border-gray-700">
                                         <div className="text-[10px] text-gray-500 uppercase mb-1">{t('Prob. Win')}</div>
@@ -356,8 +356,8 @@ export function TradeAlerts() {
                             <div className="flex items-center justify-between text-xs text-gray-500 border-t border-gray-700 pt-3">
                                 <div className="flex space-x-4">
                                     <span>Régimen: <span className={`font-medium ${alert.gexContext.regime === 'stable' ? 'text-green-400' : 'text-red-400'}`}>{alert.gexContext.regime}</span></span>
-                                    <span>Drift: <span className={`font-medium ${alert.gexContext.netDrift > 0 ? 'text-green-400' : 'text-red-400'}`}>{alert.gexContext.netDrift.toFixed(2)}</span></span>
-                                    <span>Spot: <span className="text-white">${alert.gexContext.currentPrice.toFixed(2)}</span></span>
+                                    <span>Drift: <span className={`font-medium ${alert.gexContext.netDrift > 0 ? 'text-green-400' : 'text-red-400'}`}>{alert.gexContext.netDrift != null ? alert.gexContext.netDrift.toFixed(2) : '--'}</span></span>
+                                    <span>Spot: <span className="text-white">${alert.gexContext.currentPrice != null ? alert.gexContext.currentPrice.toFixed(2) : '--'}</span></span>
                                 </div>
                                 <Link
                                     to={`/ladder/${alert.underlying}`}

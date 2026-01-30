@@ -175,7 +175,7 @@ export function SwingScanner() {
                     <div className="space-y-1 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-400">{t('Current Price')}:</span>
-                        <span className="text-white">${stock.price.toFixed(2)}</span>
+                        <span className="text-white">${stock.price != null ? stock.price.toFixed(2) : '--'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-400">{t('Change')}:</span>
