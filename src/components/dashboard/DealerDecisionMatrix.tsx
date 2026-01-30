@@ -73,25 +73,34 @@ interface DealerDecisionMatrixProps {
 
 export function DealerDecisionMatrix({ netDex, netGex, netVex }: DealerDecisionMatrixProps) {
     const currentScenarioId = useMemo(() => {
-        // Define thresholds for "Zero"
-        const isZero = (val: number) => Math.abs(val) < 1000000; // threshold can be adjusted
+        // Umbrales mejorados: GEX es la prioridad #1
+        const isGexZero = Math.abs(netGex) < 500000;
+        const isDexZero = Math.abs(netDex) < 1000000;
+        const isVexZero = Math.abs(netVex) < 500000;
 
-        const d = isZero(netDex) ? 'zero' : (netDex > 0 ? 'pos' : 'neg');
-        const g = isZero(netGex) ? 'zero' : (netGex > 0 ? 'pos' : 'neg');
-        const v = isZero(netVex) ? 'zero' : (netVex > 0 ? 'pos' : 'neg');
+        const g = isGexZero ? 'zero' : (netGex > 0 ? 'pos' : 'neg');
+        const d = isDexZero ? 'zero' : (netDex > 0 ? 'pos' : 'neg');
+        const v = isVexZero ? 'zero' : (netVex > 0 ? 'pos' : 'neg');
 
-        // Find best match
-        const match = SCENARIOS.find(s => s.dex === d && s.gex === g && s.vex === v);
-        if (match) return match.id;
+        // 1. Prioridad: GEX NEGATIVO (Aceleración / Riesgo)
+        if (g === 'neg') {
+            if (d === 'pos') return 'squeeze'; // DEX (+) vs GEX (-) = Squeeze alcista
+            if (d === 'neg') return 'crash';   // DEX (-) vs GEX (-) = Desplome / Caída libre
+            return 'crash'; // Si GEX es negativo, el riesgo es dominante
+        }
 
-        // Fallbacks for more complex or mixed states
-        if (g === 'pos' && Math.abs(netDex) < Math.abs(netGex) * 0.1) return 'magnet';
-        if (d === 'pos' && g === 'neg') return 'squeeze';
-        if (d === 'neg' && g === 'neg') return 'crash';
-        if (d === 'pos' && g === 'pos') return 'grind';
-        if (d === 'neg' && g === 'pos') return 'fakeout';
+        // 2. Prioridad: GEX POSITIVO (Estabilidad)
+        if (g === 'pos') {
+            if (d === 'pos') return 'grind';   // Subida con red de seguridad
+            if (d === 'neg') return 'fakeout'; // Caída con freno de mano (posible rebote)
+            return 'magnet'; // Si DEX es neutral pero GEX es positivo, estamos atrapados en un strike
+        }
 
-        return 'magnet'; // Default
+        // 3. Prioridad: GEX NEUTRAL (Incertidumbre)
+        if (d === 'pos') return 'grind';
+        if (d === 'neg') return 'fakeout';
+
+        return 'magnet'; // Por defecto si todo es neutral
     }, [netDex, netGex, netVex]);
 
     const activeScenario = SCENARIOS.find(s => s.id === currentScenarioId) || SCENARIOS[3];
@@ -150,8 +159,8 @@ export function DealerDecisionMatrix({ netDex, netGex, netVex }: DealerDecisionM
                         <div
                             key={s.id}
                             className={`flex items-center justify-between px-3 py-2 rounded text-[11px] transition-all ${s.id === currentScenarioId
-                                    ? 'bg-blue-500/10 border border-blue-500/20'
-                                    : 'opacity-40 grayscale hover:grayscale-0 hover:opacity-100 border border-transparent'
+                                ? 'bg-blue-500/10 border border-blue-500/20'
+                                : 'opacity-40 grayscale hover:grayscale-0 hover:opacity-100 border border-transparent'
                                 }`}
                         >
                             <div className="flex items-center space-x-3 w-40">
