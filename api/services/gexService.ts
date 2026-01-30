@@ -189,28 +189,23 @@ export class GEXService {
                 netCharm += m.netCharm;
             });
 
-            // 2. Gamma Flip (Strike donde GEX cruza de positivo a negativo)
+            // 2. gammaProfile y Gamma Flip consistente
+            const gammaProfile = this.calculateGammaProfile(allOptions, currentPrice);
+
+            // Buscar el punto donde la curva cruza por cero (Gamma Flip)
             let gammaFlip = currentPrice;
-            let closestToZero = Infinity;
+            if (gammaProfile.length > 0) {
+                for (let i = 0; i < gammaProfile.length - 1; i++) {
+                    const p1 = gammaProfile[i];
+                    const p2 = gammaProfile[i + 1];
 
-            const sortedStrikes = Array.from(strikeMetrics.entries())
-                .sort((a, b) => a[0] - b[0]);
-
-            for (let i = 0; i < sortedStrikes.length - 1; i++) {
-                const [strike1, metrics1] = sortedStrikes[i];
-                const [strike2, metrics2] = sortedStrikes[i + 1];
-
-                // Buscar cambio de signo
-                if (metrics1.netGEX * metrics2.netGEX < 0) {
-                    // Hay un cruce entre estos dos strikes
-                    gammaFlip = (strike1 + strike2) / 2;
-                    break;
-                }
-
-                // También buscar el strike más cercano a GEX = 0
-                if (Math.abs(metrics1.netGEX) < closestToZero) {
-                    closestToZero = Math.abs(metrics1.netGEX);
-                    gammaFlip = strike1;
+                    // Si hay un cambio de signo entre estos dos puntos
+                    if (p1.netGex * p2.netGex <= 0) {
+                        // Interpolación lineal simple para encontrar el cero exacto
+                        const weight = Math.abs(p1.netGex) / (Math.abs(p1.netGex) + Math.abs(p2.netGex));
+                        gammaFlip = p1.price + weight * (p2.price - p1.price);
+                        break;
+                    }
                 }
             }
 
@@ -375,7 +370,7 @@ export class GEXService {
                 expectedMove,
                 netVanna,
                 netCharm,
-                gammaProfile: this.calculateGammaProfile(allOptions, currentPrice)
+                gammaProfile
             };
 
         } catch (error) {

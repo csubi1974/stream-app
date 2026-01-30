@@ -13,9 +13,9 @@ export function GammaCurveChart({ data, currentPrice, gammaFlip, callWall, putWa
     const { t } = useTranslation();
 
     // SVG Dimensions
-    const width = 800;
-    const height = 240;
-    const margin = { top: 30, right: 40, bottom: 25, left: 60 };
+    const width = 1000;
+    const height = 300;
+    const margin = { top: 40, right: 60, bottom: 40, left: 80 };
     const graphWidth = width - margin.left - margin.right;
     const graphHeight = height - margin.top - margin.bottom;
 
@@ -27,15 +27,22 @@ export function GammaCurveChart({ data, currentPrice, gammaFlip, callWall, putWa
         if (currentPrice) prices.push(currentPrice);
         if (gammaFlip) prices.push(gammaFlip);
 
+        const min = Math.min(...prices);
+        const max = Math.max(...prices);
+        const range = max - min;
+        // Añadir un 5% de margen a los lados para que no toque el borde
+        const padding = range * 0.05;
+
         return {
-            xMin: Math.min(...prices),
-            xMax: Math.max(...prices)
+            xMin: min - padding,
+            xMax: max + padding
         };
     }, [data, callWall, putWall, currentPrice, gammaFlip]);
 
     const yMax = useMemo(() => Math.max(...data.map(d => Math.abs(d.netGex))), [data]);
 
-    const limit = yMax > 0 ? yMax * 1.2 : 1000000;
+    // Añadir margen superior e inferior al eje Y (25% extra)
+    const limit = yMax > 0 ? yMax * 1.25 : 1000000;
 
     const getX = (price: number) => {
         if (xMax === xMin) return 0;
@@ -96,7 +103,7 @@ export function GammaCurveChart({ data, currentPrice, gammaFlip, callWall, putWa
                 </div>
             </div>
 
-            <div className="relative h-[200px]">
+            <div className="relative h-[280px]">
                 <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible">
                     <defs>
                         <linearGradient id="curveGradient" x1="0" y1="0" x2="0" y2="1">
