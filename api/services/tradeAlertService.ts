@@ -553,7 +553,7 @@ export class TradeAlertService {
             }
 
             // 2. ESTRATEGIAS BASADAS EN RÉGIMEN Y DERIVA
-            if (alerts.length === 0) {
+            if (alerts.length === 0 && regime !== 'volatile') {
                 if (regime === 'stable' && Math.abs(netDrift) <= 0.5) {
                     const ironCondor = this.generateIronCondor(options, gexMetrics, targetExpiration, gexContext);
                     if (ironCondor) alerts.push(ironCondor);
@@ -568,14 +568,16 @@ export class TradeAlertService {
                 }
             }
 
-            // 3. VANNA CRUSH PLAYS
-            if (gexMetrics.netVanna > 15000000 && regime !== 'volatile') {
-                const vannaPlay = this.generateBullPutSpread(options, gexMetrics, targetExpiration, gexContext, 'vanna_crush');
-                if (vannaPlay && !alerts.find(a => a.id === vannaPlay.id)) alerts.push(vannaPlay);
-            }
-            if (gexMetrics.netVanna < -10000000 && regime !== 'volatile') {
-                const vannaPlay = this.generateBearCallSpread(options, gexMetrics, targetExpiration, gexContext, 'vanna_crush');
-                if (vannaPlay && !alerts.find(a => a.id === vannaPlay.id)) alerts.push(vannaPlay);
+            // 3. VANNA CRUSH PLAYS (Solo en regímenes no volátiles)
+            if (regime !== 'volatile') {
+                if (gexMetrics.netVanna > 15000000) {
+                    const vannaPlay = this.generateBullPutSpread(options, gexMetrics, targetExpiration, gexContext, 'vanna_crush');
+                    if (vannaPlay && !alerts.find(a => a.id === vannaPlay.id)) alerts.push(vannaPlay);
+                }
+                if (gexMetrics.netVanna < -10000000) {
+                    const vannaPlay = this.generateBearCallSpread(options, gexMetrics, targetExpiration, gexContext, 'vanna_crush');
+                    if (vannaPlay && !alerts.find(a => a.id === vannaPlay.id)) alerts.push(vannaPlay);
+                }
             }
 
             // Volatile regime warning
