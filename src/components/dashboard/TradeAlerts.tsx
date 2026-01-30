@@ -33,6 +33,14 @@ interface TradeAlert {
         currentPrice: number;
         netDrift: number;
     };
+    qualityScore?: number;
+    qualityLevel?: 'PREMIUM' | 'STANDARD' | 'AGGRESSIVE';
+    riskLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
+    exitCriteria?: {
+        profitTarget: string;
+        stopLoss: string;
+        timeExit: string;
+    };
     performance?: {
         currentPrice: number;
         unrealizedPnL: number;
@@ -101,8 +109,10 @@ export function TradeAlerts() {
         }
     };
 
-    const getStrategyColor = (strategy: string) => {
-        switch (strategy) {
+    const getStrategyColor = (alert: TradeAlert) => {
+        if (alert.status === 'WATCH' && alert.legs.length === 0) return 'border-orange-500/50 bg-orange-500/5';
+
+        switch (alert.strategy) {
             case 'BULL_PUT_SPREAD':
                 return 'border-green-500/30 hover:border-green-500/50';
             case 'BEAR_CALL_SPREAD':
@@ -162,7 +172,7 @@ export function TradeAlerts() {
                     {alerts.map((alert) => (
                         <div
                             key={alert.id}
-                            className={`bg-gray-900 rounded-xl p-5 border transition-all ${getStrategyColor(alert.strategy)}`}
+                            className={`bg-gray-900 rounded-xl p-5 border transition-all ${getStrategyColor(alert)}`}
                         >
                             {/* Alert Header */}
                             <div className="flex items-center justify-between mb-4">
@@ -205,8 +215,8 @@ export function TradeAlerts() {
                                                         <td className="py-2 text-right text-white font-mono">${leg.strike.toFixed(0)}</td>
                                                         <td className="py-3 text-center">
                                                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${isITM
-                                                                    ? 'bg-red-500/20 text-red-400 border-red-500/30'
-                                                                    : 'bg-green-500/20 text-green-400 border-green-500/30'
+                                                                ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                                                                : 'bg-green-500/20 text-green-400 border-green-500/30'
                                                                 }`}>
                                                                 {isITM ? 'ITM' : 'OTM'}
                                                             </span>
@@ -221,8 +231,51 @@ export function TradeAlerts() {
                                 </div>
                             )}
 
-                            {/* Performance Board (NEW) */}
-                            {alert.performance ? (
+                            {/* Performance & Quality Row */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                {/* Quality Score (NEW) */}
+                                {alert.qualityScore !== undefined && (
+                                    <div className="bg-gray-800/40 rounded-lg p-3 border border-gray-700/50">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-[10px] text-gray-500 uppercase font-black tracking-widest">{t('Quality Score')}</span>
+                                            <span className={`text-[10px] font-black px-2 py-0.5 rounded ${alert.qualityLevel === 'PREMIUM' ? 'bg-green-500/20 text-green-400' :
+                                                    alert.qualityLevel === 'STANDARD' ? 'bg-blue-500/20 text-blue-400' : 'bg-orange-500/20 text-orange-400'
+                                                }`}>
+                                                {alert.qualityLevel}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center space-x-3">
+                                            <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
+                                                <div
+                                                    className={`h-full transition-all duration-1000 ${alert.qualityScore >= 80 ? 'bg-green-500' :
+                                                            alert.qualityScore >= 60 ? 'bg-blue-500' : 'bg-orange-500'
+                                                        }`}
+                                                    style={{ width: `${alert.qualityScore}%` }}
+                                                ></div>
+                                            </div>
+                                            <span className="text-sm font-mono font-black text-white">{alert.qualityScore}/100</span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Risk Level */}
+                                {alert.riskLevel && (
+                                    <div className="bg-gray-800/40 rounded-lg p-3 border border-gray-700/50">
+                                        <div className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-2">{t('Risk Level')}</div>
+                                        <div className="flex items-center space-x-2">
+                                            <AlertTriangle className={`w-4 h-4 ${alert.riskLevel === 'HIGH' ? 'text-red-500' :
+                                                    alert.riskLevel === 'MEDIUM' ? 'text-orange-500' : 'text-green-500'
+                                                }`} />
+                                            <span className={`text-sm font-black ${alert.riskLevel === 'HIGH' ? 'text-red-400' :
+                                                    alert.riskLevel === 'MEDIUM' ? 'text-orange-400' : 'text-green-400'
+                                                }`}>{alert.riskLevel}</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Performance Board */}
+                            {alert.performance && alert.legs.length > 0 && (
                                 <div className="mb-4 bg-black/40 rounded-lg p-4 border border-gray-700/50">
                                     <div className="flex justify-between items-center mb-2">
                                         <div className="text-xs text-gray-400 uppercase font-bold tracking-wider flex items-center">
@@ -236,52 +289,61 @@ export function TradeAlerts() {
                                     <div className="grid grid-cols-3 gap-4">
                                         <div>
                                             <div className="text-[10px] text-gray-500 uppercase">{t('Unrealized PnL')}</div>
-                                            <div className={`text-lg font-mono font-bold ${alert.performance.unrealizedPnL > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                {alert.performance.unrealizedPnL > 0 ? '+' : ''}${alert.performance.unrealizedPnL.toFixed(0)}
+                                            <div className={`text-lg font-mono font-bold ${alert.performance.unrealizedPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                                {alert.performance.unrealizedPnL >= 0 ? '+' : ''}${alert.performance.unrealizedPnL.toFixed(0)}
                                             </div>
                                         </div>
                                         <div>
                                             <div className="text-[10px] text-gray-500 uppercase">{t('Return (ROI)')}</div>
-                                            <div className={`text-lg font-mono font-bold ${alert.performance.unrealizedPnLPercent > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                {alert.performance.unrealizedPnLPercent > 0 ? '+' : ''}{alert.performance.unrealizedPnLPercent.toFixed(1)}%
+                                            <div className={`text-lg font-mono font-bold ${alert.performance.unrealizedPnLPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                                {alert.performance.unrealizedPnLPercent >= 0 ? '+' : ''}{alert.performance.unrealizedPnLPercent.toFixed(1)}%
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <div className="text-[10px] text-gray-500 uppercase">{t('Start Value')}</div>
+                                            <div className="text-[10px] text-gray-500 uppercase font-mono tracking-tighter">Cost to Close</div>
                                             <div className="text-lg font-mono font-bold text-white">
                                                 ${alert.performance.currentPrice.toFixed(2)}
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            ) : (
-                                <div className="mb-4 bg-gray-800/30 rounded-lg p-4 border border-dashed border-gray-700 text-center">
-                                    <span className="text-xs text-gray-500 flex items-center justify-center">
-                                        <RefreshCw className="w-3 h-3 mr-2 animate-spin" />
-                                        {t('Waiting for Real-Time PnL...')}
-                                    </span>
+                            )}
+
+                            {/* Exit Criteria (NEW) */}
+                            {alert.exitCriteria && alert.legs.length > 0 && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                                    <div className="bg-green-500/5 border border-green-500/10 rounded-lg p-3">
+                                        <div className="text-[9px] text-green-500/60 uppercase font-black tracking-widest mb-1">Profit Target</div>
+                                        <p className="text-xs text-green-200 font-medium">{alert.exitCriteria.profitTarget}</p>
+                                    </div>
+                                    <div className="bg-red-500/5 border border-red-500/10 rounded-lg p-3">
+                                        <div className="text-[9px] text-red-500/60 uppercase font-black tracking-widest mb-1">Stop Loss / Exit</div>
+                                        <p className="text-xs text-red-200 font-medium">{alert.exitCriteria.stopLoss}</p>
+                                    </div>
                                 </div>
                             )}
 
                             {/* Static Metrics Row */}
-                            <div className="grid grid-cols-4 gap-4 mb-4 opacity-75 grayscale hover:filter-none hover:opacity-100 transition-all">
-                                <div className="bg-gray-800 rounded-lg p-3 text-center border border-gray-700">
-                                    <div className="text-[10px] text-gray-500 uppercase mb-1">{t('Entry Credit')}</div>
-                                    <div className="text-green-400 font-bold text-sm">${alert.netCredit.toFixed(2)}</div>
+                            {alert.legs.length > 0 && (
+                                <div className="grid grid-cols-4 gap-4 mb-4 opacity-75 grayscale hover:filter-none hover:opacity-100 transition-all">
+                                    <div className="bg-gray-800 rounded-lg p-3 text-center border border-gray-700">
+                                        <div className="text-[10px] text-gray-500 uppercase mb-1">{t('Entry Credit')}</div>
+                                        <div className="text-green-400 font-bold text-sm">${alert.netCredit.toFixed(2)}</div>
+                                    </div>
+                                    <div className="bg-gray-800 rounded-lg p-3 text-center border border-gray-700">
+                                        <div className="text-[10px] text-gray-500 uppercase mb-1">{t('Max Risk')}</div>
+                                        <div className="text-red-400 font-bold text-sm">${alert.maxLoss.toFixed(2)}</div>
+                                    </div>
+                                    <div className="bg-gray-800 rounded-lg p-3 text-center border border-gray-700">
+                                        <div className="text-[10px] text-gray-500 uppercase mb-1">{t('Prob. Win')}</div>
+                                        <div className="text-blue-400 font-bold text-sm">{alert.probability}%</div>
+                                    </div>
+                                    <div className="bg-gray-800 rounded-lg p-3 text-center border border-gray-700">
+                                        <div className="text-[10px] text-gray-500 uppercase mb-1">{t('R:R')}</div>
+                                        <div className="text-purple-400 font-bold text-sm">{alert.riskReward}</div>
+                                    </div>
                                 </div>
-                                <div className="bg-gray-800 rounded-lg p-3 text-center border border-gray-700">
-                                    <div className="text-[10px] text-gray-500 uppercase mb-1">{t('Max Risk')}</div>
-                                    <div className="text-red-400 font-bold text-sm">${alert.maxLoss.toFixed(2)}</div>
-                                </div>
-                                <div className="bg-gray-800 rounded-lg p-3 text-center border border-gray-700">
-                                    <div className="text-[10px] text-gray-500 uppercase mb-1">{t('Prob. Win')}</div>
-                                    <div className="text-blue-400 font-bold text-sm">{alert.probability}%</div>
-                                </div>
-                                <div className="bg-gray-800 rounded-lg p-3 text-center border border-gray-700">
-                                    <div className="text-[10px] text-gray-500 uppercase mb-1">{t('R:R')}</div>
-                                    <div className="text-purple-400 font-bold text-sm">{alert.riskReward}</div>
-                                </div>
-                            </div>
+                            )}
 
                             {/* Rationale */}
                             <div className="bg-blue-900/20 border border-blue-500/20 rounded-lg p-3 mb-4">
