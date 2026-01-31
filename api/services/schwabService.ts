@@ -1,6 +1,11 @@
 import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
+
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default_secret_key_change_me_in_production_32_chars';
+const IV_LENGTH = 12; // For AES-256-GCM
+const ALGORITHM = 'aes-256-gcm';
 
 interface OptionsBookData {
   symbol: string;
@@ -62,23 +67,66 @@ export class SchwabService {
     this.loadTokens();
   }
 
+  private encrypt(text: string): string {
+    const iv = crypto.randomBytes(IV_LENGTH);
+    const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
+    const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+
+    let encrypted = cipher.update(text, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+
+    const tag = cipher.getAuthTag().toString('hex');
+
+    // Format: iv:tag:encryptedData
+    return `${iv.toString('hex')}:${tag}:${encrypted}`;
+  }
+
+  private decrypt(text: string): string {
+    try {
+      const [ivHex, tagHex, encryptedData] = text.split(':');
+      if (!ivHex || !tagHex || !encryptedData) {
+        // Fallback for old unencrypted tokens
+        return text;
+      }
+
+      const iv = Buffer.from(ivHex, 'hex');
+      const tag = Buffer.from(tagHex, 'hex');
+      const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
+      const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+
+      decipher.setAuthTag(tag);
+
+      let decrypted = decipher.update(encryptedData, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+
+      return decrypted;
+    } catch (error) {
+      console.error('🔐 Decryption failed (tokens might be old/unencrypted or key mismatch)');
+      return text; // Return as is, might be JSON or old format
+    }
+  }
+
   private loadTokens() {
     try {
       if (fs.existsSync(this.tokensPath)) {
-        // Read file directly to avoid caching issues
         const fileContent = fs.readFileSync(this.tokensPath, 'utf-8');
-        const tokens = JSON.parse(fileContent);
+
+        let tokens;
+        try {
+          // Check if it's already a JSON (unencrypted legacy)
+          tokens = JSON.parse(fileContent);
+        } catch (e) {
+          // If not JSON, it's our encrypted string
+          const decrypted = this.decrypt(fileContent);
+          tokens = JSON.parse(decrypted);
+        }
+
         this.accessToken = tokens.accessToken;
         this.refreshToken = tokens.refreshToken;
 
         if (this.accessToken) {
-          console.log('✅ Schwab tokens loaded successfully');
-          console.log(`   Access Token: ${this.accessToken.substring(0, 20)}...`);
-        } else {
-          console.warn('⚠️ Access token is empty in tokens.json');
+          console.log('✅ Schwab tokens loaded successfully (Secure Mode)');
         }
-      } else {
-        console.warn(`⚠️ tokens.json file not found at: ${this.tokensPath}`);
       }
     } catch (error) {
       console.error('❌ Failed to load tokens:', error);
@@ -87,16 +135,17 @@ export class SchwabService {
 
   private saveTokens() {
     try {
-      // Temporarily unwatch to avoid triggering reload loop
       fs.unwatchFile(this.tokensPath);
 
-      fs.writeFileSync(this.tokensPath, JSON.stringify({
+      const tokenData = JSON.stringify({
         accessToken: this.accessToken,
         refreshToken: this.refreshToken
-      }, null, 2));
-      console.log('💾 Schwab tokens saved to disk');
+      });
 
-      // Re-watch
+      const encryptedData = this.encrypt(tokenData);
+      fs.writeFileSync(this.tokensPath, encryptedData);
+
+      console.log('💾 Schwab tokens encrypted and saved to disk');
       this.watchTokensFile();
     } catch (error) {
       console.error('❌ Failed to save tokens:', error);
