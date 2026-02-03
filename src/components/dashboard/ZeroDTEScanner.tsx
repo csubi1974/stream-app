@@ -37,10 +37,7 @@ export function ZeroDTEScanner() {
   const { isConnected, sendMessage } = useWebSocket({
     url: wsUrl,
     onConnect: () => {
-      sendMessage({
-        type: 'get_0dte_options',
-        underlying: 'SPXW'
-      });
+      // Data request is handled in the useEffect below
     },
     onMessage: (message) => {
       if (message.type === '0dte_options') {
@@ -49,9 +46,13 @@ export function ZeroDTEScanner() {
           options = message.data;
           setZeroDTEOptions(message.data);
         } else {
-          options = message.data.options;
-          setZeroDTEOptions(message.data.options);
-          setStats(message.data.stats);
+          options = message.data.options || [];
+          setZeroDTEOptions(options);
+
+          // Only update stats if we have valid ones to avoid flickering
+          if (message.data.stats) {
+            setStats(message.data.stats);
+          }
         }
 
         // Auto-subscribe to top 10 options by volume for the ticker
@@ -107,10 +108,12 @@ export function ZeroDTEScanner() {
     const symbol = selectedSymbol || 'SPX';
     const subSymbol = symbol === 'SPX' ? '$SPX' : symbol;
 
-    const fetchData = async () => {
+    const fetchData = async (showLoading = true) => {
       try {
-        setStats(null);
-        setLoading(true);
+        if (showLoading) {
+          setStats(null);
+          setLoading(true);
+        }
 
         // 1. Fetch via REST for initial load
         const response = await fetch(`/api/scanner/0dte?symbol=${symbol}`);
@@ -120,8 +123,11 @@ export function ZeroDTEScanner() {
           if (Array.isArray(data)) {
             setZeroDTEOptions(data);
           } else {
-            setZeroDTEOptions(data.options);
-            setStats(data.stats);
+            // Only update stats if we got valid data back to avoid flickering
+            if (data.stats) {
+              setStats(data.stats);
+            }
+            setZeroDTEOptions(data.options || []);
           }
           setLoading(false);
         }
@@ -131,7 +137,7 @@ export function ZeroDTEScanner() {
       }
     };
 
-    fetchData();
+    fetchData(true);
 
     // 2. Request initial live data via WebSocket
     if (isConnected) {
@@ -148,8 +154,8 @@ export function ZeroDTEScanner() {
       });
     }
 
-    // 3. Setup auto-refresh every 30 seconds
-    const interval = setInterval(fetchData, 30000);
+    // 3. Setup auto-refresh every 30 seconds - SILENT refresh (don't clear stats)
+    const interval = setInterval(() => fetchData(false), 30000);
 
     return () => {
       isMounted = false;

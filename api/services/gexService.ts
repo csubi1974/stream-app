@@ -581,7 +581,7 @@ export class GEXService {
      */
     private calculateGammaProfile(options: any[], currentPrice: number): Array<{ price: number, netGex: number }> {
         const profile: Array<{ price: number, netGex: number }> = [];
-        const range = 0.05; // +/- 5%
+        const range = 0.03; // +/- 3% (reducido del 5% para mejor visualización)
         const steps = 40;
         const stepSize = (currentPrice * range * 2) / steps;
         const startPrice = currentPrice * (1 - range);
@@ -629,7 +629,7 @@ export class GEXService {
 
     private calculateMockGammaProfile(currentPrice: number, flip: number): Array<{ price: number, netGex: number }> {
         const profile = [];
-        const range = 0.05;
+        const range = 0.03;
         const steps = 40;
         const stepSize = (currentPrice * range * 2) / steps;
         const startPrice = currentPrice * (1 - range);
