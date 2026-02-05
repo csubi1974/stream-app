@@ -40,22 +40,46 @@ export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX' }: 
     const [hoveredStrike, setHoveredStrike] = useState<number | null>(null);
     const svgRef = useRef<SVGSVGElement>(null);
 
-    // Filter significant data
+    // Filter significant data to avoid squashing the chart
     const activeStrikes = useMemo(() => {
         if (data.length === 0) return [];
+
+        // 1. Limitar rango por precio actual (+/- 12% para tener contexto pero sin exagerar)
+        let filtered = data;
+        if (currentPrice) {
+            const rangeLimit = currentPrice * 0.12;
+            filtered = data.filter(d => Math.abs(d.strike - currentPrice) <= rangeLimit);
+        }
+
+        // If filtering by range leaves too little data, fallback to full data
+        if (filtered.length < 5) filtered = data;
+
+        // 2. Filtrar strikes con valores insignificantes (ruido profundo OTM/ITM)
         if (hasActiveGreeks) {
+            let maxGreek = 0;
             if (mode === 'GEX') {
-                return data.filter(d => Math.abs(d.callGex) > 0 || Math.abs(d.putGex) > 0 || (currentPrice && Math.abs(d.strike - currentPrice) < 45));
+                maxGreek = Math.max(...filtered.map(d => Math.max(Math.abs(d.callGex), Math.abs(d.putGex))));
             } else if (mode === 'VEX') {
-                return data.filter(d => Math.abs(d.callVanna || 0) > 0 || Math.abs(d.putVanna || 0) > 0 || (currentPrice && Math.abs(d.strike - currentPrice) < 45));
+                maxGreek = Math.max(...filtered.map(d => Math.max(Math.abs(d.callVanna || 0), Math.abs(d.putVanna || 0))));
             } else {
-                return data.filter(d => Math.abs((d as any).callDex || 0) > 0 || Math.abs((d as any).putDex || 0) > 0 || (currentPrice && Math.abs(d.strike - currentPrice) < 45));
+                maxGreek = Math.max(...filtered.map(d => Math.max(Math.abs((d as any).callDex || 0), Math.abs((d as any).putDex || 0))));
+            }
+
+            // Umbral del 0.1% del valor máximo para considerar un strike como "activo"
+            const threshold = maxGreek * 0.001;
+
+            if (mode === 'GEX') {
+                return filtered.filter(d => Math.abs(d.callGex) > threshold || Math.abs(d.putGex) > threshold || (currentPrice && Math.abs(d.strike - currentPrice) < (currentPrice * 0.01)));
+            } else if (mode === 'VEX') {
+                return filtered.filter(d => Math.abs(d.callVanna || 0) > threshold || Math.abs(d.putVanna || 0) > threshold || (currentPrice && Math.abs(d.strike - currentPrice) < (currentPrice * 0.01)));
+            } else {
+                return filtered.filter(d => Math.abs((d as any).callDex || 0) > threshold || Math.abs((d as any).putDex || 0) > threshold || (currentPrice && Math.abs(d.strike - currentPrice) < (currentPrice * 0.01)));
             }
         }
-        return data.filter(d => (d.callOi || 0) > 0 || (d.putOi || 0) > 0 || (currentPrice && Math.abs(d.strike - currentPrice) < 45));
+        return filtered.filter(d => (d.callOi || 0) > 0 || (d.putOi || 0) > 0 || (currentPrice && Math.abs(d.strike - currentPrice) < (currentPrice * 0.01)));
     }, [data, currentPrice, hasActiveGreeks, mode]);
 
-    const chartData = activeStrikes.length > 5 ? activeStrikes : data;
+    const chartData = activeStrikes;
 
     // Scales
     const strikes = chartData.map(d => d.strike);
@@ -81,11 +105,32 @@ export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX' }: 
     const getY = (value: number) => graphHeight / 2 - (value / limit) * (graphHeight / 2);
     const zeroY = getY(0);
 
-    // Dynamic tick frequency for X axis
+    // Dynamic tick frequency for X axis to prevent overlap
     const xTicks = useMemo(() => {
-        if (chartData.length < 15) return chartData.map(d => d.strike);
-        const step = Math.max(1, Math.floor(chartData.length / 12));
-        return chartData.filter((_, i) => i % step === 0).map(d => d.strike);
+        if (chartData.length === 0) return [];
+
+        // Siempre incluir el strike más cercano al spot si existe
+        let ticks: number[] = [];
+
+        if (chartData.length <= 12) {
+            ticks = chartData.map(d => d.strike);
+        } else {
+            // Seleccionar ~10 ticks distribuidos uniformemente por valor de precio, no por índice
+            const minS = Math.min(...chartData.map(d => d.strike));
+            const maxS = Math.max(...chartData.map(d => d.strike));
+            const step = (maxS - minS) / 8;
+
+            for (let i = 0; i <= 8; i++) {
+                const targetStrike = minS + i * step;
+                // Encontrar el strike real más cercano al target
+                const actual = chartData.reduce((prev, curr) =>
+                    Math.abs(curr.strike - targetStrike) < Math.abs(prev.strike - targetStrike) ? curr : prev
+                );
+                if (!ticks.includes(actual.strike)) ticks.push(actual.strike);
+            }
+        }
+
+        return ticks.sort((a, b) => a - b);
     }, [chartData]);
 
     const yTicks = [limit, limit / 2, 0, -limit / 2, -limit];
@@ -308,7 +353,8 @@ export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX' }: 
                         {xTicks.map(strike => (
                             <text
                                 key={strike} x={getX(strike)} y={graphHeight + 40}
-                                fill="#9ca3af" fontSize="11" textAnchor="middle" fontWeight="black" fontFamily="monospace"
+                                fill="#9ca3af" fontSize="10" textAnchor="middle" fontWeight="black" fontFamily="monospace"
+                                transform={`rotate(-15, ${getX(strike)}, ${graphHeight + 40})`}
                             >
                                 {strike.toLocaleString()}
                             </text>
