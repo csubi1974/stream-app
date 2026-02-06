@@ -186,6 +186,13 @@ export class MarketDataService {
         chain.underlyingPrice ||
         (allOptions.length > 0 ? parseFloat(allOptions[0].strikePrice || allOptions[0].strike) : 0);
 
+      // Calcular T real para 0DTE (horas hasta el cierre)
+      const now = new Date();
+      const closeTime = new Date();
+      closeTime.setHours(16, 0, 0, 0); // 4 PM ET
+      let tReal = (closeTime.getTime() - now.getTime()) / (1000 * 60 * 60 * 24 * 365);
+      if (tReal <= 0) tReal = 0.5 / 365; // Mínimo 12 horas si ya cerró o similar para evitar ceros
+
       // 1. Calculate GLOBAL Walls using ALL options (to match HUD)
       const globalStrikeMetrics = new Map<number, { callGex: number; putGex: number }>();
       let globalMaxCallGex = 0;
@@ -258,7 +265,16 @@ export class MarketDataService {
 
         const strike = parseFloat(opt.strikePrice || opt.strike);
         const oi = opt.openInterest || 0;
-        const gamma = opt.gamma || 0;
+        const gammaFromAPI = opt.gamma || 0;
+        const volatility = (opt.volatility || 20) / 100;
+
+        // Recalcular Gamma si es 0DTE para mayor precisión, usando Black-Scholes
+        // Esto evita que gammas genéricos del API distorsionen el nivel de Flip
+        let gamma = gammaFromAPI;
+        if (tReal > 0 && tReal < 1 / 365) {
+          gamma = this.calculateBSGamma(currentPrice, strike, volatility, tReal);
+        }
+
         const vega = opt.vega || 0;
 
         if (!strikes.has(strike)) strikes.set(strike, {
@@ -271,7 +287,9 @@ export class MarketDataService {
         const delta = opt.delta || 0;
 
         // GEX = Gamma * OI * 100 * Spot Price
-        const gexValue = gamma * oi * 100 * (currentPrice || strike);
+        // Para 0DTE, si el gamma del API parece "estático" o "standard", 
+        // podríamos recalcularlo aquí, pero por ahora usamos el del API con el factor de spot correcto.
+        const gexValue = gamma * oi * 100 * currentPrice;
 
         // Vanna Exposure = Vega * OI * 100 (Simplified institutional exposure)
         const vannaValue = vega * oi * 100;
@@ -442,6 +460,17 @@ export class MarketDataService {
 
   async getTradeHistory(symbol: string, limit: number = 100): Promise<any[]> {
     return mockDb.getTradeHistory(symbol, limit);
+  }
+
+  private calculateBSGamma(S: number, K: number, sigma: number, T: number): number {
+    if (T <= 0 || sigma <= 0 || S <= 0) return 0;
+    try {
+      const d1 = (Math.log(S / K) + (0.04 + (sigma * sigma) / 2) * T) / (sigma * Math.sqrt(T));
+      const nPrimeD1 = (1 / Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * d1 * d1);
+      return nPrimeD1 / (S * sigma * Math.sqrt(T));
+    } catch (e) {
+      return 0;
+    }
   }
 
   async getMarketWalls(symbol: string) {

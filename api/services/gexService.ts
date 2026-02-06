@@ -63,22 +63,27 @@ export class GEXService {
                 return this.getDefaultMetrics();
             }
 
+            // Flatten options data
+            const allOptions: any[] = [];
+            allOptions.push(...this.flattenOptionsMap(chain.callExpDateMap || chain.calls));
+            allOptions.push(...this.flattenOptionsMap(chain.putExpDateMap || chain.puts));
+
+            return this.processGEXOptions(chain, allOptions);
+        } catch (error) {
+            console.error('❌ Failed to calculate GEX metrics:', error);
+            return this.getDefaultMetrics();
+        }
+    }
+
+    /**
+     * Procesa una lista de opciones para calcular métricas GEX
+     */
+    private async processGEXOptions(chain: any, allOptions: any[]): Promise<GEXMetrics> {
+        try {
             // Robust price detection
             const currentPrice = chain.underlying?.last ||
                 chain.underlying?.lastPrice ||
                 chain.underlyingPrice || 0;
-
-            if (currentPrice === 0) {
-                console.warn(`⚠️ GEX: Missing underlying price for ${symbol}`);
-            } else {
-                console.log(`✅ GEX: Using REAL market data for ${searchSymbol} at $${currentPrice.toFixed(2)}`);
-            }
-
-            const allOptions: any[] = [];
-
-            // Flatten options data
-            allOptions.push(...this.flattenOptionsMap(chain.callExpDateMap || chain.calls));
-            allOptions.push(...this.flattenOptionsMap(chain.putExpDateMap || chain.puts));
 
             // Calcular métricas por strike
             const strikeMetrics = new Map<number, {
@@ -104,9 +109,25 @@ export class GEXService {
                 if (strike === 0) continue;
 
                 const oi = opt.openInterest || 0;
-                const gamma = opt.gamma || 0;
-                const delta = opt.delta || 0;
+                const gammaFromAPI = opt.gamma || 0;
+                const volatility = (opt.volatility || 20) / 100;
                 const isCall = opt.putCall === 'CALL';
+
+                // Calcular T real para re-calculo (mismo que en profile)
+                const today = new Date();
+                const expDate = new Date();
+                expDate.setHours(16, 0, 0, 0);
+                let tReal = (expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24 * 365);
+                if (tReal <= 0) tReal = 1 / 365;
+
+                // Si es una opción con vencimiento hoy (o muy cercano), recalcular gamma
+                let gamma = gammaFromAPI;
+                const isToday = opt.expirationDate?.startsWith(new Date().toLocaleDateString('en-CA'));
+                if (isToday && tReal < 1 / 365) {
+                    gamma = this.calculateBSGamma(currentPrice, strike, volatility, tReal);
+                }
+
+                const delta = opt.delta || 0;
 
                 if (!strikeMetrics.has(strike)) {
                     strikeMetrics.set(strike, {
@@ -372,9 +393,8 @@ export class GEXService {
                 netCharm,
                 gammaProfile
             };
-
         } catch (error) {
-            console.error('❌ Failed to calculate GEX metrics:', error);
+            console.error('❌ Error in processGEXOptions:', error);
             return this.getDefaultMetrics();
         }
     }
@@ -530,11 +550,8 @@ export class GEXService {
                 return this.getDefaultMetrics();
             }
 
-            // Usar la misma lógica de cálculo pero solo con opciones 0DTE
-            // (reutilizar la lógica anterior pero con dataset filtrado)
-            // Por simplicidad, llamar al método principal y filtrar internamente
-
-            return this.calculateGEXMetrics(symbol);
+            // Usar la misma lógica de procesamiento pero solo con las opciones filtradas
+            return this.processGEXOptions(chain, allOptions);
 
         } catch (error) {
             console.error('❌ Failed to calculate 0DTE GEX metrics:', error);
@@ -581,19 +598,26 @@ export class GEXService {
      */
     private calculateGammaProfile(options: any[], currentPrice: number): Array<{ price: number, netGex: number }> {
         const profile: Array<{ price: number, netGex: number }> = [];
-        const range = 0.03; // +/- 3% (reducido del 5% para mejor visualización)
-        const steps = 40;
-        const stepSize = (currentPrice * range * 2) / steps;
-        const startPrice = currentPrice * (1 - range);
+        const today = new Date();
+        const expirationDate = new Date();
+        expirationDate.setHours(16, 0, 0, 0); // Market close 4 PM ET
+
+        // Calcular T real en años. Si el mercado está cerrado, usar 1 día como mínimo para evitar división por cero
+        let tReal = (expirationDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24 * 365);
+        if (tReal <= 0) tReal = 1 / 365;
 
         // Pre-recolectar datos relevantes para velocidad
         const relevantOptions = options.map(opt => ({
             strike: parseFloat(opt.strikePrice || opt.strike),
             oi: opt.openInterest || 0,
             iv: (opt.volatility || 20) / 100,
-            isCall: opt.putCall === 'CALL',
-            daysToExpiry: 1 / 365 // Asumimos 1 día o muy poco para 0DTE
+            isCall: opt.putCall === 'CALL'
         })).filter(o => o.oi > 0 && o.strike > 0);
+
+        const range = 0.03; // +/- 3%
+        const steps = 40;
+        const stepSize = (currentPrice * range * 2) / steps;
+        const startPrice = currentPrice * (1 - range);
 
         for (let i = 0; i <= steps; i++) {
             const simulatedPrice = startPrice + i * stepSize;
@@ -601,7 +625,7 @@ export class GEXService {
 
             for (const opt of relevantOptions) {
                 // Cálculo simplificado de Gamma usando Black-Scholes para la curva
-                const gamma = this.calculateBSGamma(simulatedPrice, opt.strike, opt.iv, opt.daysToExpiry);
+                const gamma = this.calculateBSGamma(simulatedPrice, opt.strike, opt.iv, tReal);
                 const gex = gamma * opt.oi * 100 * simulatedPrice;
 
                 if (opt.isCall) {
