@@ -330,5 +330,8 @@
     "Walls become \"SOLID\".": "Walls become \"SOLID\".",
     "Validate Price Respect.": "Validate Price Respect.",
     "Max Gamma Acceleration.": "Max Gamma Acceleration.",
-    "Execute if Valid.": "Execute if Valid."
+    "Execute if Valid.": "Execute if Valid.",
+    "ESTRUCTURAL / GLOBAL": "STRUCTURAL / GLOBAL",
+    "GEX Total: Basado en todos los vencimientos (Macro). Define el régimen de estabilidad general.": "Total GEX: Based on all expirations (Macro). Defines the overall stability regime.",
+    "Para el sentimiento de hoy, consulta el Gamma Flip en el ZeroDTE Scanner (Táctico).": "For today's sentiment, check the Gamma Flip in the ZeroDTE Scanner (Tactical)."
 }

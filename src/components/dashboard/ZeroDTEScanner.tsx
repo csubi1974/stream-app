@@ -19,6 +19,7 @@ interface ScanStats {
   deltaTarget?: number;
   volatilityImplied?: number;
   drift?: number;
+  gammaFlip?: number;
 }
 
 export function ZeroDTEScanner() {
@@ -358,6 +359,7 @@ export function ZeroDTEScanner() {
                 currentPrice={stats.currentPrice}
                 symbol={(stats as any).fetchedSymbol || selectedSymbol}
                 mode={chartMode}
+                gammaFlip={stats.gammaFlip}
               />
             </div>
           )}

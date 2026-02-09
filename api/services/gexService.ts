@@ -614,8 +614,8 @@ export class GEXService {
             isCall: opt.putCall === 'CALL'
         })).filter(o => o.oi > 0 && o.strike > 0);
 
-        const range = 0.03; // +/- 3%
-        const steps = 40;
+        const range = 0.08; // +/- 8% (Expanded to match 0DTE logic)
+        const steps = 60;   // Increased resolution
         const stepSize = (currentPrice * range * 2) / steps;
         const startPrice = currentPrice * (1 - range);
 

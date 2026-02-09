@@ -186,12 +186,35 @@ export class MarketDataService {
         chain.underlyingPrice ||
         (allOptions.length > 0 ? parseFloat(allOptions[0].strikePrice || allOptions[0].strike) : 0);
 
-      // Calcular T real para 0DTE (horas hasta el cierre)
+      // Extract all available expirations
+      const availableDates = new Set<string>();
+      allOptions.forEach((opt: any) => {
+        if (opt.expirationDate) availableDates.add(opt.expirationDate);
+      });
+
+      // Determine target date: Today OR Next Available
+      let targetDate = today;
+      const sortedDates = Array.from(availableDates).sort();
+
+      // Robust Date Selection:
+      // We want the EARLIEST expiration that is >= today
+      const futureDates = sortedDates.filter(d => d.split('T')[0] >= today);
+
+      if (futureDates.length > 0) {
+        targetDate = futureDates[0].split('T')[0];
+      } else if (sortedDates.length > 0) {
+        targetDate = sortedDates[0].split('T')[0];
+      }
+
+      // Calculate TTE (Time to Expiration) based on the actual target expiration date
+      const targetDateObj = new Date(targetDate);
+      targetDateObj.setHours(16, 0, 0, 0); // Expiration at 4 PM ET
+
       const now = new Date();
-      const closeTime = new Date();
-      closeTime.setHours(16, 0, 0, 0); // 4 PM ET
-      let tReal = (closeTime.getTime() - now.getTime()) / (1000 * 60 * 60 * 24 * 365);
-      if (tReal <= 0) tReal = 0.5 / 365; // Mínimo 12 horas si ya cerró o similar para evitar ceros
+      let tReal = (targetDateObj.getTime() - now.getTime()) / (1000 * 60 * 60 * 24 * 365);
+
+      // If we are on expiration day and past close, or same day, ensure a minimum T to avoid BS model breakdown
+      if (tReal <= 0) tReal = 1 / (365 * 24); // 1 hour minimum if we're on the edge
 
       // 1. Calculate GLOBAL Walls using ALL options (to match HUD)
       const globalStrikeMetrics = new Map<number, { callGex: number; putGex: number }>();
@@ -226,30 +249,6 @@ export class MarketDataService {
           }
         }
       });
-
-      // Extract all available expirations
-      const availableDates = new Set<string>();
-      allOptions.forEach((opt: any) => {
-        if (opt.expirationDate) availableDates.add(opt.expirationDate);
-      });
-
-      // Determine target date: Today OR Next Available
-      let targetDate = today;
-      const sortedDates = Array.from(availableDates).sort();
-
-      // Robust Date Selection:
-      // We want the EARLIEST expiration that is >= today
-      const futureDates = sortedDates.filter(d => d.split('T')[0] >= today);
-
-      if (futureDates.length > 0) {
-        targetDate = futureDates[0].split('T')[0];
-        console.log(`📅 Found target expiry for ${symbol}: ${targetDate}`);
-      } else if (sortedDates.length > 0) {
-        targetDate = sortedDates[0].split('T')[0];
-        console.log(`📅 No future dates found, defaulting to nearest: ${targetDate}`);
-      } else {
-        console.warn(`⚠️ No expiry dates found for ${symbol}`);
-      }
 
       // 2. Calculate 0DTE specific GEX, Vanna & DEX for the chart and list
       const strikes = new Map<number, {
@@ -397,7 +396,8 @@ export class MarketDataService {
           volatilityImplied, // Add for reference
           drift: changePercent, // Add for reference
           vannaExposure, // Net Vanna
-          fetchedSymbol: searchSymbol
+          fetchedSymbol: searchSymbol,
+          gammaFlip: this.calculateGammaFlip(zeroDte, currentPrice, tReal)
         }
       };
 
@@ -551,5 +551,53 @@ export class MarketDataService {
       callWall: 6950, // Simplificado - en producción usar cálculo complejo
       putWall: 6850
     };
+  }
+
+  private calculateGammaFlip(options: any[], currentPrice: number, tReal: number): number {
+    try {
+      const range = 0.08; // +/- 8% (Expanded for better flip detection)
+      const steps = 60;   // Increased resolution
+      const startPrice = currentPrice * (1 - range);
+      const stepSize = (currentPrice * range * 2) / steps;
+
+      const profile: Array<{ price: number, netGex: number }> = [];
+
+      for (let i = 0; i <= steps; i++) {
+        const simulatedPrice = startPrice + i * stepSize;
+        let totalNetGex = 0;
+
+        for (const opt of options) {
+          const strike = parseFloat(opt.strikePrice || opt.strike);
+          const oi = opt.openInterest || 0;
+          const volatility = (opt.volatility || 20) / 100;
+          const isCall = opt.putCall === 'CALL';
+
+          const gamma = this.calculateBSGamma(simulatedPrice, strike, volatility, tReal);
+          const gex = gamma * oi * 100 * simulatedPrice;
+
+          if (isCall) totalNetGex += gex;
+          else totalNetGex -= gex;
+        }
+
+        profile.push({ price: simulatedPrice, netGex: totalNetGex });
+      }
+
+      // Find Flip
+      let gammaFlip = currentPrice;
+      // Interpolate for zero crossing
+      for (let i = 0; i < profile.length - 1; i++) {
+        const p1 = profile[i];
+        const p2 = profile[i + 1];
+        if (p1.netGex * p2.netGex <= 0) {
+          const weight = Math.abs(p1.netGex) / (Math.abs(p1.netGex) + Math.abs(p2.netGex));
+          gammaFlip = p1.price + weight * (p2.price - p1.price);
+          if (Math.abs(gammaFlip - currentPrice) < currentPrice * 0.2) break; // Use closest reasonable flip
+        }
+      }
+      return gammaFlip;
+    } catch (e) {
+      console.error('Error calculating Gamma Flip in MarketDataService', e);
+      return currentPrice;
+    }
   }
 }

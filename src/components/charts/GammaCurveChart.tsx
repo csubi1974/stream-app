@@ -88,8 +88,11 @@ export function GammaCurveChart({ data, currentPrice, gammaFlip, callWall, putWa
     return (
         <div className="w-full bg-gray-900/50 rounded-xl border border-gray-800 p-3">
             <div className="flex justify-between items-center mb-2">
-                <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center">
                     {t('Theoretical Gamma Curve')}
+                    <span className="ml-2 px-1.5 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded text-[8px] font-black">
+                        {t('ESTRUCTURAL / GLOBAL')}
+                    </span>
                 </h4>
                 <div className="flex space-x-3 text-[9px] uppercase font-bold">
                     <div className="flex items-center">
@@ -227,8 +230,9 @@ export function GammaCurveChart({ data, currentPrice, gammaFlip, callWall, putWa
                 </svg>
             </div>
 
-            <div className="mt-2 flex justify-between text-[10px] text-gray-500 font-mono italic">
-                <span>* Dinámica teórica del GEX en base a cambios en el Spot</span>
+            <div className="mt-2 flex flex-col gap-1 text-[9px] text-gray-500 font-mono italic">
+                <span>* {t('GEX Total: Basado en todos los vencimientos (Macro). Define el régimen de estabilidad general.')}</span>
+                <span>* {t('Para el sentimiento de hoy, consulta el Gamma Flip en el ZeroDTE Scanner (Táctico).')}</span>
             </div>
         </div>
     );

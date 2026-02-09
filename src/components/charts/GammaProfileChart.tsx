@@ -14,9 +14,10 @@ interface GammaProfileChartProps {
     currentPrice?: number;
     symbol?: string;
     mode?: 'GEX' | 'VEX' | 'DEX';
+    gammaFlip?: number;
 }
 
-export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX' }: GammaProfileChartProps) {
+export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX', gammaFlip }: GammaProfileChartProps) {
     const { t } = useTranslation();
 
     // Check if we have data for the current mode
@@ -82,9 +83,27 @@ export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX' }: 
     const chartData = activeStrikes;
 
     // Scales
-    const strikes = chartData.map(d => d.strike);
-    const xMin = strikes.length > 0 ? Math.min(...strikes) : 0;
-    const xMax = strikes.length > 0 ? Math.max(...strikes) : 100;
+    const { xMin, xMax } = useMemo(() => {
+        const prices = chartData.map(d => d.strike);
+
+        // Include currentPrice and gammaFlip in the scale calculation to ensure they are visible
+        if (currentPrice) prices.push(currentPrice);
+        if (gammaFlip) prices.push(gammaFlip);
+
+        if (prices.length === 0) return { xMin: 0, xMax: 100 };
+
+        const min = Math.min(...prices);
+        const max = Math.max(...prices);
+        const range = max - min;
+
+        // Add a small 2% padding to results
+        const padding = range * 0.02;
+
+        return {
+            xMin: min - padding,
+            xMax: max + padding
+        };
+    }, [chartData, currentPrice, gammaFlip, mode]);
 
     const yMax = useMemo(() => {
         if (hasActiveGreeks) {
@@ -222,6 +241,10 @@ export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX' }: 
                             <div className="w-6 h-0 border-t-2 border-dashed border-blue-500/80 mr-2.5"></div>
                             <span className="text-blue-400 font-bold">Spot Price</span>
                         </div>
+                        <div className="flex items-center group">
+                            <div className="w-6 h-0 border-t-2 border-dashed border-yellow-400 mr-2.5"></div>
+                            <span className="text-yellow-400 font-bold">Flip</span>
+                        </div>
                     </div>
 
                     {currentPrice && (
@@ -346,6 +369,25 @@ export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX' }: 
                                 <circle cx={getX(currentPrice)} cy={-20} r="3" fill="#3b82f6" />
                                 <circle cx={getX(currentPrice)} cy={graphHeight + 20} r="6" fill="#3b82f6" fillOpacity="0.4" />
                                 <circle cx={getX(currentPrice)} cy={graphHeight + 20} r="3" fill="#3b82f6" />
+                            </g>
+                        )}
+
+                        {/* Gamma Flip Marker - Brighter Yellow */}
+                        {gammaFlip && gammaFlip >= xMin && gammaFlip <= xMax && (
+                            <g>
+                                <line
+                                    x1={getX(gammaFlip)} y1={-20}
+                                    x2={getX(gammaFlip)} y2={graphHeight + 20}
+                                    stroke="#facc15" strokeWidth="3" strokeDasharray="4 2"
+                                />
+                                <text x={getX(gammaFlip)} y={-45} textAnchor="middle" fill="#facc15" fontSize="10" fontWeight="bold">
+                                    FLIP
+                                </text>
+                                <text x={getX(gammaFlip)} y={-35} textAnchor="middle" fill="#facc15" fontSize="9" fontWeight="bold">
+                                    ${gammaFlip.toFixed(2)}
+                                </text>
+                                <circle cx={getX(gammaFlip)} cy={-20} r="4" fill="#facc15" />
+                                <circle cx={getX(gammaFlip)} cy={graphHeight + 20} r="4" fill="#facc15" />
                             </g>
                         )}
 
