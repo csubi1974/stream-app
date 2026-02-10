@@ -48,7 +48,8 @@ export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX', ga
         // 1. Limitar rango por precio actual (+/- 12% para tener contexto pero sin exagerar)
         let filtered = data;
         if (currentPrice) {
-            const rangeLimit = currentPrice * 0.12;
+            // Rango de +/- 3% para SPX/SPY es ideal para ver la zona de combate
+            const rangeLimit = currentPrice * 0.035;
             filtered = data.filter(d => Math.abs(d.strike - currentPrice) <= rangeLimit);
         }
 
@@ -66,15 +67,15 @@ export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX', ga
                 maxGreek = Math.max(...filtered.map(d => Math.max(Math.abs((d as any).callDex || 0), Math.abs((d as any).putDex || 0))));
             }
 
-            // Umbral del 0.1% del valor máximo para considerar un strike como "activo"
-            const threshold = maxGreek * 0.001;
+            // Umbral muy bajo para limpiar el ruido de los extremos
+            const threshold = maxGreek * 0.0005;
 
             if (mode === 'GEX') {
-                return filtered.filter(d => Math.abs(d.callGex) > threshold || Math.abs(d.putGex) > threshold || (currentPrice && Math.abs(d.strike - currentPrice) < (currentPrice * 0.01)));
+                return filtered.filter(d => Math.abs(d.callGex) > threshold || Math.abs(d.putGex) > threshold);
             } else if (mode === 'VEX') {
-                return filtered.filter(d => Math.abs(d.callVanna || 0) > threshold || Math.abs(d.putVanna || 0) > threshold || (currentPrice && Math.abs(d.strike - currentPrice) < (currentPrice * 0.01)));
+                return filtered.filter(d => Math.abs(d.callVanna || 0) > threshold || Math.abs(d.putVanna || 0) > threshold);
             } else {
-                return filtered.filter(d => Math.abs((d as any).callDex || 0) > threshold || Math.abs((d as any).putDex || 0) > threshold || (currentPrice && Math.abs(d.strike - currentPrice) < (currentPrice * 0.01)));
+                return filtered.filter(d => Math.abs((d as any).callDex || 0) > threshold || Math.abs((d as any).putDex || 0) > threshold);
             }
         }
         return filtered.filter(d => (d.callOi || 0) > 0 || (d.putOi || 0) > 0 || (currentPrice && Math.abs(d.strike - currentPrice) < (currentPrice * 0.01)));
@@ -118,10 +119,15 @@ export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX', ga
         return Math.max(...chartData.map(d => Math.max(Math.abs(d.callOi || 0), Math.abs(d.putOi || 0))));
     }, [chartData, hasActiveGreeks, mode]);
 
+    const oiMax = useMemo(() => {
+        return Math.max(...chartData.map(d => Math.max(d.callOi || 0, d.putOi || 0)));
+    }, [chartData]);
+
     const limit = yMax > 0 ? yMax * 1.15 : 100;
 
     const getX = (strike: number) => ((strike - xMin) / (xMax - xMin)) * graphWidth;
     const getY = (value: number) => graphHeight / 2 - (value / limit) * (graphHeight / 2);
+    const getOiY = (value: number) => graphHeight / 2 - (value / (oiMax || 1)) * (graphHeight / 2);
     const zeroY = getY(0);
 
     // Dynamic tick frequency for X axis to prevent overlap
@@ -137,9 +143,9 @@ export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX', ga
             // Seleccionar ~10 ticks distribuidos uniformemente por valor de precio, no por índice
             const minS = Math.min(...chartData.map(d => d.strike));
             const maxS = Math.max(...chartData.map(d => d.strike));
-            const step = (maxS - minS) / 8;
+            const step = (maxS - minS) / 12;
 
-            for (let i = 0; i <= 8; i++) {
+            for (let i = 0; i <= 12; i++) {
                 const targetStrike = minS + i * step;
                 // Encontrar el strike real más cercano al target
                 const actual = chartData.reduce((prev, curr) =>
@@ -241,11 +247,16 @@ export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX', ga
                             <div className="w-6 h-0 border-t-2 border-dashed border-blue-500/80 mr-2.5"></div>
                             <span className="text-blue-400 font-bold">Spot Price</span>
                         </div>
-                        <div className="flex items-center group">
-                            <div className="w-6 h-0 border-t-2 border-dashed border-yellow-400 mr-2.5"></div>
-                            <span className="text-yellow-400 font-bold">Flip</span>
-                        </div>
                     </div>
+
+                    {gammaFlip && (
+                        <div className="text-right border-l border-gray-800 pl-8">
+                            <span className="block text-[10px] text-yellow-500 font-black uppercase tracking-widest mb-1">Gamma Flip</span>
+                            <span className="text-2xl text-yellow-500 font-mono font-black drop-shadow-[0_0_10px_rgba(234,179,8,0.2)]">
+                                ${gammaFlip.toFixed(2)}
+                            </span>
+                        </div>
+                    )}
 
                     {currentPrice && (
                         <div className="text-right border-l border-gray-800 pl-8">
@@ -310,7 +321,8 @@ export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX', ga
                         {/* Bars */}
                         {chartData.map((d) => {
                             const x = getX(d.strike);
-                            const barWidth = Math.max(10, (graphWidth / chartData.length) * 0.55);
+                            // Restauramos a un factor de 0.45 para recuperar el efecto "muro"
+                            const barWidth = Math.max(2, (graphWidth / chartData.length) * 0.45);
 
                             let valCall, valPut;
                             if (hasActiveGreeks) {
@@ -335,23 +347,44 @@ export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX', ga
                             const yPut = getY(valPut);
                             const hPut = Math.max(0, yPut - zeroY);
 
+                            // OI Shadow Scaling
+                            const hCallOi = Math.max(0, zeroY - getOiY(d.callOi || 0));
+                            const hPutOi = Math.max(0, getOiY(-(d.putOi || 0)) - zeroY);
+                            const shadowWidth = barWidth * 1.5;
+
                             return (
                                 <g key={d.strike} className="transition-all duration-300 hover:brightness-150">
-                                    {/* Call Bar */}
+                                    {/* OI Shadow Bars (Structural Walls) */}
+                                    <rect
+                                        x={x - shadowWidth / 2} y={zeroY - hCallOi}
+                                        width={shadowWidth} height={hCallOi}
+                                        fill="#22c55e" fillOpacity="0.12"
+                                        stroke="#22c55e" strokeOpacity="0.2" strokeWidth="0.5"
+                                        rx={1}
+                                    />
+                                    <rect
+                                        x={x - shadowWidth / 2} y={zeroY}
+                                        width={shadowWidth} height={hPutOi}
+                                        fill="#ef4444" fillOpacity="0.12"
+                                        stroke="#ef4444" strokeOpacity="0.2" strokeWidth="0.5"
+                                        rx={1}
+                                    />
+
+                                    {/* Call Bar (GEX/Sensitivity) */}
                                     <rect
                                         x={x - barWidth / 2} y={yCall}
                                         width={barWidth} height={hCall}
-                                        fill="url(#barGreen)" rx={3}
+                                        fill="url(#barGreen)" rx={1}
                                     >
-                                        <title>Strike: {d.strike} | Call {hasActiveGreeks ? mode : 'OI'}: {formatValue(valCall, !hasActiveGreeks)}</title>
+                                        <title>Strike: {d.strike} | Call {hasActiveGreeks ? mode : 'OI'}: {formatValue(valCall, !hasActiveGreeks)} | OI: {d.callOi}</title>
                                     </rect>
-                                    {/* Put Bar */}
+                                    {/* Put Bar (GEX/Sensitivity) */}
                                     <rect
                                         x={x - barWidth / 2} y={zeroY}
                                         width={barWidth} height={hPut}
-                                        fill="url(#barRed)" rx={3}
+                                        fill="url(#barRed)" rx={1}
                                     >
-                                        <title>Strike: {d.strike} | Put {hasActiveGreeks ? mode : 'OI'}: {formatValue(Math.abs(valPut), !hasActiveGreeks)}</title>
+                                        <title>Strike: {d.strike} | Put {hasActiveGreeks ? mode : 'OI'}: {formatValue(Math.abs(valPut), !hasActiveGreeks)} | OI: {d.putOi}</title>
                                     </rect>
                                 </g>
                             );
@@ -372,24 +405,6 @@ export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX', ga
                             </g>
                         )}
 
-                        {/* Gamma Flip Marker - Brighter Yellow */}
-                        {gammaFlip && gammaFlip >= xMin && gammaFlip <= xMax && (
-                            <g>
-                                <line
-                                    x1={getX(gammaFlip)} y1={-20}
-                                    x2={getX(gammaFlip)} y2={graphHeight + 20}
-                                    stroke="#facc15" strokeWidth="3" strokeDasharray="4 2"
-                                />
-                                <text x={getX(gammaFlip)} y={-45} textAnchor="middle" fill="#facc15" fontSize="10" fontWeight="bold">
-                                    FLIP
-                                </text>
-                                <text x={getX(gammaFlip)} y={-35} textAnchor="middle" fill="#facc15" fontSize="9" fontWeight="bold">
-                                    ${gammaFlip.toFixed(2)}
-                                </text>
-                                <circle cx={getX(gammaFlip)} cy={-20} r="4" fill="#facc15" />
-                                <circle cx={getX(gammaFlip)} cy={graphHeight + 20} r="4" fill="#facc15" />
-                            </g>
-                        )}
 
                         {/* X Axis Labels */}
                         {xTicks.map(strike => (

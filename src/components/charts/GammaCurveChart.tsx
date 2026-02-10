@@ -71,12 +71,13 @@ export function GammaCurveChart({ data, currentPrice, gammaFlip, callWall, putWa
 
     const linePath = useMemo(() => {
         if (data.length < 2) return '';
+        // Usamos una resolución alta para que los segmentos lineales parezcan una curva suave
         let path = `M ${getX(data[0].price)} ${getY(data[0].netGex)}`;
         for (let i = 1; i < data.length; i++) {
             path += ` L ${getX(data[i].price)} ${getY(data[i].netGex)}`;
         }
         return path;
-    }, [data, xMin, xMax]);
+    }, [data, xMin, xMax, limit]);
 
     const formatValue = (val: number) => {
         const v = Math.abs(val);

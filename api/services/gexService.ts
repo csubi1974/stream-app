@@ -614,10 +614,14 @@ export class GEXService {
             isCall: opt.putCall === 'CALL'
         })).filter(o => o.oi > 0 && o.strike > 0);
 
-        const range = 0.08; // +/- 8% (Expanded to match 0DTE logic)
-        const steps = 60;   // Increased resolution
+        const range = 0.05; // Ajustamos a +/- 5% para que la curva se vea más concentrada y "rica"
+        const steps = 120;  // Resolución óptima
         const stepSize = (currentPrice * range * 2) / steps;
         const startPrice = currentPrice * (1 - range);
+
+        // Para la visualización de la curva, usamos un T ligeramente mayor
+        // Esto suaviza la curva y evita los "picos" que ocurren el día de vencimiento
+        const visualT = Math.max(tReal, 1 / 365);
 
         for (let i = 0; i <= steps; i++) {
             const simulatedPrice = startPrice + i * stepSize;
@@ -625,7 +629,7 @@ export class GEXService {
 
             for (const opt of relevantOptions) {
                 // Cálculo simplificado de Gamma usando Black-Scholes para la curva
-                const gamma = this.calculateBSGamma(simulatedPrice, opt.strike, opt.iv, tReal);
+                const gamma = this.calculateBSGamma(simulatedPrice, opt.strike, opt.iv, visualT);
                 const gex = gamma * opt.oi * 100 * simulatedPrice;
 
                 if (opt.isCall) {

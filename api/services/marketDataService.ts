@@ -555,12 +555,15 @@ export class MarketDataService {
 
   private calculateGammaFlip(options: any[], currentPrice: number, tReal: number): number {
     try {
-      const range = 0.08; // +/- 8% (Expanded for better flip detection)
-      const steps = 60;   // Increased resolution
+      const range = 0.08;
+      const steps = 120;   // Resolución equilibrada
       const startPrice = currentPrice * (1 - range);
       const stepSize = (currentPrice * range * 2) / steps;
 
       const profile: Array<{ price: number, netGex: number }> = [];
+
+      // Usar un T mínimo para suavizar el perfil visual y evitar picos infinitos ATM
+      const visualT = Math.max(tReal, 1 / 365);
 
       for (let i = 0; i <= steps; i++) {
         const simulatedPrice = startPrice + i * stepSize;
@@ -572,7 +575,7 @@ export class MarketDataService {
           const volatility = (opt.volatility || 20) / 100;
           const isCall = opt.putCall === 'CALL';
 
-          const gamma = this.calculateBSGamma(simulatedPrice, strike, volatility, tReal);
+          const gamma = this.calculateBSGamma(simulatedPrice, strike, volatility, visualT);
           const gex = gamma * oi * 100 * simulatedPrice;
 
           if (isCall) totalNetGex += gex;
