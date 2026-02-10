@@ -339,7 +339,7 @@ export function ZeroDTEScanner() {
           <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 mb-6">
             <div className="flex-1">
               <MarketSentimentGauge
-                value={stats?.volatilityImplied ? Math.min(100, (stats.volatilityImplied / 40) * 100) : 52}
+                value={stats?.volatilityImplied ? Math.max(0, Math.min(100, 100 - ((stats.volatilityImplied - 12) / (40 - 12)) * 100)) : 52}
                 label="Fear & Greed (VIX)"
               />
             </div>
