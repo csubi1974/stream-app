@@ -250,14 +250,32 @@ export class MarketDataService {
         }
       });
 
-      // 2. Calculate 0DTE specific GEX, Vanna & DEX for the chart and list
       const strikes = new Map<number, {
-        callOi: number; putOi: number;
-        callGex: number; putGex: number;
+        callOi: number; putOi: number; // INTERÉS ABIERTO TOTAL (Global)
+        callGex: number; putGex: number; // MÉTRICAS 0DTE (Específicas)
         callVanna: number; putVanna: number;
         callDex: number; putDex: number;
       }>();
 
+      // 1. Accumulate Global Open Interest for all strikes first
+      allOptions.forEach((opt: any) => {
+        const strike = parseFloat(opt.strikePrice || opt.strike);
+        const oi = opt.openInterest || 0;
+        const isCall = opt.putCall === 'CALL';
+
+        if (!strikes.has(strike)) strikes.set(strike, {
+          callOi: 0, putOi: 0,
+          callGex: 0, putGex: 0,
+          callVanna: 0, putVanna: 0,
+          callDex: 0, putDex: 0
+        });
+
+        const stat = strikes.get(strike)!;
+        if (isCall) stat.callOi += oi;
+        else stat.putOi += oi;
+      });
+
+      // 2. Calculate 0DTE specific GEX, Vanna & DEX for the chart and list
       allOptions.forEach((opt: any) => {
         // Filter by our smart target date for the detailed stats
         if (!opt.expirationDate?.startsWith(targetDate)) return;
@@ -268,22 +286,14 @@ export class MarketDataService {
         const volatility = (opt.volatility || 20) / 100;
 
         // Recalcular Gamma si es 0DTE para mayor precisión, usando Black-Scholes
-        // Esto evita que gammas genéricos del API distorsionen el nivel de Flip
         let gamma = gammaFromAPI;
         if (tReal > 0 && tReal < 1 / 365) {
           gamma = this.calculateBSGamma(currentPrice, strike, volatility, tReal);
         }
 
         const vega = opt.vega || 0;
-
-        if (!strikes.has(strike)) strikes.set(strike, {
-          callOi: 0, putOi: 0,
-          callGex: 0, putGex: 0,
-          callVanna: 0, putVanna: 0,
-          callDex: 0, putDex: 0
-        });
-        const stat = strikes.get(strike)!;
         const delta = opt.delta || 0;
+        const stat = strikes.get(strike)!;
 
         // GEX = Gamma * OI * 100 * Spot Price
         // Para 0DTE, si el gamma del API parece "estático" o "standard", 
@@ -297,12 +307,10 @@ export class MarketDataService {
         const dexValue = delta * oi * 100;
 
         if (opt.putCall === 'CALL') {
-          stat.callOi += oi;
           stat.callGex += gexValue;
           stat.callVanna += vannaValue;
           stat.callDex += dexValue;
         } else {
-          stat.putOi += oi;
           stat.putGex -= gexValue;
           stat.putVanna -= vannaValue;
           stat.putDex += dexValue;
