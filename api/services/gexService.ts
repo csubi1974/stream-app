@@ -19,6 +19,9 @@ export interface GEXMetrics {
     pinningTarget?: number;
     pinningConfidence?: number;
     pinningRationale?: string;
+    maxPain?: number;
+    ivRank?: number;
+    termStructure?: Array<{ dte: number, iv: number }>;
     gammaProfile: Array<{ price: number, netGex: number }>;
 }
 
@@ -39,8 +42,9 @@ export class GEXService {
             // Si es SPX, intentamos con el prefijo $ que es estándar para índices en Schwab
             let chain = null;
             if (searchSymbol === 'SPX') {
-                console.log('📡 GEX: Trying $SPX index symbol first...');
-                chain = await this.schwabService.getOptionsChain('$SPX');
+                console.log('📡 GEX: Trying $SPX index symbol first (Optimized)...');
+                // Limit range for SPX to avoid 502 errors
+                chain = await this.schwabService.getOptionsChain('$SPX', 30, 100);
                 if (chain && (chain.callExpDateMap || chain.putExpDateMap)) {
                     searchSymbol = '$SPX';
                 }
@@ -48,13 +52,13 @@ export class GEXService {
 
             // Si no funcionó $SPX, intentamos con el símbolo original
             if (!chain || (!chain.callExpDateMap && !chain.putExpDateMap)) {
-                chain = await this.schwabService.getOptionsChain(searchSymbol);
+                chain = await this.schwabService.getOptionsChain(searchSymbol, 45);
             }
 
             // Fallback for SPX to SPXW
             if ((!chain || (!chain.callExpDateMap && !chain.putExpDateMap)) && searchSymbol.includes('SPX')) {
-                console.log('⚠️ GEX: SPX Chain unavailable, trying SPXW...');
-                chain = await this.schwabService.getOptionsChain('SPXW');
+                console.log('⚠️ GEX: SPX Chain unavailable, trying SPXW (Optimized)...');
+                chain = await this.schwabService.getOptionsChain('SPXW', 30, 100);
                 if (chain && (chain.callExpDateMap || chain.putExpDateMap)) searchSymbol = 'SPXW';
             }
 
@@ -342,25 +346,39 @@ export class GEXService {
                 console.warn('⚠️ GEX: Wall validation error:', err);
             }
 
-            // 8. MARKET PINNING PREDICTION (NEW)
+            // 8. CALCULATE MAX PAIN & IV RANK & TERM STRUCTURE
+            const maxPain = this.calculateMaxPain(allOptions);
+            const ivRank = await this.calculateIVRank(chain.symbol || (chain.underlying?.symbol), chain.volatility || 0);
+            const termStructure = this.calculateTermStructure(chain, currentPrice);
+
+            // 9. MARKET PINNING PREDICTION (ENHANCED)
             let pinningTarget = callWallStrike;
             let pinningConfidence = 0;
             let pinningRationale = '';
 
-            if (callWallStrike === putWallStrike) {
+            const isConvergentWalls = callWallStrike === putWallStrike;
+            const isMaxPainNearWall = maxPain > 0 && (
+                Math.abs(maxPain - callWallStrike) / callWallStrike < 0.002 ||
+                Math.abs(maxPain - putWallStrike) / putWallStrike < 0.002
+            );
+
+            if (isConvergentWalls) {
                 pinningTarget = callWallStrike;
                 pinningConfidence = (callWallStrength === 'solid' && putWallStrength === 'solid') ? 85 : 65;
                 pinningRationale = 'High Concentration: Dealers Pinning Target (Convergent Walls)';
-            } else {
-                // Find strike with highest net absolute GEX near current price
-                const activeRange = strikeMetrics.values();
-                let maxImpact = 0;
-                for (const m of activeRange) {
-                    if (Math.abs(m.netGEX) > maxImpact) {
-                        maxImpact = Math.abs(m.netGEX);
-                        // Simplified picking
-                    }
+
+                // Ultra high confidence if Max Pain aligns with convergent walls
+                if (isMaxPainNearWall) {
+                    pinningConfidence = Math.min(95, pinningConfidence + 15);
+                    pinningRationale = 'Golden Anchor: GEX Walls & Max Pain Convergence';
                 }
+            } else if (isMaxPainNearWall) {
+                // Pin to Max Pain if it aligns with one of the walls even if walls aren't convergent
+                pinningTarget = maxPain;
+                pinningConfidence = 75;
+                pinningRationale = 'Dual Force: Wall Liquidity matched with Max Pain';
+            } else {
+                // Standard magnet logic
                 pinningTarget = Math.abs(currentPrice - callWallStrike) < Math.abs(currentPrice - putWallStrike) ? callWallStrike : putWallStrike;
                 pinningConfidence = 45;
                 pinningRationale = 'Gamma Magnet: Nearest Major Liquidity Wall';
@@ -368,7 +386,7 @@ export class GEXService {
 
             // Adjustment for negative gamma
             if (regime === 'volatile') {
-                pinningConfidence -= 20;
+                pinningConfidence = Math.max(10, pinningConfidence - 30);
                 pinningRationale = 'Low Confidence: Negative Gamma Regime (No Anchor)';
             }
 
@@ -389,6 +407,9 @@ export class GEXService {
                 currentPrice,
                 regime,
                 expectedMove,
+                maxPain,
+                ivRank,
+                termStructure,
                 netVanna,
                 netCharm,
                 gammaProfile
@@ -445,6 +466,7 @@ export class GEXService {
             pinningTarget: 0,
             pinningConfidence: 0,
             pinningRationale: 'Waiting for data...',
+            maxPain: 0,
             gammaProfile: []
         };
     }
@@ -524,6 +546,7 @@ export class GEXService {
             pinningTarget: Math.round(adjustedPrice / 5) * 5,
             pinningConfidence: 75,
             pinningRationale: 'Mock Prediction: Index Pinning near major strike',
+            maxPain: Math.round(adjustedPrice / 5) * 5,
             gammaProfile: this.calculateMockGammaProfile(adjustedPrice, gammaFlip)
         };
     }
@@ -589,6 +612,60 @@ export class GEXService {
             // Expected move is the straddle price
             return callPrice + putPrice;
         } catch (error) {
+            return 0;
+        }
+    }
+
+    /**
+     * Calcula el punto de Max Pain (precio donde el valor intrínseco total de las opciones es mínimo)
+     */
+    private calculateMaxPain(options: any[]): number {
+        try {
+            if (!options || options.length === 0) return 0;
+
+            // 1. Extraer strikes únicos y filtrar ruido
+            const strikes = [...new Set(options.map(o => parseFloat(o.strikePrice || o.strike)))]
+                .filter(s => !isNaN(s) && s > 0)
+                .sort((a, b) => a - b);
+
+            if (strikes.length === 0) return 0;
+
+            let minPain = Infinity;
+            let maxPainStrike = strikes[0];
+
+            // 2. Iterar sobre cada strike como posible precio de vencimiento
+            // (Para optimizar en cadenas gigantes de SPX, podríamos limitar el rango cerca del spot, 
+            // pero para 0DTE el cálculo directo es suficientemente rápido)
+            for (const testPrice of strikes) {
+                let totalPain = 0;
+
+                for (const opt of options) {
+                    const strike = parseFloat(opt.strikePrice || opt.strike);
+                    const oi = opt.openInterest || 0;
+                    if (oi <= 0) continue;
+
+                    if (opt.putCall === 'CALL') {
+                        // ITM Calls si el precio de cierre > strike
+                        if (testPrice > strike) {
+                            totalPain += (testPrice - strike) * oi;
+                        }
+                    } else if (opt.putCall === 'PUT') {
+                        // ITM Puts si el precio de cierre < strike
+                        if (testPrice < strike) {
+                            totalPain += (strike - testPrice) * oi;
+                        }
+                    }
+                }
+
+                if (totalPain < minPain) {
+                    minPain = totalPain;
+                    maxPainStrike = testPrice;
+                }
+            }
+
+            return maxPainStrike;
+        } catch (error) {
+            console.error('❌ Error calculating Max Pain:', error);
             return 0;
         }
     }
@@ -674,5 +751,99 @@ export class GEXService {
             });
         }
         return profile;
+    }
+
+    /**
+     * Calcula el IV Rank basado en histórico de 1 año (252 días)
+     */
+    private async calculateIVRank(symbol: string, currentIV: number): Promise<number> {
+        try {
+            if (!symbol) return 0;
+
+            // 1. Determinar símbolo proxy para volatilidad
+            let vSymbol = '$VIX'; // Default para SPX/SPY
+            if (symbol.includes('QQQ')) vSymbol = '$VIXN';
+            if (symbol.includes('IWM')) vSymbol = '$RVX';
+
+            // 2. Intentar obtener histórico de 1 año
+            const history = await this.schwabService.getPriceHistory(vSymbol, 'year', 1, 'daily', 1);
+
+            if (!history || history.length === 0) {
+                // Fallback: Si no hay histórico, devolver un valor neutral basado en el IV actual
+                return currentIV > 25 ? 65 : 35;
+            }
+
+            const ivs = history.map(c => c.close);
+            const high = Math.max(...ivs);
+            const low = Math.min(...ivs);
+
+            // Si el símbolo actual es el VIX, usamos su precio. Si no, usamos el IV que nos pasaron.
+            const currentVal = (symbol.includes('SPX') || symbol.includes('SPY'))
+                ? (await this.schwabService.getQuotes(['$VIX']))['$VIX']?.quote?.lastPrice || currentIV
+                : currentIV;
+
+            if (high === low) return 50;
+
+            const rank = ((currentVal - low) / (high - low)) * 100;
+            return Math.max(0, Math.min(100, rank));
+        } catch (error) {
+            console.error('❌ Error calculating IV Rank in GEXService:', error);
+            return 50;
+        }
+    }
+
+    /**
+     * Calcula la estructura temporal de volatilidad (Term Structure)
+     */
+    private calculateTermStructure(chain: any, currentPrice: number): Array<{ dte: number, iv: number }> {
+        const structure: Array<{ dte: number, iv: number }> = [];
+        try {
+            const expMaps = [chain.callExpDateMap, chain.putExpDateMap];
+            const datesSet = new Set<string>();
+
+            // Recopilar todas las fechas únicas
+            expMaps.forEach(map => {
+                if (map) Object.keys(map).forEach(date => datesSet.add(date));
+            });
+
+            // Para cada fecha, encontrar la opción ATM y su IV
+            Array.from(datesSet).sort().forEach(dateKey => {
+                // dateKey format: "2026-02-11:0"
+                const parts = dateKey.split(':');
+                const dte = parseInt(parts[1]);
+
+                let bestIV = 0;
+                let minDiff = Infinity;
+
+                // Buscar en calls y puts el strike ATM
+                [chain.callExpDateMap, chain.putExpDateMap].forEach(map => {
+                    if (map && map[dateKey]) {
+                        Object.keys(map[dateKey]).forEach(strikeStr => {
+                            const strike = parseFloat(strikeStr);
+                            const diff = Math.abs(strike - currentPrice);
+                            if (diff < minDiff) {
+                                minDiff = diff;
+                                const options = map[dateKey][strikeStr];
+                                if (Array.isArray(options) && options.length > 0) {
+                                    bestIV = options[0].volatility || 0;
+                                } else if (options.volatility) {
+                                    bestIV = options.volatility;
+                                }
+                            }
+                        });
+                    }
+                });
+
+                if (bestIV > 0) {
+                    structure.push({ dte, iv: bestIV });
+                }
+            });
+
+            // Limitar a un número manejable de puntos (ej. primeros 10 vencimientos)
+            return structure.slice(0, 10);
+        } catch (error) {
+            console.error('❌ Error calculating term structure:', error);
+            return [];
+        }
     }
 }

@@ -25,8 +25,56 @@ interface GEXMetrics {
     pinningTarget?: number;
     pinningConfidence?: number;
     pinningRationale?: string;
+    maxPain?: number;
+    ivRank?: number;
+    termStructure?: Array<{ dte: number, iv: number }>;
     gammaProfile?: Array<{ price: number, netGex: number }>;
 }
+
+// Mini Componente para el gráfico de Term Structure
+const TermStructureChart = ({ data }: { data: Array<{ dte: number, iv: number }> }) => {
+    if (!data || data.length < 2) return <div className="h-10 flex items-center justify-center text-[10px] text-gray-500 italic">Insuff. Data</div>;
+
+    const width = 120;
+    const height = 40;
+    const padding = 5;
+
+    // Limitar a los primeros 10 puntos
+    const plotData = data.slice(0, 10);
+    const maxDte = Math.max(...plotData.map(d => d.dte));
+    const minDte = Math.min(...plotData.map(d => d.dte));
+    const maxIv = Math.max(...plotData.map(d => d.iv));
+    const minIv = Math.min(...plotData.map(d => d.iv));
+
+    const getX = (dte: number) => padding + (dte - minDte) / (maxDte - minDte || 1) * (width - 2 * padding);
+    const getY = (iv: number) => (height - padding) - (iv - minIv) / (maxIv - minIv || 1) * (height - 2 * padding);
+
+    // Detectar Backwardation (IV cercana > IV lejana)
+    const isBackwardation = plotData[0].iv > plotData[plotData.length - 1].iv;
+    const color = isBackwardation ? '#f87171' : '#60a5fa';
+
+    const points = plotData.map(d => `${getX(d.dte)},${getY(d.iv)}`).join(' ');
+
+    return (
+        <div className="flex flex-col items-center mt-2 w-full">
+            <svg width={width} height={height} className="overflow-visible">
+                <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="#374151" strokeWidth="1" />
+                <polyline points={points} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                {plotData.map((d, i) => (
+                    <circle key={i} cx={getX(d.dte)} cy={getY(d.iv)} r="1.5" fill={color} />
+                ))}
+            </svg>
+            <div className="flex justify-between w-full mt-1 px-1">
+                <span className="text-[8px] text-gray-500 font-mono">{plotData[0].dte}d</span>
+                <span className="text-[8px] font-bold uppercase tracking-tighter" style={{ color }}>
+                    {isBackwardation ? 'Backward' : 'Contango'}
+                </span>
+                <span className="text-[8px] text-gray-500 font-mono">{plotData[plotData.length - 1].dte}d</span>
+            </div>
+        </div>
+    );
+};
+
 
 export function GEXMetricsHUD() {
     const { t } = useTranslation();
@@ -137,7 +185,10 @@ export function GEXMetricsHUD() {
         putWallLiquidity,
         pinningTarget,
         pinningConfidence,
-        pinningRationale
+        pinningRationale,
+        maxPain,
+        ivRank,
+        termStructure
     } = gexMetrics;
 
     // Determinar color del Total GEX
@@ -175,7 +226,7 @@ export function GEXMetricsHUD() {
                 <div className="flex items-center gap-4">
                     <h2 className="text-xl font-bold text-white flex items-center">
                         <Activity className="h-6 w-6 mr-2 text-blue-500" />
-                        {t('GEX Market Intelligence HUD')}
+                        {t('Institutional Market Intelligence HUD')}
                         <Link to="/academy" className="ml-2 p-1 text-gray-500 hover:text-blue-400 transition-colors" title={t('Academy Guide')}>
                             <BookOpen className="h-4 w-4" />
                         </Link>
@@ -343,6 +394,40 @@ export function GEXMetricsHUD() {
                     highlight={pinningConfidence ? pinningConfidence > 70 : false}
                     tooltip={t('El nivel de precio donde es más probable que el mercado cierre hoy. Se basa en el punto de convergencia de los muros de GEX y la atracción del imán institucional.')}
                 />
+
+                {/* Max Pain - NEW */}
+                <MetricCard
+                    icon={<AlertTriangle className="h-5 w-5 text-pink-400" />}
+                    label={t('Max Pain')}
+                    value={maxPain ? `$${maxPain.toFixed(0)}` : '--'}
+                    valueColor="text-pink-400"
+                    subtitle={t('Option Seller Profit Max')}
+                    highlight={currentPrice && maxPain ? Math.abs(currentPrice - maxPain) / currentPrice < 0.005 : false}
+                    tooltip={t('El precio donde los compradores de opciones (Retail) tienen la mayor pérdida agregada y los vendedores (Market Makers) obtienen el máximo beneficio. Actúa como un imán mecánico al vencimiento.')}
+                />
+
+                {/* IV Rank - NEW */}
+                <MetricCard
+                    icon={<Activity className="h-5 w-5 text-orange-400" />}
+                    label={t('IV Rank')}
+                    value={ivRank != null ? `${ivRank.toFixed(1)}%` : '--'}
+                    valueColor={ivRank != null && ivRank > 70 ? 'text-red-400' : 'text-green-400'}
+                    subtitle={ivRank != null && ivRank > 70 ? t('Expensive Options') : t('Cheap Options')}
+                    confidence={ivRank}
+                    tooltip={t('Mide la Volatilidad Implícita actual frente a su rango histórico de 1 año. >70% significa opciones caras (vencer crédito). <30% significa opciones baratas (comprar protección/momentum).')}
+                />
+
+                {/* Term Structure - NEW */}
+                <MetricCard
+                    icon={<TrendingUp className="h-5 w-5 text-indigo-400" />}
+                    label={t('Term Structure')}
+                    value={termStructure && termStructure.length > 0 ? `${termStructure[0].iv.toFixed(1)}%` : '--'}
+                    valueColor="text-indigo-400"
+                    subtitle={termStructure && termStructure.length > 1 && termStructure[0].iv > termStructure[termStructure.length - 1].iv ? 'Backwardation (Panic)' : 'Contango (Normal)'}
+                    tooltip={t('Mide la curva de Miedo (IV) en el tiempo. SUBIDA AZUL (Contango): Estado normal/calma. BAJADA ROJA (Backwardation): Pánico o evento inminente. Si hoy es más caro que el futuro, los institucionales pagan lo que sea por protección - Escenario ideal para VENDER prima tras el pico.')}
+                >
+                    {termStructure && <TermStructureChart data={termStructure} />}
+                </MetricCard>
             </div>
 
             {/* Additional Context Bar */}
@@ -429,10 +514,11 @@ interface MetricCardProps {
     liquidity?: number;
     confidence?: number;
     rationale?: string;
+    children?: React.ReactNode;
 }
 
 function MetricCard({
-    icon, label, value, valueColor, subtitle, trend, highlight, tooltip, strength, liquidity, confidence, rationale
+    icon, label, value, valueColor, subtitle, trend, highlight, tooltip, strength, liquidity, confidence, rationale, children
 }: MetricCardProps) {
     const { t } = useTranslation();
     const getIconColor = () => {
@@ -509,7 +595,7 @@ function MetricCard({
                     <div className="flex flex-col space-y-1">
                         <div className="flex justify-between items-center text-[8px] font-black uppercase">
                             <span>{t('Confidenza')}:</span>
-                            <span className={confidence > 70 ? 'text-green-400' : 'text-yellow-500'}>{confidence}%</span>
+                            <span className={confidence > 70 ? 'text-green-400' : 'text-yellow-500'}>{confidence.toFixed(1)}%</span>
                         </div>
                         <div className="w-full h-1 bg-gray-800 rounded-full overflow-hidden border border-gray-700/50 shadow-inner">
                             <div
@@ -527,6 +613,11 @@ function MetricCard({
                 {strength === 'weak' && (
                     <div className="text-[9px] text-red-400 font-bold leading-tight mt-1 border-t border-red-900/30 pt-1 animate-pulse">
                         ⚠️ {t('Muro Teórico sin Liquidez Real - Posible Ruptura')}
+                    </div>
+                )}
+                {children && (
+                    <div className="mt-2 pt-2 border-t border-gray-800">
+                        {children}
                     </div>
                 )}
             </div>

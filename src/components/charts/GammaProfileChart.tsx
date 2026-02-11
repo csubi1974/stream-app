@@ -15,9 +15,10 @@ interface GammaProfileChartProps {
     symbol?: string;
     mode?: 'GEX' | 'VEX' | 'DEX';
     gammaFlip?: number;
+    maxPain?: number;
 }
 
-export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX', gammaFlip }: GammaProfileChartProps) {
+export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX', gammaFlip, maxPain }: GammaProfileChartProps) {
     const { t } = useTranslation();
 
     // Check if we have data for the current mode
@@ -90,6 +91,7 @@ export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX', ga
         // Include currentPrice and gammaFlip in the scale calculation to ensure they are visible
         if (currentPrice) prices.push(currentPrice);
         if (gammaFlip) prices.push(gammaFlip);
+        if (maxPain) prices.push(maxPain);
 
         if (prices.length === 0) return { xMin: 0, xMax: 100 };
 
@@ -247,6 +249,12 @@ export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX', ga
                             <div className="w-6 h-0 border-t-2 border-dashed border-blue-500/80 mr-2.5"></div>
                             <span className="text-blue-400 font-bold">Spot Price</span>
                         </div>
+                        {maxPain && (
+                            <div className="flex items-center group">
+                                <div className="w-6 h-0 border-t-2 border-dotted border-pink-500 mr-2.5"></div>
+                                <span className="text-pink-400 font-bold">Max Pain</span>
+                            </div>
+                        )}
                     </div>
 
                     {gammaFlip && (
@@ -402,6 +410,23 @@ export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX', ga
                                 <circle cx={getX(currentPrice)} cy={-20} r="3" fill="#3b82f6" />
                                 <circle cx={getX(currentPrice)} cy={graphHeight + 20} r="6" fill="#3b82f6" fillOpacity="0.4" />
                                 <circle cx={getX(currentPrice)} cy={graphHeight + 20} r="3" fill="#3b82f6" />
+                            </g>
+                        )}
+
+                        {/* Max Pain Marker */}
+                        {maxPain && maxPain >= xMin && maxPain <= xMax && (
+                            <g>
+                                <line
+                                    x1={getX(maxPain)} y1={-15}
+                                    x2={getX(maxPain)} y2={graphHeight + 15}
+                                    stroke="#ec4899" strokeWidth="2" strokeDasharray="4 4"
+                                />
+                                <text
+                                    x={getX(maxPain)} y={-25}
+                                    textAnchor="middle" fill="#ec4899" fontSize="9" fontWeight="black"
+                                >
+                                    MAX PAIN
+                                </text>
                             </g>
                         )}
 

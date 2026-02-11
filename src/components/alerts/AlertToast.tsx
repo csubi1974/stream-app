@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { X, AlertTriangle, TrendingUp, TrendingDown, Volume2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useMarketStore, TradeData } from '../../stores/marketStore';
 
 interface AlertToastProps {
@@ -13,19 +14,25 @@ interface AlertToastProps {
 }
 
 export function AlertToast({ alert, onClose }: AlertToastProps) {
+  const { t } = useTranslation();
   useEffect(() => {
-    // Auto-dismiss after 5 seconds
+    // Priority-based auto-dismiss
+    // Standard alerts: 4s, Large sweeps: 6s
+    const isPriority = (alert.totalSize || alert.size) > 1000;
+    const duration = isPriority ? 6000 : 4000;
+
     const timer = setTimeout(() => {
       onClose(alert.id);
-    }, 5000);
+    }, duration);
 
     return () => clearTimeout(timer);
-  }, [alert.id, onClose]);
+  }, [alert.id, onClose, alert.totalSize, alert.size]);
 
   const getAlertIcon = () => {
+    const isBig = (alert.totalSize || alert.size) > 1000;
     switch (alert.type) {
       case 'sweep':
-        return <Volume2 className="h-5 w-5 text-yellow-500" />;
+        return <Volume2 className={`h-5 w-5 ${isBig ? 'text-red-400 animate-pulse' : 'text-yellow-500'}`} />;
       case 'unusual_volume':
         return <AlertTriangle className="h-5 w-5 text-orange-500" />;
       case 'price_alert':
@@ -40,9 +47,14 @@ export function AlertToast({ alert, onClose }: AlertToastProps) {
   };
 
   const getAlertColor = () => {
+    const isBig = (alert.totalSize || alert.size) > 1000;
+    if (isBig && alert.type === 'sweep') {
+      return 'border-red-500/50 bg-gradient-to-br from-red-900/80 to-black/90 shadow-red-500/20';
+    }
+
     switch (alert.type) {
       case 'sweep':
-        return 'border-yellow-500 bg-yellow-900';
+        return 'border-yellow-500/40 bg-gradient-to-br from-yellow-900/40 to-black/80 shadow-yellow-500/10';
       case 'unusual_volume':
         return 'border-orange-500 bg-orange-900';
       case 'price_alert':
@@ -57,9 +69,7 @@ export function AlertToast({ alert, onClose }: AlertToastProps) {
   };
 
   const formatTime = (timestamp: string) => {
-    // If it's already a formatted time string (HH:MM:SS), return it
-    if (timestamp.includes(':')) return timestamp;
-
+    if (timestamp.includes(':') && timestamp.length <= 11) return timestamp;
     return new Date(timestamp).toLocaleTimeString('en-US', {
       hour12: false,
       hour: '2-digit',
@@ -68,33 +78,47 @@ export function AlertToast({ alert, onClose }: AlertToastProps) {
     });
   };
 
+  const isBigSweep = (alert.totalSize || alert.size) > 1000;
+
   return (
     <div className={`
-      relative p-4 rounded-lg border-2 shadow-lg backdrop-blur-md transform transition-all duration-300 ease-in-out hover:scale-105
+      relative p-4 rounded-xl border shadow-2xl backdrop-blur-xl transform transition-all duration-500 ease-out hover:scale-[1.02] overflow-hidden
       ${getAlertColor()}
     `}>
-      <div className="flex items-start space-x-3">
-        <div className="flex-shrink-0 bg-black/20 p-1.5 rounded-md">
+      {/* Glossy Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent pointer-events-none"></div>
+
+      <div className="flex items-start space-x-4 relative z-10">
+        <div className={`flex-shrink-0 p-2 rounded-lg ${isBigSweep ? 'bg-red-500/20' : 'bg-black/40 shadow-inner'}`}>
           {getAlertIcon()}
         </div>
 
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-black text-white mb-1 uppercase tracking-tight">
-            {alert.message}
+          <div className="flex items-center justify-between mb-1">
+            <div className={`text-[10px] font-black uppercase tracking-[0.2em] ${isBigSweep ? 'text-red-400' : 'text-yellow-500 opacity-80'}`}>
+              {isBigSweep ? t('EXTREME SWEEP') : t(alert.message)}
+            </div>
+            {(alert.count || 0) > 1 && (
+              <span className="bg-blue-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-bounce shadow-lg shadow-blue-500/20">
+                {t('STACKED')} x{alert.count}
+              </span>
+            )}
           </div>
 
-          <div className="flex items-center space-x-3 text-[10px] font-bold text-white/70">
-            <span className="bg-white/10 px-1.5 py-0.5 rounded">{alert.symbol}</span>
-            <span className="bg-white/10 px-1.5 py-0.5 rounded">${alert.price.toFixed(2)}</span>
-            <span className="bg-white/10 px-1.5 py-0.5 rounded">{alert.size} contracts</span>
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <span className="bg-white/10 text-white font-black px-2 py-1 rounded text-xs border border-white/5">{alert.symbol}</span>
+            <span className="bg-black/40 text-blue-300 font-mono px-2 py-1 rounded text-xs border border-blue-500/20">${alert.price.toFixed(2)}</span>
+            <span className={`px-2 py-1 rounded text-xs font-bold border ${isBigSweep ? 'bg-red-500 text-white border-red-400' : 'bg-white/5 text-white/90 border-white/10'}`}>
+              {alert.totalSize || alert.size} contracts
+            </span>
           </div>
 
-          <div className="flex items-center justify-between mt-2">
-            <span className="text-[10px] text-white/40 font-mono">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-white/30 font-mono italic">
               {formatTime(alert.timestamp)}
             </span>
             {alert.exchange && (
-              <span className="text-[10px] text-white/40 uppercase tracking-widest font-black italic">
+              <span className="text-[9px] text-white/20 uppercase tracking-widest font-black italic">
                 {alert.exchange}
               </span>
             )}
@@ -104,22 +128,23 @@ export function AlertToast({ alert, onClose }: AlertToastProps) {
         <div className="flex-shrink-0">
           <button
             onClick={() => onClose(alert.id)}
-            className="text-white/40 hover:text-white transition-colors"
+            className="p-1 rounded-full hover:bg-white/10 text-white/20 hover:text-white transition-all"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
       </div>
 
-      {/* Progress bar for auto-dismiss */}
-      <div className="absolute bottom-0 left-0 h-1 bg-white bg-opacity-30 rounded-full" style={{
-        animation: 'progress 5s linear forwards'
+      {/* Dynamic Progress Bar */}
+      <div className={`absolute bottom-0 left-0 h-[3px] opacity-60 rounded-full ${isBigSweep ? 'bg-red-500' : 'bg-white'}`} style={{
+        width: '100%',
+        animation: `progress ${(alert.totalSize || alert.size) > 1000 ? '6s' : '4s'} linear forwards`
       }}></div>
 
       <style>{`
         @keyframes progress {
-          from { width: 100%; }
-          to { width: 0%; }
+          from { transform: translateX(0); }
+          to { transform: translateX(-100%); }
         }
       `}</style>
     </div>
@@ -130,8 +155,10 @@ interface AlertContainerProps {
   position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
 }
 
-export function AlertContainer({ position = 'top-right' }: AlertContainerProps) {
-  const { sweepAlerts, removeSweepAlert } = useMarketStore();
+export function AlertContainer({ position }: AlertContainerProps) {
+  const { sweepAlerts, removeSweepAlert, settings } = useMarketStore();
+
+  const currentPosition = position || settings.alertPosition || 'top-right';
 
   const positionClasses = {
     'top-right': 'top-20 right-6',
@@ -148,11 +175,17 @@ export function AlertContainer({ position = 'top-right' }: AlertContainerProps) 
     return null;
   }
 
-  // Show only the 3 most recent alerts to avoid cluttering the screen
-  const visibleAlerts = sweepAlerts.slice(0, 3);
+  // QUALITY FILTER: Only show pop-ups for high impact sweeps
+  // If size is less than 2x threshold, we don't show the toast (just list it in the panel)
+  // This reduces intrusiveness as requested.
+  const visibleAlerts = sweepAlerts
+    .filter(a => (a.totalSize || a.size) >= (settings.sweepThreshold * 1.5))
+    .slice(0, 3);
+
+  if (visibleAlerts.length === 0) return null;
 
   return (
-    <div className={`fixed z-[100] space-y-3 w-80 ${positionClasses[position]}`}>
+    <div className={`fixed z-[100] space-y-3 w-85 ${positionClasses[currentPosition]}`}>
       {visibleAlerts.map((alert, index) => (
         <AlertToast
           key={`${alert.symbol}-${alert.timestamp}-${index}`}

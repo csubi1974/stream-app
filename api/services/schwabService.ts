@@ -295,7 +295,7 @@ export class SchwabService {
     }
   }
 
-  async getOptionsChain(underlying: string): Promise<any> {
+  async getOptionsChain(underlying: string, daysToFetch: number = 7, strikeCount: number = 50): Promise<any> {
     if (!this.accessToken) {
       console.warn(`⚠️ No access token available for getOptionsChain(${underlying})`);
       return null;
@@ -305,7 +305,7 @@ export class SchwabService {
       const today = new Date();
       const fromDate = today.toISOString().split('T')[0];
       const future = new Date();
-      future.setDate(today.getDate() + 7);
+      future.setDate(today.getDate() + daysToFetch);
       const toDate = future.toISOString().split('T')[0];
 
       const params: any = {
@@ -314,6 +314,7 @@ export class SchwabService {
         includeUnderlyingQuote: true,
         strategy: 'SINGLE',
         range: 'ALL',
+        strikeCount,
         fromDate,
         toDate
       };

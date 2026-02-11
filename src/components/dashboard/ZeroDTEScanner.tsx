@@ -12,6 +12,7 @@ import { DealerDecisionMatrix } from './DealerDecisionMatrix';
 interface ScanStats {
   callWall: number;
   putWall: number;
+  pinningTarget?: number;
   totalVolume: number;
   currentPrice?: number;
   strikes: any[];
@@ -20,6 +21,7 @@ interface ScanStats {
   volatilityImplied?: number;
   drift?: number;
   gammaFlip?: number;
+  maxPain?: number;
 }
 
 export function ZeroDTEScanner() {
@@ -69,9 +71,10 @@ export function ZeroDTEScanner() {
 
       if (message.type === 'option_trade') {
         const trade = message.data;
+        const state = useMarketStore.getState();
 
         // Add to global store for the Ticker
-        useMarketStore.getState().addTrade({
+        state.addTrade({
           symbol: trade.symbol,
           price: trade.price,
           size: trade.size,
@@ -81,14 +84,14 @@ export function ZeroDTEScanner() {
         });
 
         // If it's a large trade, add to sweep alerts
-        if (trade.size >= 500) {
-          useMarketStore.getState().addSweepAlert({
+        if (trade.size >= state.settings.sweepThreshold) {
+          state.addSweepAlert({
             symbol: trade.symbol,
             price: trade.price,
             size: trade.size,
             side: trade.side || 'N/A',
             exchange: trade.exchange || 'N/A',
-            timestamp: new Date().toLocaleTimeString()
+            timestamp: new Date().toISOString()
           });
         }
 
@@ -300,6 +303,16 @@ export function ZeroDTEScanner() {
                   <span className="text-white font-mono text-sm font-bold">{formatStrike(stats.putWall)}</span>
                 </div>
 
+                {stats.pinningTarget != null && (
+                  <>
+                    <div className="w-[1px] bg-gray-800"></div>
+                    <div className="text-center min-w-[70px] bg-yellow-400/10 px-2 rounded border border-yellow-400/20">
+                      <span className="block text-[8px] text-yellow-500 uppercase font-black tracking-tighter leading-none mb-1">PINNING</span>
+                      <span className="text-white font-mono text-sm font-bold">{formatStrike(stats.pinningTarget)}</span>
+                    </div>
+                  </>
+                )}
+
                 {stats.currentPrice != null && (
                   <>
                     <div className="w-[1px] bg-gray-800"></div>
@@ -326,6 +339,16 @@ export function ZeroDTEScanner() {
                     <div className="text-center min-w-[60px]">
                       <span className="block text-[8px] text-amber-400 uppercase font-black tracking-tighter leading-none mb-1">IV</span>
                       <span className="text-white font-mono text-sm font-bold">{(stats.volatilityImplied).toFixed(1)}%</span>
+                    </div>
+                  </>
+                )}
+
+                {stats.maxPain != null && (
+                  <>
+                    <div className="w-[1px] bg-gray-800"></div>
+                    <div className="text-center min-w-[70px]">
+                      <span className="block text-[8px] text-pink-400 uppercase font-black tracking-tighter leading-none mb-1">MAX PAIN</span>
+                      <span className="text-white font-mono text-sm font-bold">${stats.maxPain.toFixed(0)}</span>
                     </div>
                   </>
                 )}
@@ -360,6 +383,7 @@ export function ZeroDTEScanner() {
                 symbol={(stats as any).fetchedSymbol || selectedSymbol}
                 mode={chartMode}
                 gammaFlip={stats.gammaFlip}
+                maxPain={stats.maxPain}
               />
             </div>
           )}

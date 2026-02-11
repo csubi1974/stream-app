@@ -4,10 +4,9 @@ import { OptionsLadderPage } from './pages/OptionsLadder';
 import { SwingScanner } from './pages/SwingScanner';
 import { Backtest } from './pages/Backtest';
 import { Settings } from './pages/Settings';
-import { StreamMarketEngine } from './pages/StreamMarketEngine';
+import { IntelligenceHub } from './pages/IntelligenceHub';
 import { Signals } from './pages/Signals';
 import { Calendar } from './pages/Calendar';
-import { Academy } from './pages/Academy';
 
 function App() {
   return (
@@ -15,8 +14,9 @@ function App() {
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/ladder/:symbol" element={<OptionsLadderPage />} />
-        <Route path="/engine" element={<StreamMarketEngine />} />
-        <Route path="/academy" element={<Academy />} />
+        <Route path="/intelligence" element={<IntelligenceHub />} />
+        <Route path="/academy" element={<IntelligenceHub />} />
+        <Route path="/engine" element={<IntelligenceHub />} />
         <Route path="/signals" element={<Signals />} />
         <Route path="/calendar" element={<Calendar />} />
         <Route path="/backtest" element={<Backtest />} />

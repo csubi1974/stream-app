@@ -18,7 +18,24 @@ Esta versión introduce el **Quality Scoring System** y la **Estrategia de Salid
 - **GEX Negativo (Rojo)**: Los dealers agregan volatilidad y aceleran el movimiento → Mercado peligroso o explosivo
 
 **Visualización:**
-- Indicador "Total GEX" en el HUD con color dinámico (verde/rojo)
+- Indicador "Total GEX" en el HUD con color dinámico (verde/rojo).
+- Visualización de la curva teórica en el gráfico de perfil.
+
+---
+
+### 1.1 **Max Pain (Máximo Dolor)**
+
+**¿Qué hace?**
+- Identifica el strike price donde el valor intrínseco de todas las opciones (Calls y Puts) es el **MÍNIMO** posible al vencimiento.
+
+**Utilidad:**
+- Es el nivel de **máximo beneficio para los vendedores (Dealers/Market Makers)** y máxima pérdida para los compradores (Retail).
+- Actúa como un **imán mecánico** extremadamente potente, especialmente en las últimas 2 horas de la sesión 0DTE.
+
+**Visualización:**
+- Indicador "Max Pain" en el HUD (Color Rosa/Fucsia).
+- Línea vertical punteada Rosa en el gráfico de perfil Gamma.
+- Indicador de proximidad en el HUD.
 
 ---
 
@@ -96,6 +113,24 @@ Esta versión introduce el **Quality Scoring System** y la **Estrategia de Salid
 **Qué hace:**
 - Filtra y muestra las opciones que expiran hoy (0DTE) con mayor actividad
 - Permite ver dónde está ocurriendo la acción en tiempo real
+
+---
+
+### 7. **Market Pinning Prediction (Predicción de Anclaje)**
+
+**¿Qué hace?**
+- Algoritmo de convergencia que predice el nivel exacto de cierre del mercado.
+- Cruza datos de: **Call Wall**, **Put Wall**, **Max Pain** y **Regimen de Gamma**.
+
+**Tipos de Anclaje:**
+- **Anclaje de Oro (Golden Anchor)**: Cuando los muros de GEX y el Max Pain coinciden en el mismo strike (Confianza >90%).
+- **Fuerza Dual**: Cuando la liquidez del muro y el Max Pain están alineados.
+- **Imán de Gamma**: Atracción por proximidad al muro más fuerte.
+
+**Visualización:**
+- Indicador "Objetivo de Cierre" (Pinning Target) en el HUD con barra de confianza dinámica.
+- Razón visual (Rationale) que explica la lógica de la predicción.
+- Etiqueta "PINNING" en el encabezado del Escáner 0DTE.
 
 ---
 
@@ -278,7 +313,7 @@ R: Revisar logs del servidor, puede ser un problema de autenticación con Schwab
 
 ## ✨ Nuevas Funcionalidades v1.6
 
-### 7. **Quality Scoring System (Puntuación de Calidad)**
+### 8. **Quality Scoring System (Puntuación de Calidad)**
 
 **¿Qué hace?**
 - Clasifica automáticamente cada señal en **PREMIUM**, **STANDARD** o **AGGRESSIVE** basándose en un algoritmo de 6 factores (Move Exhaustion, Time Remaining, etc.).
@@ -288,7 +323,7 @@ R: Revisar logs del servidor, puede ser un problema de autenticación con Schwab
 
 ---
 
-### 8. **Gestión de Salida (Exit Strategy)**
+### 9. **Gestión de Salida (Exit Strategy)**
 
 **¿Qué hace?**
 - Define el plan de salida antes de entrar:
@@ -298,9 +333,17 @@ R: Revisar logs del servidor, puede ser un problema de autenticación con Schwab
 
 ---
 
-### 9. **Persistencia de Resultados**
+### 10. **Persistencia de Resultados**
 
 Se ha habilitado la base de datos para registrar no solo la entrada, sino también el resultado final de cada trade (WIN/LOSS) y el PnL realizado.
+
+---
+
+### 11. **Ajuste de Versión y Actualización de Sistema**
+
+- **Max Pain Integrado**: Motor de cálculo strike por strike activado en el backend.
+- **Gráfico de Perfil Dinámico**: Inclusión de marcadores visuales para Flip, Spot, Muros y Max Pain.
+- **Sincronización Total**: El Escáner y el HUD comparten la misma inteligencia de anclaje.
 
 ---
 

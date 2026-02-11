@@ -3,33 +3,11 @@ import { Header } from '../components/layout/Header';
 import { Save, Bell, Key, Volume2, RefreshCw } from 'lucide-react';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
+import { useMarketStore } from '../stores/marketStore';
 
 export function Settings() {
   const { t } = useTranslation();
-  const [settings, setSettings] = useState({
-    // Alert Settings
-    sweepThreshold: 50,
-    volumeAlertThreshold: 3.0,
-    enableSoundAlerts: true,
-    enableVisualAlerts: true,
-    alertPosition: 'top-right' as 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left',
-
-    // API Settings
-    schwabAppKey: '',
-    schwabSecret: '',
-
-    // Display Settings
-    updateSpeed: 100,
-    darkMode: true,
-    showGreeks: true,
-    showVolumeProfile: true,
-
-    // Scanner Settings
-    minRVOL: 2.0,
-    minDollarVolume: 50000000,
-    maxStocks: 50
-  });
-
+  const { settings, updateSettings } = useMarketStore();
   const [saved, setSaved] = useState(false);
   const [schwabConnected, setSchwabConnected] = useState(false);
   const [manualTokens, setManualTokens] = useState({ access_token: '', refresh_token: '' });
@@ -41,8 +19,7 @@ export function Settings() {
   const apiUrl = '';
 
   const handleSave = () => {
-    // Save settings to localStorage or API
-    localStorage.setItem('tapeReaderSettings', JSON.stringify(settings));
+    // Already saved in updateSettings via store, but we can show the feedback
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
@@ -84,7 +61,7 @@ export function Settings() {
   }, [apiUrl]);
 
   const handleChange = (key: string, value: any) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
+    updateSettings({ [key]: value });
   };
 
   return (
@@ -115,7 +92,7 @@ export function Settings() {
                 onChange={(e) => handleChange('sweepThreshold', Number(e.target.value))}
                 className="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-blue-500 focus:outline-none"
                 min="10"
-                max="500"
+                max="5000"
               />
             </div>
 
@@ -165,6 +142,7 @@ export function Settings() {
               </select>
             </div>
           </div>
+
 
           <div className="flex items-center space-x-6 mt-4">
             <label className="flex items-center">

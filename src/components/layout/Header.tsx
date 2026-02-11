@@ -52,9 +52,8 @@ export function Header() {
 
   const navItems = [
     { path: '/', label: t('Dashboard'), icon: BarChart3 },
+    { path: '/intelligence', label: t('Intelligence Hub'), icon: BookOpen },
     { path: '/signals', label: t('Signals'), icon: Target },
-    { path: '/engine', label: t('Market Engine'), icon: Zap },
-    { path: '/academy', label: t('Trading Academy'), icon: BookOpen },
     { path: '/calendar', label: t('Calendar'), icon: Calendar },
     { path: '/backtest', label: t('Backtest'), icon: Clock },
     { path: '/settings', label: t('Settings'), icon: Settings },

@@ -11,6 +11,9 @@ export interface VolumeData {
   action: string;
   bidHits: number;
   askHits: number;
+  drift?: number;
+  gammaFlip?: number;
+  maxPain?: number;
 }
 
 export class MarketDataService {
@@ -405,7 +408,10 @@ export class MarketDataService {
           drift: changePercent, // Add for reference
           vannaExposure, // Net Vanna
           fetchedSymbol: searchSymbol,
-          gammaFlip: this.calculateGammaFlip(zeroDte, currentPrice, tReal)
+          gammaFlip: this.calculateGammaFlip(zeroDte, currentPrice, tReal),
+          maxPain: this.calculateMaxPain(zeroDte),
+          pinningTarget: this.calculatePinningTarget(globalCallWallStrike, globalPutWallStrike, this.calculateMaxPain(zeroDte), currentPrice, changePercent),
+          ivRank: await this.calculateIVRank(symbol, volatilityImplied)
         }
       };
 
@@ -609,6 +615,113 @@ export class MarketDataService {
     } catch (e) {
       console.error('Error calculating Gamma Flip in MarketDataService', e);
       return currentPrice;
+    }
+  }
+
+  /**
+   * Calcula el strike de Max Pain para un conjunto de opciones
+   */
+  private calculateMaxPain(options: any[]): number {
+    try {
+      if (!options || options.length === 0) return 0;
+
+      // 1. Strikes únicos
+      const strikes = [...new Set(options.map(o => parseFloat(o.strikePrice || o.strike)))]
+        .filter(s => !isNaN(s) && s > 0)
+        .sort((a, b) => a - b);
+
+      if (strikes.length === 0) return 0;
+
+      let minPain = Infinity;
+      let maxPainStrike = strikes[0];
+
+      // 2. Probar cada strike
+      for (const testPrice of strikes) {
+        let totalPain = 0;
+        for (const opt of options) {
+          const strike = parseFloat(opt.strikePrice || opt.strike);
+          const oi = opt.openInterest || 0;
+          if (oi <= 0) continue;
+
+          if (opt.putCall === 'CALL') {
+            if (testPrice > strike) totalPain += (testPrice - strike) * oi;
+          } else {
+            if (testPrice < strike) totalPain += (strike - testPrice) * oi;
+          }
+        }
+
+        if (totalPain < minPain) {
+          minPain = totalPain;
+          maxPainStrike = testPrice;
+        }
+      }
+
+      return maxPainStrike;
+    } catch (e) {
+      console.error('Error calculating Max Pain in MarketDataService', e);
+      return 0;
+    }
+  }
+
+  /**
+   * Calcula el objetivo de anclaje (pinning) basado en walls y Max Pain
+   */
+  private calculatePinningTarget(callWall: number, putWall: number, maxPain: number, currentPrice: number, drift: number): number {
+    try {
+      // 1. Convergencia de Muros
+      if (callWall === putWall) return callWall;
+
+      // 2. Si Max Pain está alineado con uno de los muros, ese es el imán fuerte
+      const isMaxPainNearCall = Math.abs(maxPain - callWall) / callWall < 0.002;
+      const isMaxPainNearPut = Math.abs(maxPain - putWall) / putWall < 0.002;
+
+      if (isMaxPainNearCall) return callWall;
+      if (isMaxPainNearPut) return putWall;
+
+      // 3. Si no hay coincidencia, elegir el muro más cercano al precio actual
+      // pero si el drift es muy fuerte, elegir el muro en dirección del drift
+      if (Math.abs(drift) > 1.5) {
+        return drift > 0 ? callWall : putWall;
+      }
+
+      return Math.abs(currentPrice - callWall) < Math.abs(currentPrice - putWall) ? callWall : putWall;
+    } catch (e) {
+      return callWall;
+    }
+  }
+
+  /**
+   * Calcula el IV Rank basado en histórico de 1 año (252 días)
+   */
+  private async calculateIVRank(symbol: string, currentIV: number): Promise<number> {
+    try {
+      // 1. Determinar símbolo proxy para volatilidad
+      let vSymbol = '$VIX'; // Default para SPX/SPY
+      if (symbol.includes('QQQ')) vSymbol = '$VIXN';
+      if (symbol.includes('IWM')) vSymbol = '$RVX';
+
+      // 2. Intentar obtener histórico de 1 año
+      const history = await this.schwabService.getPriceHistory(vSymbol, 'year', 1, 'daily', 1);
+
+      if (!history || history.length === 0) {
+        // Fallback: Si no hay histórico, devolver un valor neutral basado en el IV actual
+        return currentIV > 25 ? 65 : 35;
+      }
+
+      const ivs = history.map(c => c.close);
+      const high = Math.max(...ivs);
+      const low = Math.min(...ivs);
+
+      // Si el símbolo actual es el VIX, usamos su precio. Si no, usamos el IV que nos pasaron.
+      const currentVal = (symbol.includes('SPX') || symbol.includes('SPY')) ? (await this.schwabService.getQuotes(['$VIX']))['$VIX']?.quote?.lastPrice || currentIV : currentIV;
+
+      if (high === low) return 50;
+
+      const rank = ((currentVal - low) / (high - low)) * 100;
+      return Math.max(0, Math.min(100, rank));
+    } catch (error) {
+      console.error('❌ Error calculating IV Rank:', error);
+      return 50;
     }
   }
 }
