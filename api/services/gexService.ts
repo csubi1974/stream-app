@@ -239,19 +239,21 @@ export class GEXService {
             // Si clientes compran calls (positive delta), dealers tienen negative delta
             let netCallDelta = 0;
             let netPutDelta = 0;
+            let totalOI = 0;
 
             strikeMetrics.forEach(m => {
                 netCallDelta += m.callDelta;
                 netPutDelta += m.putDelta;
+                totalOI += m.callOI + m.putOI;
             });
 
             // Invertir porque queremos la posición DEALER (institucional)
             const netInstitutionalDelta = -(netCallDelta + netPutDelta);
 
-            // 4. Net Drift
-            // Presión estructural basada en delta institucional
-            // Normalizar por el precio actual para obtener un valor interpretable
-            const netDrift = (netInstitutionalDelta / currentPrice) * 100;
+            // 4. Net Drift (Momentum Score)
+            // Normalized institutional bias relative to total liquidity
+            const totalOptionShares = Math.max(1, totalOI * 100);
+            const netDrift = (netInstitutionalDelta / totalOptionShares) * 100;
 
             // 5. Determinar régimen de volatilidad
             let regime: 'stable' | 'volatile' | 'neutral' = 'neutral';
