@@ -234,18 +234,24 @@ export class GEXService {
             const gammaProfile = this.calculateGammaProfile(allOptions, currentPrice);
 
             // Buscar el punto donde la curva cruza por cero (Gamma Flip)
+            // Priorizamos el cruce más cercano al precio actual para mayor relevancia operativa
             let gammaFlip = currentPrice;
+            let minDistance = Infinity;
+
             if (gammaProfile.length > 0) {
                 for (let i = 0; i < gammaProfile.length - 1; i++) {
                     const p1 = gammaProfile[i];
                     const p2 = gammaProfile[i + 1];
 
-                    // Si hay un cambio de signo entre estos dos puntos
                     if (p1.netGex * p2.netGex <= 0) {
-                        // Interpolación lineal simple para encontrar el cero exacto
                         const weight = Math.abs(p1.netGex) / (Math.abs(p1.netGex) + Math.abs(p2.netGex));
-                        gammaFlip = p1.price + weight * (p2.price - p1.price);
-                        break;
+                        const crossingPrice = p1.price + weight * (p2.price - p1.price);
+                        const distance = Math.abs(crossingPrice - currentPrice);
+
+                        if (distance < minDistance) {
+                            minDistance = distance;
+                            gammaFlip = crossingPrice;
+                        }
                     }
                 }
             }
@@ -271,19 +277,24 @@ export class GEXService {
             const totalOptionShares = Math.max(1, totalOI * 100);
             const netDrift = (netInstitutionalDelta / totalOptionShares) * 100;
 
-            // 5. Determinar régimen de volatilidad
-            let regime: 'stable' | 'volatile' | 'neutral' = 'neutral';
+            // 5. Determinar Régimen basado en Gamma Local (el punto de la curva más cercano al spot)
+            // Esto es mucho más preciso que usar el GEX Total, ya que ignora muros lejanos (como el muro de 7000)
+            const spotGexPoint = gammaProfile.reduce((prev, curr) =>
+                Math.abs(curr.price - currentPrice) < Math.abs(prev.price - currentPrice) ? curr : prev
+            );
 
-            if (totalGEX > 0) {
-                regime = 'stable'; // Gamma positiva = dealers amortiguan movimientos
-            } else if (totalGEX < 0) {
-                regime = 'volatile'; // Gamma negativa = dealers amplifican movimientos
-            }
+            let regime: 'stable' | 'volatile' | 'neutral' = 'stable';
 
-            // Ajustar si estamos cerca del gamma flip
-            const distanceToFlip = Math.abs(currentPrice - gammaFlip) / currentPrice;
-            if (distanceToFlip < 0.002) { // Menos de 0.2% (Más preciso para activos de alto precio)
-                regime = 'neutral'; // Cerca del flip = mayor incertidumbre
+            if (spotGexPoint.netGex < 0) {
+                regime = 'volatile'; // Estamos en el lado negativo de la curva
+            } else {
+                // Si estamos por encima del flip, es estable, a menos que estemos MUY cerca del flip
+                const distanceToFlip = Math.abs(currentPrice - gammaFlip) / currentPrice;
+                if (distanceToFlip < 0.0015) { // 0.15% de proximidad
+                    regime = 'neutral';
+                } else {
+                    regime = 'stable';
+                }
             }
 
             // 6. Calculate Expected Move (ATM Straddle)
@@ -533,7 +544,9 @@ export class GEXService {
         // Expected Move típicamente 0.5-1% para 0DTE
         const expectedMove = adjustedPrice * (0.005 + Math.random() * 0.005);
 
-        // Determinar régimen
+        const gammaProfile = this.calculateMockGammaProfile(adjustedPrice, gammaFlip);
+
+        // Determinar régimen simple para el mock
         let regime: 'stable' | 'volatile' | 'neutral' = 'stable';
         if (totalGEX < 0) {
             regime = 'volatile';

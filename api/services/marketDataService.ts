@@ -126,27 +126,28 @@ export class MarketDataService {
       let chain = null;
 
       // Si el símbolo es SPX, intentamos con $SPX primero (formato estándar para índices)
+      // Optimizamos para evitar errores 502 Bad Gateway
       if (searchSymbol === 'SPX') {
-        console.log('📡 Scanner: Trying $SPX index symbol first...');
+        console.log('📡 Scanner: Trying $SPX index symbol first (Optimized)...');
         try {
-          chain = await this.schwabService.getOptionsChain('$SPX');
+          chain = await this.schwabService.getOptionsChain('$SPX', 30, 100);
           if (chain && (chain.callExpDateMap || chain.putExpDateMap)) {
             searchSymbol = '$SPX';
           }
         } catch (e) {
-          console.warn('⚠️ Scanner: $SPX failed, will try original symbol');
+          console.warn('⚠️ Scanner: $SPX optimized call failed, will try standard');
         }
       }
 
       // Si no tenemos cadena aún, intentamos con el símbolo original
       if (!chain || (!chain.callExpDateMap && !chain.putExpDateMap)) {
-        chain = await this.schwabService.getOptionsChain(searchSymbol);
+        chain = await this.schwabService.getOptionsChain(searchSymbol, 45);
       }
 
       // Fallback for SPX to SPXW
       if ((!chain || (!chain.callExpDateMap && !chain.putExpDateMap)) && searchSymbol.includes('SPX')) {
-        console.log('⚠️ Scanner: SPX Chain unavailable, trying SPXW...');
-        chain = await this.schwabService.getOptionsChain('SPXW');
+        console.log('⚠️ Scanner: SPX Chain unavailable, trying SPXW (Optimized)...');
+        chain = await this.schwabService.getOptionsChain('SPXW', 30, 100);
         if (chain && (chain.callExpDateMap || chain.putExpDateMap)) searchSymbol = 'SPXW';
       }
 
@@ -236,7 +237,8 @@ export class MarketDataService {
           globalStrikeMetrics.set(strike, { callGex: 0, putGex: 0 });
         }
         const metrics = globalStrikeMetrics.get(strike)!;
-        const gexContribution = gamma * oi * 100 * (currentPrice || strike);
+        // Normalized GEX = Gamma * OI * 100 * (Spot^2) * 0.01 (QuantData Standard)
+        const gexContribution = gamma * oi * 100 * (currentPrice * currentPrice) * 0.01;
 
         if (isCall) {
           metrics.callGex += gexContribution;
@@ -298,10 +300,8 @@ export class MarketDataService {
         const delta = opt.delta || 0;
         const stat = strikes.get(strike)!;
 
-        // GEX = Gamma * OI * 100 * Spot Price
-        // Para 0DTE, si el gamma del API parece "estático" o "standard", 
-        // podríamos recalcularlo aquí, pero por ahora usamos el del API con el factor de spot correcto.
-        const gexValue = gamma * oi * 100 * currentPrice;
+        // Normalized GEX = Gamma * OI * 100 * (Spot^2) * 0.01
+        const gexValue = gamma * oi * 100 * (currentPrice * currentPrice) * 0.01;
 
         // Vanna Exposure = Vega * OI * 100 (Simplified institutional exposure)
         const vannaValue = vega * oi * 100;
@@ -590,7 +590,8 @@ export class MarketDataService {
           const isCall = opt.putCall === 'CALL';
 
           const gamma = this.calculateBSGamma(simulatedPrice, strike, volatility, visualT);
-          const gex = gamma * oi * 100 * simulatedPrice;
+          // Normalized GEX = Gamma * OI * 100 * (S^2) * 0.01
+          const gex = gamma * oi * 100 * (simulatedPrice * simulatedPrice) * 0.01;
 
           if (isCall) totalNetGex += gex;
           else totalNetGex -= gex;
@@ -599,16 +600,21 @@ export class MarketDataService {
         profile.push({ price: simulatedPrice, netGex: totalNetGex });
       }
 
-      // Find Flip
+      // Interpolate for zero crossing - Find the one closest to current price
       let gammaFlip = currentPrice;
-      // Interpolate for zero crossing
+      let minDistance = Infinity;
       for (let i = 0; i < profile.length - 1; i++) {
         const p1 = profile[i];
         const p2 = profile[i + 1];
         if (p1.netGex * p2.netGex <= 0) {
           const weight = Math.abs(p1.netGex) / (Math.abs(p1.netGex) + Math.abs(p2.netGex));
-          gammaFlip = p1.price + weight * (p2.price - p1.price);
-          if (Math.abs(gammaFlip - currentPrice) < currentPrice * 0.2) break; // Use closest reasonable flip
+          const crossingPrice = p1.price + weight * (p2.price - p1.price);
+          const distance = Math.abs(crossingPrice - currentPrice);
+
+          if (distance < minDistance) {
+            minDistance = distance;
+            gammaFlip = crossingPrice;
+          }
         }
       }
       return gammaFlip;
