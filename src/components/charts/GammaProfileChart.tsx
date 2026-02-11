@@ -329,8 +329,8 @@ export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX', ga
                         {/* Bars */}
                         {chartData.map((d) => {
                             const x = getX(d.strike);
-                            // Restauramos a un factor de 0.45 para recuperar el efecto "muro"
-                            const barWidth = Math.max(2, (graphWidth / chartData.length) * 0.45);
+                            // Cap bar width to prevent "fat" bars when few strikes are shown
+                            const barWidth = Math.min(30, Math.max(2, (graphWidth / chartData.length) * 0.45));
 
                             let valCall, valPut;
                             if (hasActiveGreeks) {
