@@ -67,10 +67,26 @@ export class GEXService {
                 return this.getDefaultMetrics();
             }
 
-            // Flatten options data
-            const allOptions: any[] = [];
-            allOptions.push(...this.flattenOptionsMap(chain.callExpDateMap || chain.calls));
-            allOptions.push(...this.flattenOptionsMap(chain.putExpDateMap || chain.puts));
+            // Flatten and filter options data (Near-term focus: 0-5 days)
+            // This prevents long-dated options from "contaminating" the current market regime HUD
+            const allOptionsRaw: any[] = [];
+            allOptionsRaw.push(...this.flattenOptionsMap(chain.callExpDateMap || chain.calls));
+            allOptionsRaw.push(...this.flattenOptionsMap(chain.putExpDateMap || chain.puts));
+
+            const today = new Date();
+            const fiveDaysFromNow = new Date();
+            fiveDaysFromNow.setDate(today.getDate() + 5);
+
+            const allOptions = allOptionsRaw.filter(opt => {
+                if (!opt.expirationDate) return true;
+                const expDate = new Date(opt.expirationDate);
+                return expDate <= fiveDaysFromNow;
+            });
+
+            if (allOptions.length === 0 && allOptionsRaw.length > 0) {
+                // Fallback if filtering is too aggressive
+                return this.processGEXOptions(chain, allOptionsRaw);
+            }
 
             return this.processGEXOptions(chain, allOptions);
         } catch (error) {
@@ -149,9 +165,9 @@ export class GEXService {
 
                 const metrics = strikeMetrics.get(strike)!;
 
-                // Calcular GEX = Gamma * OI * 100 * Spot Price
-                // Factor 100 porque cada contrato representa 100 acciones
-                const gexContribution = gamma * oi * 100 * currentPrice;
+                // Normalized GEX = Gamma * OI * 100 * (Spot^2) * 0.01
+                // This represents the Dollar Gamma Exposure for a 1% move (QuantData Standard)
+                const gexContribution = gamma * oi * 100 * (currentPrice * currentPrice) * 0.01;
 
                 // Vanna approximation if not provided: Vanna ≈ Vega / IV (simplified for Net exposure)
                 // Institutional Vanna is typically dDelta/dVol
@@ -707,9 +723,9 @@ export class GEXService {
             let totalNetGex = 0;
 
             for (const opt of relevantOptions) {
-                // Cálculo simplificado de Gamma usando Black-Scholes para la curva
                 const gamma = this.calculateBSGamma(simulatedPrice, opt.strike, opt.iv, visualT);
-                const gex = gamma * opt.oi * 100 * simulatedPrice;
+                // Normalized GEX = Gamma * OI * 100 * (Spot^2) * 0.01
+                const gex = gamma * opt.oi * 100 * (simulatedPrice * simulatedPrice) * 0.01;
 
                 if (opt.isCall) {
                     totalNetGex += gex;
