@@ -98,14 +98,14 @@ export function Header() {
 
           <div className="flex items-center space-x-4">
             {/* Market Status Widget */}
-            <div className={`flex items-center space-x-3 px-3 py-1.5 rounded-lg border transition-all ${marketStatus.isOpen ? 'bg-positive/5 border-positive/20' : 'bg-white/5 border-white/10'}`}>
+            <div className={`flex items-center space-x-3 px-3 py-1.5 rounded-lg border transition-all ${marketStatus.isOpen ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
               <div className="flex items-center space-x-2">
-                <div className={`w-1.5 h-1.5 rounded-full shadow-[0_0_8px] ${marketStatus.isOpen ? 'bg-positive shadow-positive/50 animate-pulse' : 'bg-negative shadow-negative/50'}`}></div>
-                <span className={`text-[10px] font-black uppercase tracking-widest ${marketStatus.isOpen ? 'text-positive' : 'text-ink-secondary'}`}>
+                <div className={`w-1.5 h-1.5 rounded-full shadow-[0_0_8px] ${marketStatus.isOpen ? 'bg-green-500 shadow-green-500/50 animate-pulse' : 'bg-red-500 shadow-red-500/50'}`}></div>
+                <span className={`text-[10px] font-black uppercase tracking-widest ${marketStatus.isOpen ? 'text-green-400' : 'text-red-400'}`}>
                   {marketStatus.text}
                 </span>
               </div>
-              <span className="text-[9px] text-ink-muted data-font font-medium pt-0.5">{marketStatus.next}</span>
+              <span className="text-[9px] text-gray-400 data-font font-medium pt-0.5">{marketStatus.next}</span>
             </div>
 
             {/* Language Selector */}
@@ -125,7 +125,7 @@ export function Header() {
             </button>
 
             <div className="flex items-center border-l border-white/10 pl-4 h-6">
-              <span className="text-[9px] text-ink-muted data-font font-bold uppercase tracking-tighter tabular-nums">v1.16.8</span>
+              <span className="text-[9px] text-ink-muted data-font font-bold uppercase tracking-tighter tabular-nums">v1.16.9</span>
             </div>
           </div>
         </div>
