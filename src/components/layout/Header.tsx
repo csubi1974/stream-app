@@ -125,7 +125,7 @@ export function Header() {
             </button>
 
             <div className="flex items-center border-l border-white/10 pl-4 h-6">
-              <span className="text-[9px] text-ink-muted data-font font-bold uppercase tracking-tighter tabular-nums">v1.16.7</span>
+              <span className="text-[9px] text-ink-muted data-font font-bold uppercase tracking-tighter tabular-nums">v1.16.8</span>
             </div>
           </div>
         </div>

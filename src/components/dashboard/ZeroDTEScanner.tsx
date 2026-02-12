@@ -33,7 +33,7 @@ export function ZeroDTEScanner() {
   const [filterType, setFilterType] = useState<'ALL' | 'CALL' | 'PUT'>('ALL');
   const [chartMode, setChartMode] = useState<'GEX' | 'VEX' | 'DEX'>('GEX');
   const [isSymbolMenuOpen, setIsSymbolMenuOpen] = useState(false);
-  const commonSymbols = ['SPX', 'SPY', 'QQQ', 'IWM', 'AAPL', 'NVDA', 'TSLA', 'AMD'];
+  const commonSymbols = ['SPX', 'SPY', 'QQQ', 'IWM', 'NVDA', 'TSLA', 'AAPL', 'AMZN', 'AVGO', 'GOOGL', 'MSFT', 'META', 'XLF'];
 
   const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3002';
 

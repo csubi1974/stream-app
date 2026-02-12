@@ -255,7 +255,7 @@ export function GEXMetricsHUD() {
                     {/* Symbol Selector */}
                     <div className="flex items-center bg-base/50 border border-white/10 rounded-xl p-1 shadow-inner backdrop-blur-md">
                         <div className="flex gap-1 mr-2 pr-2 border-r border-white/10">
-                            {['SPX', 'SPY', 'QQQ', 'IWM', 'AAPL', 'NVDA', 'TSLA', 'AMD'].map((sym) => (
+                            {['SPX', 'SPY', 'QQQ', 'IWM', 'NVDA', 'TSLA', 'AAPL', 'AMZN', 'AVGO', 'GOOGL', 'MSFT', 'META', 'XLF'].map((sym) => (
                                 <button
                                     key={sym}
                                     onClick={() => setSelectedSymbol(sym)}
