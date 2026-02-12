@@ -646,13 +646,15 @@ export class MarketDataService {
         let totalPain = 0;
         for (const opt of options) {
           const strike = parseFloat(opt.strikePrice || opt.strike);
-          const oi = opt.openInterest || 0;
-          if (oi <= 0) continue;
+          // Usamos OI + Volumen para detectar cambios intradiarios (Live Max Pain)
+          // Schwab usa 'volume' para opciones y 'totalVolume' para acciones, soportamos ambos
+          const liquidity = (opt.openInterest || 0) + (opt.totalVolume || opt.volume || 0);
+          if (liquidity <= 0) continue;
 
           if (opt.putCall === 'CALL') {
-            if (testPrice > strike) totalPain += (testPrice - strike) * oi;
+            if (testPrice > strike) totalPain += (testPrice - strike) * liquidity;
           } else {
-            if (testPrice < strike) totalPain += (strike - testPrice) * oi;
+            if (testPrice < strike) totalPain += (strike - testPrice) * liquidity;
           }
         }
 

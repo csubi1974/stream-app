@@ -508,6 +508,7 @@ export function GEXMetricsHUD() {
                             gammaFlip={gammaFlip}
                             callWall={callWall}
                             putWall={putWall}
+                            maxPain={maxPain}
                         />
                     )}
                 </div>

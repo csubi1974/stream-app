@@ -34358,6 +34358,32 @@
       "risk_level": "MEDIUM",
       "quality_metadata": "{\"openPrice\":6973.98,\"moveFromOpen\":0,\"movePercent\":0,\"moveRatio\":0,\"wallDistance\":10,\"hoursRemaining\":6.283333333333333,\"generatedAtPrice\":6973.98}",
       "exit_criteria": "{\"profitTarget\":\"100% (Dejar Expirar)\",\"stopLoss\":\"Cerrar inmediatamente si el Call Wall ($7000) se rompe (Precio > 7005)\",\"timeExit\":\"Cerrar a las 3:45 PM si está en riesgo\"}"
+    },
+    {
+      "id": "BPS-2026-02-12-6840-wall",
+      "strategy": "BULL_PUT_SPREAD",
+      "underlying": "SPX",
+      "generated_at": "2026-02-12T18:13:43.500Z",
+      "status": "ACTIVE",
+      "alert_data": "{\"id\":\"BPS-2026-02-12-6840-wall\",\"strategy\":\"BULL_PUT_SPREAD\",\"strategyLabel\":\"Wall Reversion (Support)\",\"underlying\":\"SPX\",\"expiration\":\"2026-02-12\",\"legs\":[{\"action\":\"SELL\",\"type\":\"PUT\",\"strike\":6840,\"price\":8.25,\"delta\":-0.341},{\"action\":\"BUY\",\"type\":\"PUT\",\"strike\":6835,\"price\":6.85,\"delta\":-0.294}],\"netCredit\":1.4,\"maxLoss\":3.6,\"maxProfit\":1.4,\"probability\":65.9,\"riskReward\":\"1:2.6\",\"rationale\":\"ESTRATEGIA REVERSION: El precio está testeando un Put Wall SÓLIDO en $6850. El crédito es ALTO debido a la cercanía del muro. El riesgo es que si el muro se rompe, el soporte desaparece, por lo que el Stop Loss es estricto justo debajo del muro.\",\"status\":\"ACTIVE\",\"gexContext\":{\"regime\":\"volatile\",\"callWall\":6850,\"putWall\":6850,\"callWallStrength\":\"weak\",\"putWallStrength\":\"solid\",\"gammaFlip\":6937.024027770797,\"currentPrice\":6854.48,\"netDrift\":16.473950950813755,\"expectedMove\":28.349999999999998,\"totalGEX\":-30257746950.741154,\"openPrice\":6854.48,\"netCharm\":189460.64380433699,\"symbol\":\"SPX\"},\"generatedAt\":\"2026-02-12T18:13:43.500Z\",\"validUntil\":\"2026-02-12T20:13:43.500Z\",\"qualityScore\":75,\"qualityLevel\":\"AGGRESSIVE\",\"riskLevel\":\"MEDIUM\",\"qualityFactors\":{\"moveExhaustion\":10,\"expectedMoveUsage\":10,\"wallProximity\":10,\"timeRemaining\":7,\"regimeStrength\":1,\"driftAlignment\":10},\"metadata\":{\"openPrice\":6854.48,\"moveFromOpen\":0,\"movePercent\":0,\"moveRatio\":0,\"wallDistance\":10,\"hoursRemaining\":2.783333333333333,\"generatedAtPrice\":6854.48},\"exitCriteria\":{\"profitTarget\":\"100% (Dejar Expirar)\",\"stopLoss\":\"Cerrar inmediatamente si el Put Wall ($6850) se rompe (Precio < 6845)\",\"timeExit\":\"Cerrar a las 3:45 PM si está en riesgo\"}}",
+      "quality_score": 75,
+      "quality_level": "AGGRESSIVE",
+      "risk_level": "MEDIUM",
+      "quality_metadata": "{\"openPrice\":6854.48,\"moveFromOpen\":0,\"movePercent\":0,\"moveRatio\":0,\"wallDistance\":10,\"hoursRemaining\":2.783333333333333,\"generatedAtPrice\":6854.48}",
+      "exit_criteria": "{\"profitTarget\":\"100% (Dejar Expirar)\",\"stopLoss\":\"Cerrar inmediatamente si el Put Wall ($6850) se rompe (Precio < 6845)\",\"timeExit\":\"Cerrar a las 3:45 PM si está en riesgo\"}"
+    },
+    {
+      "id": "BPS-2026-02-12-6845-wall",
+      "strategy": "BULL_PUT_SPREAD",
+      "underlying": "SPX",
+      "generated_at": "2026-02-12T18:39:43.510Z",
+      "status": "ACTIVE",
+      "alert_data": "{\"id\":\"BPS-2026-02-12-6845-wall\",\"strategy\":\"BULL_PUT_SPREAD\",\"strategyLabel\":\"Wall Reversion (Support)\",\"underlying\":\"SPX\",\"expiration\":\"2026-02-12\",\"legs\":[{\"action\":\"SELL\",\"type\":\"PUT\",\"strike\":6845,\"price\":6.699999999999999,\"delta\":-0.327},{\"action\":\"BUY\",\"type\":\"PUT\",\"strike\":6840,\"price\":5.35,\"delta\":-0.275}],\"netCredit\":1.35,\"maxLoss\":3.65,\"maxProfit\":1.35,\"probability\":67.3,\"riskReward\":\"1:2.7\",\"rationale\":\"ESTRATEGIA REVERSION: El precio está testeando un Put Wall SÓLIDO en $6850. El crédito es ALTO debido a la cercanía del muro. El riesgo es que si el muro se rompe, el soporte desaparece, por lo que el Stop Loss es estricto justo debajo del muro.\",\"status\":\"ACTIVE\",\"gexContext\":{\"regime\":\"volatile\",\"callWall\":6850,\"putWall\":6850,\"callWallStrength\":\"weak\",\"putWallStrength\":\"solid\",\"gammaFlip\":6937.646149824816,\"currentPrice\":6860.57,\"netDrift\":15.28649509054716,\"expectedMove\":25.1,\"totalGEX\":-29708512055.17034,\"openPrice\":6860.57,\"netCharm\":403675.21545755904,\"symbol\":\"SPX\"},\"generatedAt\":\"2026-02-12T18:39:43.510Z\",\"validUntil\":\"2026-02-12T20:39:43.510Z\",\"qualityScore\":75,\"qualityLevel\":\"AGGRESSIVE\",\"riskLevel\":\"MEDIUM\",\"qualityFactors\":{\"moveExhaustion\":10,\"expectedMoveUsage\":10,\"wallProximity\":10,\"timeRemaining\":5,\"regimeStrength\":1,\"driftAlignment\":10},\"metadata\":{\"openPrice\":6860.57,\"moveFromOpen\":0,\"movePercent\":0,\"moveRatio\":0,\"wallDistance\":5,\"hoursRemaining\":2.35,\"generatedAtPrice\":6860.57},\"exitCriteria\":{\"profitTarget\":\"100% (Dejar Expirar)\",\"stopLoss\":\"Cerrar inmediatamente si el Put Wall ($6850) se rompe (Precio < 6845)\",\"timeExit\":\"Cerrar a las 3:45 PM si está en riesgo\"}}",
+      "quality_score": 75,
+      "quality_level": "AGGRESSIVE",
+      "risk_level": "MEDIUM",
+      "quality_metadata": "{\"openPrice\":6860.57,\"moveFromOpen\":0,\"movePercent\":0,\"moveRatio\":0,\"wallDistance\":5,\"hoursRemaining\":2.35,\"generatedAtPrice\":6860.57}",
+      "exit_criteria": "{\"profitTarget\":\"100% (Dejar Expirar)\",\"stopLoss\":\"Cerrar inmediatamente si el Put Wall ($6850) se rompe (Precio < 6845)\",\"timeExit\":\"Cerrar a las 3:45 PM si está en riesgo\"}"
     }
   ]
 }

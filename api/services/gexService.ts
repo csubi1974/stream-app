@@ -376,7 +376,11 @@ export class GEXService {
             }
 
             // 8. CALCULATE MAX PAIN & IV RANK & TERM STRUCTURE
-            const maxPain = this.calculateMaxPain(allOptions);
+            // Focus Max Pain on the nearest expiration (0DTE/Front-Month) for better pinning detection
+            const nearestExp = [...new Set(allOptions.map(o => o.expirationDate))].sort()[0];
+            const nearestOptions = allOptions.filter(o => o.expirationDate === nearestExp);
+            const maxPain = this.calculateMaxPain(nearestOptions.length > 0 ? nearestOptions : allOptions);
+
             const ivRank = await this.calculateIVRank(chain.symbol || (chain.underlying?.symbol), chain.volatility || 0);
             const termStructure = this.calculateTermStructure(chain, currentPrice);
 
@@ -665,25 +669,25 @@ export class GEXService {
             let maxPainStrike = strikes[0];
 
             // 2. Iterar sobre cada strike como posible precio de vencimiento
-            // (Para optimizar en cadenas gigantes de SPX, podríamos limitar el rango cerca del spot, 
-            // pero para 0DTE el cálculo directo es suficientemente rápido)
             for (const testPrice of strikes) {
                 let totalPain = 0;
 
                 for (const opt of options) {
                     const strike = parseFloat(opt.strikePrice || opt.strike);
-                    const oi = opt.openInterest || 0;
-                    if (oi <= 0) continue;
+                    // Usamos OI + Volumen para un "Live Max Pain" que detecta cambios intradiarios
+                    // Schwab suele usar 'volume' en el chain de opciones y 'totalVolume' en quotes
+                    const liquidity = (opt.openInterest || 0) + (opt.totalVolume || opt.volume || 0);
+                    if (liquidity <= 0) continue;
 
                     if (opt.putCall === 'CALL') {
                         // ITM Calls si el precio de cierre > strike
                         if (testPrice > strike) {
-                            totalPain += (testPrice - strike) * oi;
+                            totalPain += (testPrice - strike) * liquidity;
                         }
                     } else if (opt.putCall === 'PUT') {
                         // ITM Puts si el precio de cierre < strike
                         if (testPrice < strike) {
-                            totalPain += (strike - testPrice) * oi;
+                            totalPain += (strike - testPrice) * liquidity;
                         }
                     }
                 }

@@ -7,9 +7,10 @@ interface GammaCurveChartProps {
     gammaFlip: number;
     callWall?: number;
     putWall?: number;
+    maxPain?: number;
 }
 
-export function GammaCurveChart({ data, currentPrice, gammaFlip, callWall, putWall }: GammaCurveChartProps) {
+export function GammaCurveChart({ data, currentPrice, gammaFlip, callWall, putWall, maxPain }: GammaCurveChartProps) {
     const { t } = useTranslation();
 
     // SVG Dimensions
@@ -26,6 +27,7 @@ export function GammaCurveChart({ data, currentPrice, gammaFlip, callWall, putWa
         if (putWall) prices.push(putWall);
         if (currentPrice) prices.push(currentPrice);
         if (gammaFlip) prices.push(gammaFlip);
+        if (maxPain) prices.push(maxPain);
 
         const min = Math.min(...prices);
         const max = Math.max(...prices);
@@ -171,6 +173,15 @@ export function GammaCurveChart({ data, currentPrice, gammaFlip, callWall, putWa
                             />
                         )}
 
+                        {/* Max Pain Marker (Pink) */}
+                        {maxPain && (
+                            <line
+                                x1={getX(maxPain)} y1={0}
+                                x2={getX(maxPain)} y2={graphHeight}
+                                stroke="#ec4899" strokeWidth="2" strokeDasharray="2 2"
+                            />
+                        )}
+
                         {/* X-Axis Ticks */}
                         {[xMin, (xMin + xMax) / 2, xMax].map((tick, i) => (
                             <text
@@ -225,6 +236,20 @@ export function GammaCurveChart({ data, currentPrice, gammaFlip, callWall, putWa
                                 dx="5"
                             >
                                 CALL WALL: ${callWall != null ? callWall.toFixed(0) : '--'}
+                            </text>
+                        )}
+
+                        {maxPain && (
+                            <text
+                                x={getX(maxPain)}
+                                y={graphHeight + 35}
+                                textAnchor="middle"
+                                fill="#ec4899"
+                                fontSize="9"
+                                fontWeight="bold"
+                                dy="2"
+                            >
+                                MAX PAIN: ${maxPain != null ? maxPain.toFixed(0) : '--'}
                             </text>
                         )}
                     </g>
