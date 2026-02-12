@@ -81,16 +81,18 @@ export function VolumeScanner({ onSymbolSelect }: VolumeScannerProps) {
 
   if (loading) {
     return (
-      <div className="bg-gray-800 rounded-lg p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white flex items-center">
-            <TrendingUp className="h-5 w-5 mr-2 text-green-500" />
+      <div className="glass-surface rounded-2xl p-6 border border-white/[0.05]">
+        <div className="flex items-center space-x-3 mb-6">
+          <div className="p-2 bg-accent/10 rounded-lg">
+            <TrendingUp className="h-4 w-4 text-accent animate-pulse" />
+          </div>
+          <h2 className="text-[10px] font-black text-white uppercase tracking-widest">
             {t('Volume Scanner')}
           </h2>
         </div>
-        <div className="animate-pulse space-y-3">
+        <div className="space-y-2">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-16 bg-gray-700 rounded"></div>
+            <div key={i} className="h-12 bg-white/[0.02] rounded-lg animate-pulse"></div>
           ))}
         </div>
       </div>
@@ -98,151 +100,165 @@ export function VolumeScanner({ onSymbolSelect }: VolumeScannerProps) {
   }
 
   return (
-    <div className="bg-gray-800 rounded-lg p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-white flex items-center">
-          <TrendingUp className="h-5 w-5 mr-2 text-green-500" />
-          {t('Volume Scanner')}
-        </h2>
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <label className="text-sm text-gray-400">{t('Min RVOL')}:</label>
+    <div className="space-y-4">
+      {/* Controls Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-4 px-1">
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-accent/10 rounded-lg">
+            <Activity className="h-4 w-4 text-accent" />
+          </div>
+          <div>
+            <h3 className="text-[10px] font-black text-white uppercase tracking-widest leading-none">Volume Heatmap</h3>
+            <p className="text-[9px] text-ink-tertiary uppercase tracking-wider font-semibold mt-0.5">Real-time Flow Analysis</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-base/50 border border-white/10 rounded-lg px-3 py-1.5">
+            <label className="text-[9px] text-ink-tertiary uppercase font-black tracking-widest">Min RVOL:</label>
             <input
               type="number"
               value={filters.minRvol}
               onChange={(e) => setFilters(prev => ({ ...prev, minRvol: Number(e.target.value) }))}
-              className="bg-gray-700 text-white px-2 py-1 rounded text-sm w-16"
+              className="bg-white/5 text-white px-2 py-1 rounded text-xs w-14 data-font font-bold border border-white/10 focus:border-accent/50 focus:outline-none transition-colors"
               min="1"
               step="0.1"
             />
           </div>
-          <div className="flex items-center space-x-2">
-            <label className="text-sm text-gray-400">{t('Min $Vol')}:</label>
+          <div className="flex items-center gap-2 bg-base/50 border border-white/10 rounded-lg px-3 py-1.5">
+            <label className="text-[9px] text-ink-tertiary uppercase font-black tracking-widest">Min $Vol:</label>
             <input
               type="number"
               value={filters.minDollarVol / 1000000}
               onChange={(e) => setFilters(prev => ({ ...prev, minDollarVol: Number(e.target.value) * 1000000 }))}
-              className="bg-gray-700 text-white px-2 py-1 rounded text-sm w-16"
+              className="bg-white/5 text-white px-2 py-1 rounded text-xs w-14 data-font font-bold border border-white/10 focus:border-accent/50 focus:outline-none transition-colors"
               min="10"
               step="10"
             />
-            <span className="text-sm text-gray-400">M</span>
+            <span className="text-[9px] text-ink-muted font-bold">M</span>
           </div>
         </div>
       </div>
 
-      <div className="overflow-x-auto h-[400px] overflow-y-auto custom-scrollbar">
-        <table className="w-full text-sm">
-          <thead className="sticky top-0 bg-gray-800 z-10 shadow-lg">
-            <tr className="border-b border-gray-700">
-              <th
-                className="text-left py-3 px-2 text-gray-400 font-medium cursor-pointer hover:text-white"
-                onClick={() => handleSort('symbol')}
-              >
-                {t('Symbol')} {sortConfig.key === 'symbol' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-              </th>
-              <th
-                className="text-right py-3 px-2 text-gray-400 font-medium cursor-pointer hover:text-white"
-                onClick={() => handleSort('price')}
-              >
-                {t('Price')} {sortConfig.key === 'price' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-              </th>
-              <th
-                className="text-right py-3 px-2 text-gray-400 font-medium cursor-pointer hover:text-white"
-                onClick={() => handleSort('rvol')}
-              >
-                {t('Volume')} {sortConfig.key === 'rvol' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-              </th>
-              <th
-                className="text-right py-3 px-2 text-gray-400 font-medium cursor-pointer hover:text-white"
-                onClick={() => handleSort('dollarVolume')}
-              >
-                $Volume {sortConfig.key === 'dollarVolume' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-              </th>
-              <th
-                className="text-right py-3 px-2 text-gray-400 font-medium cursor-pointer hover:text-white"
-                onClick={() => handleSort('changePercent')}
-              >
-                %Δ {sortConfig.key === 'changePercent' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-              </th>
-              <th className="text-center py-3 px-2 text-gray-400 font-medium">{t('Pressure')}</th>
-              <th className="text-left py-3 px-2 text-gray-400 font-medium">{t('Action')}</th>
-              <th className="text-center py-3 px-2 text-gray-400 font-medium">{t('View')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sortedData.map((stock) => (
-              <tr
-                key={stock.symbol}
-                className="border-b border-gray-700 hover:bg-gray-700 transition-colors cursor-pointer"
-                onClick={() => handleStockClick(stock)}
-              >
-                <td className="py-3 px-2">
-                  <div className="font-bold text-white">{stock.symbol}</div>
-                </td>
-                <td className="py-3 px-2 text-right">
-                  <div className="text-white font-mono">${stock.price?.toFixed(2) || '0.00'}</div>
-                </td>
-                <td className="py-3 px-2 text-right">
-                  <span className={`font-bold ${stock.rvol >= 4 ? 'text-red-400' :
-                    stock.rvol >= 3 ? 'text-yellow-400' : 'text-green-400'
-                    }`}>
-                    {stock.rvol.toFixed(1)}x
-                  </span>
-                </td>
-                <td className="py-3 px-2 text-right text-white font-bold">
-                  ${(stock.dollarVolume / 1000000).toFixed(0)}M
-                </td>
-                <td className="py-3 px-2 text-right">
-                  <span className={`font-bold ${stock.changePercent > 0 ? 'text-green-400' :
-                    stock.changePercent < 0 ? 'text-red-400' : 'text-gray-400'
-                    }`}>
-                    {stock.changePercent > 0 ? '+' : ''}{stock.changePercent.toFixed(1)}%
-                  </span>
-                </td>
-                <td className="py-3 px-2">
-                  <div className="flex items-center justify-center space-x-2">
-                    <div className="text-xs text-gray-400">
-                      B:{stock.bidHits}%
-                    </div>
-                    <div className="w-12 h-2 bg-gray-600 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-red-500 to-green-500"
-                        style={{
-                          width: '100%',
-                          background: `linear-gradient(to right, #ef4444 ${100 - stock.bidHits}%, #22c55e ${100 - stock.bidHits}%)`
-                        }}
-                      />
-                    </div>
-                    <div className="text-xs text-gray-400">
-                      A:{stock.askHits}%
-                    </div>
-                  </div>
-                </td>
-                <td className="py-3 px-2">
-                  <span className={`font-medium ${getActionColor(stock.action)}`}>
-                    {stock.action}
-                  </span>
-                </td>
-                <td className="py-3 px-2 text-center">
-                  <Link
-                    to={`/scanner/${stock.symbol}`}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs font-medium transition-colors"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {t('Chart')}
-                  </Link>
-                </td>
+      {/* Data Table */}
+      <div className="bg-base/30 rounded-2xl border border-white/[0.05] overflow-hidden">
+        <div className="overflow-x-auto max-h-[450px] overflow-y-auto">
+          <table className="w-full text-xs">
+            <thead className="sticky top-0 bg-base/95 backdrop-blur-md z-10 border-b border-white/[0.08]">
+              <tr>
+                <th
+                  className="text-left py-3 px-4 text-ink-tertiary font-black uppercase tracking-widest text-[9px] cursor-pointer hover:text-accent transition-colors"
+                  onClick={() => handleSort('symbol')}
+                >
+                  Symbol {sortConfig.key === 'symbol' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                </th>
+                <th
+                  className="text-right py-3 px-4 text-ink-tertiary font-black uppercase tracking-widest text-[9px] cursor-pointer hover:text-accent transition-colors"
+                  onClick={() => handleSort('price')}
+                >
+                  Price {sortConfig.key === 'price' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                </th>
+                <th
+                  className="text-right py-3 px-4 text-ink-tertiary font-black uppercase tracking-widest text-[9px] cursor-pointer hover:text-accent transition-colors"
+                  onClick={() => handleSort('rvol')}
+                >
+                  RVOL {sortConfig.key === 'rvol' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                </th>
+                <th
+                  className="text-right py-3 px-4 text-ink-tertiary font-black uppercase tracking-widest text-[9px] cursor-pointer hover:text-accent transition-colors"
+                  onClick={() => handleSort('dollarVolume')}
+                >
+                  $Volume {sortConfig.key === 'dollarVolume' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                </th>
+                <th
+                  className="text-right py-3 px-4 text-ink-tertiary font-black uppercase tracking-widest text-[9px] cursor-pointer hover:text-accent transition-colors"
+                  onClick={() => handleSort('changePercent')}
+                >
+                  %Δ {sortConfig.key === 'changePercent' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                </th>
+                <th className="text-center py-3 px-4 text-ink-tertiary font-black uppercase tracking-widest text-[9px]">Flow</th>
+                <th className="text-left py-3 px-4 text-ink-tertiary font-black uppercase tracking-widest text-[9px]">Signal</th>
+                <th className="text-center py-3 px-4 text-ink-tertiary font-black uppercase tracking-widest text-[9px]">Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {sortedData.map((stock, idx) => (
+                <tr
+                  key={stock.symbol}
+                  className="border-b border-white/[0.03] hover:bg-white/[0.03] transition-all cursor-pointer group"
+                  onClick={() => handleStockClick(stock)}
+                >
+                  <td className="py-3 px-4">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-1 h-6 rounded-full bg-gradient-to-b from-accent/50 to-accent/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                      <span className="font-black text-white tracking-tight">{stock.symbol}</span>
+                    </div>
+                  </td>
+                  <td className="py-3 px-4 text-right">
+                    <span className="text-white data-font font-bold">${stock.price?.toFixed(2) || '0.00'}</span>
+                  </td>
+                  <td className="py-3 px-4 text-right">
+                    <span className={`font-black px-2 py-0.5 rounded ${stock.rvol >= 5 ? 'bg-negative/10 text-negative' :
+                      stock.rvol >= 4 ? 'bg-warning/10 text-warning' :
+                        stock.rvol >= 3 ? 'bg-accent/10 text-accent' : 'text-ink-secondary'
+                      }`}>
+                      {stock.rvol.toFixed(1)}x
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-right">
+                    <span className="text-white data-font font-bold">
+                      ${(stock.dollarVolume / 1000000).toFixed(0)}M
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-right">
+                    <span className={`font-black data-font ${stock.changePercent > 0 ? 'text-positive' :
+                      stock.changePercent < 0 ? 'text-negative' : 'text-ink-muted'
+                      }`}>
+                      {stock.changePercent > 0 ? '+' : ''}{stock.changePercent.toFixed(1)}%
+                    </span>
+                  </td>
+                  <td className="py-3 px-4">
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="text-[8px] text-red-400/80 font-bold data-font">B:{stock.bidHits}%</span>
+                      <div className="w-16 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                        <div
+                          className="h-full transition-all"
+                          style={{
+                            width: '100%',
+                            background: `linear-gradient(to right, #ef4444 ${stock.bidHits}%, #22c55e ${stock.bidHits}%)`
+                          }}
+                        />
+                      </div>
+                      <span className="text-[8px] text-green-400/80 font-bold data-font">A:{stock.askHits}%</span>
+                    </div>
+                  </td>
+                  <td className="py-3 px-4">
+                    <span className={`text-[10px] font-bold ${getActionColor(stock.action)}`}>
+                      {stock.action}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-center">
+                    <Link
+                      to={`/scanner/${stock.symbol}`}
+                      className="inline-flex items-center px-3 py-1 bg-accent/10 hover:bg-accent/20 text-accent border border-accent/20 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Chart
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {volumeData.length === 0 && (
-        <div className="text-center py-8">
-          <TrendingUp className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-400">{t('No stocks match')}</p>
+        <div className="text-center py-12 bg-white/[0.02] rounded-2xl border border-white/[0.05]">
+          <div className="p-4 bg-white/5 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+            <TrendingUp className="h-8 w-8 text-ink-muted" />
+          </div>
+          <p className="text-ink-tertiary text-sm font-semibold uppercase tracking-wider">{t('No stocks match')}</p>
         </div>
       )}
     </div>

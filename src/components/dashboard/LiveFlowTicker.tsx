@@ -52,14 +52,16 @@ export function LiveFlowTicker() {
     // Fallback if no entries yet
     if (entries.length === 0) {
         return (
-            <div className="w-full bg-black/80 border-y border-gray-800 backdrop-blur-md h-10 flex items-center px-4 overflow-hidden relative">
-                <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-black to-transparent z-10 flex items-center pl-4">
-                    <div className="flex items-center space-x-2">
-                        <Zap className="w-3 h-3 text-gray-600" />
-                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Institutional Flow</span>
+            <div className="w-full bg-base/95 backdrop-blur-xl border-y border-white/[0.05] h-12 flex items-center px-6 overflow-hidden relative">
+                <div className="absolute left-0 top-0 bottom-0 w-40 bg-gradient-to-r from-base via-base/80 to-transparent z-10 flex items-center pl-6">
+                    <div className="flex items-center space-x-3">
+                        <div className="p-1.5 bg-accent/10 rounded-md">
+                            <Zap className="w-3 h-3 text-accent/40 animate-pulse" />
+                        </div>
+                        <span className="text-[9px] font-black text-ink-tertiary uppercase tracking-[0.25em]">Institutional Flow</span>
                     </div>
                 </div>
-                <div className="pl-36 text-[10px] font-black text-gray-700 uppercase tracking-widest animate-pulse">
+                <div className="pl-44 text-[9px] font-bold text-ink-tertiary uppercase tracking-widest animate-pulse">
                     Awaiting live streaming flow data...
                 </div>
             </div>
@@ -67,11 +69,13 @@ export function LiveFlowTicker() {
     }
 
     return (
-        <div className="w-full bg-black/80 border-y border-gray-800 backdrop-blur-md h-10 overflow-hidden flex items-center relative group">
-            <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-black to-transparent z-10 flex items-center pl-4">
-                <div className="flex items-center space-x-2">
-                    <Zap className="w-3 h-3 text-yellow-500 fill-yellow-500 animate-pulse" />
-                    <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Institutional Flow</span>
+        <div className="w-full bg-base/95 backdrop-blur-xl border-y border-white/[0.05] h-12 overflow-hidden flex items-center relative group shadow-[inset_0_1px_0_0_rgba(255,255,255,0.03)]">
+            <div className="absolute left-0 top-0 bottom-0 w-40 bg-gradient-to-r from-base via-base/90 to-transparent z-10 flex items-center pl-6">
+                <div className="flex items-center space-x-3">
+                    <div className="p-1.5 bg-accent/10 rounded-md shadow-[0_0_12px_rgba(0,242,255,0.15)]">
+                        <Zap className="w-3 h-3 text-accent fill-accent/50 animate-pulse" />
+                    </div>
+                    <span className="text-[9px] font-black text-white uppercase tracking-[0.25em]">Institutional Flow</span>
                 </div>
             </div>
 
@@ -79,26 +83,34 @@ export function LiveFlowTicker() {
                 {[...entries, ...entries].map((entry, idx) => (
                     <div
                         key={`${entry.id}-${idx}`}
-                        className="inline-flex items-center space-x-3 px-6 border-r border-gray-800 h-full hover:bg-white/5 transition-colors cursor-default"
+                        className="inline-flex items-center space-x-4 px-6 border-r border-white/[0.05] h-full hover:bg-white/[0.03] transition-all cursor-default group/item"
                     >
-                        <span className="text-[10px] font-mono text-gray-500">{entry.timestamp}</span>
-                        <span className="text-sm font-black text-white">{entry.symbol}</span>
-                        <div className="flex items-center space-x-1">
+                        <span className="text-[9px] data-font text-ink-tertiary font-medium">{entry.timestamp}</span>
+                        <span className="text-sm font-black text-white tracking-tight">{entry.symbol}</span>
+                        <div className="flex items-center space-x-2">
                             {entry.strike > 0 && (
-                                <span className="text-xs font-bold text-gray-400">{entry.strike}</span>
+                                <span className="text-xs font-bold text-ink-secondary data-font">${entry.strike}</span>
                             )}
-                            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${entry.type === 'CALL' ? 'bg-green-900/50 text-green-400' : 'bg-red-900/50 text-red-400'
+                            <span className={`text-[9px] font-black px-2 py-0.5 rounded-md border ${entry.type === 'CALL'
+                                ? 'bg-positive/10 text-positive border-positive/20'
+                                : 'bg-negative/10 text-negative border-negative/20'
                                 }`}>
                                 {entry.type}
                             </span>
                         </div>
                         <div className="flex items-center space-x-2">
-                            <span className={`text-xs font-bold ${entry.side === 'BUY' ? 'text-green-500' : entry.side === 'SELL' ? 'text-red-500' : 'text-gray-400'}`}>
-                                {entry.side === 'BUY' ? <TrendingUp className="w-3 h-3 inline mr-1" /> : entry.side === 'SELL' ? <TrendingDown className="w-3 h-3 inline mr-1" /> : null}
-                                {entry.size}
-                            </span>
+                            <div className={`flex items-center space-x-1 text-xs font-black data-font ${entry.side === 'BUY' ? 'text-positive' :
+                                entry.side === 'SELL' ? 'text-negative' : 'text-ink-muted'
+                                }`}>
+                                {entry.side === 'BUY' ? (
+                                    <TrendingUp className="w-3 h-3" />
+                                ) : entry.side === 'SELL' ? (
+                                    <TrendingDown className="w-3 h-3" />
+                                ) : null}
+                                <span>{entry.size}</span>
+                            </div>
                             {entry.flags?.includes('SWEEP') && (
-                                <span className="bg-blue-900/40 text-blue-400 text-[8px] font-black px-1 rounded border border-blue-500/30 flex items-center">
+                                <span className="bg-accent/10 text-accent text-[8px] font-black px-2 py-0.5 rounded-md border border-accent/30 flex items-center shadow-[0_0_8px_rgba(0,242,255,0.1)]">
                                     <Target className="w-2 h-2 mr-1" /> SWEEP
                                 </span>
                             )}

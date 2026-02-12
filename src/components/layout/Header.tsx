@@ -60,17 +60,21 @@ export function Header() {
   ];
 
   return (
-    <header className="bg-gray-900 border-b border-gray-800">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          <div className="flex items-center">
-            <Link to="/" className="flex items-center space-x-2">
-              <BarChart3 className="h-8 w-8 text-green-500" />
-              <span className="text-xl font-bold text-white">{t('TapeReading Logo')}</span>
+    <header className="glass-surface sticky top-0 z-50 border-b border-white/[0.05]">
+      <div className="max-w-[1600px] mx-auto px-6">
+        <div className="flex items-center justify-between h-14">
+          <div className="flex items-center mr-12">
+            <Link to="/" className="flex items-center space-x-3 group transition-all">
+              <div className="p-1.5 bg-accent/10 rounded-lg group-hover:bg-accent/20 transition-colors border border-accent/20">
+                <Zap className="h-5 w-5 text-accent" />
+              </div>
+              <span className="text-lg font-black tracking-tighter text-white uppercase italic">
+                STREAM<span className="text-accent">.</span>FLOW
+              </span>
             </Link>
           </div>
 
-          <nav className="flex space-x-4">
+          <nav className="hidden lg:flex items-center space-x-1">
             {navItems.map(({ path, label, icon: Icon }) => {
               const isActive = location.pathname === path;
               return (
@@ -78,53 +82,50 @@ export function Header() {
                   key={path}
                   to={path}
                   className={`
-                    flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors
+                    flex items-center space-x-2 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all
                     ${isActive
-                      ? 'bg-gray-800 text-white'
-                      : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                      ? 'bg-accent/10 text-accent border border-accent/20 shadow-[0_0_15px_rgba(0,242,255,0.1)]'
+                      : 'text-ink-secondary hover:text-white hover:bg-white/5'
                     }
                   `}
                 >
-                  <Icon className="h-4 w-4" />
-                  <span>{label}</span>
+                  <Icon className="h-3.5 w-3.5" />
+                  <span className="uppercase">{label}</span>
                 </Link>
               );
             })}
           </nav>
 
-          <div className="flex items-center space-x-6">
+          <div className="flex items-center space-x-4">
             {/* Market Status Widget */}
-            <div className={`flex flex-col items-end px-3 py-1 rounded border ${marketStatus.isOpen ? 'bg-green-900/20 border-green-800' : 'bg-gray-800 border-gray-700'}`}>
+            <div className={`flex items-center space-x-3 px-3 py-1.5 rounded-lg border transition-all ${marketStatus.isOpen ? 'bg-positive/5 border-positive/20' : 'bg-white/5 border-white/10'}`}>
               <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${marketStatus.isOpen ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-                <span className={`text-xs font-bold ${marketStatus.isOpen ? 'text-green-400' : 'text-gray-400'}`}>
+                <div className={`w-1.5 h-1.5 rounded-full shadow-[0_0_8px] ${marketStatus.isOpen ? 'bg-positive shadow-positive/50 animate-pulse' : 'bg-negative shadow-negative/50'}`}></div>
+                <span className={`text-[10px] font-black uppercase tracking-widest ${marketStatus.isOpen ? 'text-positive' : 'text-ink-secondary'}`}>
                   {marketStatus.text}
                 </span>
               </div>
-              <span className="text-[10px] text-gray-500">{marketStatus.next}</span>
+              <span className="text-[9px] text-ink-muted data-font font-medium pt-0.5">{marketStatus.next}</span>
             </div>
 
             {/* Language Selector */}
-            <div className="relative">
-              <button
-                onClick={() => {
-                  const newLang = i18n.language === 'en' ? 'es' : 'en';
-                  i18n.changeLanguage(newLang);
-                }}
-                className="flex items-center space-x-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-md transition-colors group"
-                title={i18n.language === 'en' ? t('Switch to Spanish') : t('Switch to English')}
-              >
-                <span className="text-lg">
-                  {i18n.language === 'en' ? '🇺🇸' : '🇪🇸'}
-                </span>
-                <span className="text-xs font-medium text-gray-300 group-hover:text-white">
-                  {i18n.language === 'en' ? 'EN' : 'ES'}
-                </span>
-              </button>
-            </div>
+            <button
+              onClick={() => {
+                const newLang = i18n.language === 'en' ? 'es' : 'en';
+                i18n.changeLanguage(newLang);
+              }}
+              className="flex items-center space-x-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all group"
+            >
+              <span className="text-sm">
+                {i18n.language === 'en' ? '🇺🇸' : '🇪🇸'}
+              </span>
+              <span className="text-[10px] font-black text-ink-secondary group-hover:text-white data-font">
+                {i18n.language === 'en' ? 'EN' : 'ES'}
+              </span>
+            </button>
 
-            <div className="flex items-center space-x-2">
-              <span className="text-xs text-gray-500 font-mono">{t('Version')}</span>
+            <div className="flex items-center border-l border-white/10 pl-4 h-6">
+              <span className="text-[9px] text-ink-muted data-font font-bold uppercase tracking-tighter tabular-nums">v1.16.7</span>
             </div>
           </div>
         </div>

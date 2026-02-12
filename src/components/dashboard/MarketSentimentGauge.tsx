@@ -34,23 +34,25 @@ export function MarketSentimentGauge({ value, label }: MarketSentimentGaugeProps
     const rotation = (value / 100) * 180 - 90;
 
     return (
-        <div className="group relative bg-gray-900/60 border border-gray-800 rounded-xl p-4 flex flex-col items-center justify-center backdrop-blur-sm shadow-xl hover:border-blue-500/50 transition-all duration-300">
+        <div className="group relative glass-surface rounded-xl p-5 border border-white/[0.08] hover:border-white/[0.15] transition-all duration-300 flex flex-col items-center justify-center">
             {/* Tooltip */}
-            <div className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full w-48 p-2 bg-gray-900 border border-gray-700 rounded-lg shadow-2xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 text-[10px] text-gray-300 text-center leading-relaxed">
-                <div className="font-black text-white mb-1 uppercase tracking-tighter border-b border-gray-800 pb-1">{label}</div>
+            <div className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full w-56 p-3 bg-gray-950 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 text-[10px] text-ink-secondary text-center leading-relaxed">
+                <div className="font-black text-accent mb-2 uppercase tracking-wider border-b border-white/10 pb-1 text-[9px]">{label}</div>
                 {description}
                 {/* Arrow */}
-                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-700"></div>
+                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-950"></div>
             </div>
 
-            <div className="flex items-center space-x-2 mb-3">
-                <Gauge className="w-3 h-3 text-gray-500" />
-                <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">{label}</span>
+            <div className="flex items-center space-x-2 mb-4">
+                <div className="p-1 bg-white/5 rounded">
+                    <Gauge className="w-3 h-3 text-ink-muted" />
+                </div>
+                <span className="text-[9px] font-black text-ink-tertiary uppercase tracking-[0.2em]">{label}</span>
             </div>
 
             <div className="relative w-32 h-16 overflow-hidden">
                 {/* Semi-circle background */}
-                <div className="absolute top-0 left-0 w-32 h-32 rounded-full border-[10px] border-gray-800/50 scale-y-[1] translate-y-0"></div>
+                <div className="absolute top-0 left-0 w-32 h-32 rounded-full border-[10px] border-white/5 scale-y-[1] translate-y-0"></div>
 
                 {/* Colored arc */}
                 <svg className="absolute top-0 left-0 w-32 h-16" viewBox="0 0 128 64">
@@ -70,6 +72,9 @@ export function MarketSentimentGauge({ value, label }: MarketSentimentGaugeProps
                         strokeLinecap="round"
                         strokeDasharray={`${(value / 100) * 169} 169`}
                         className={color}
+                        style={{
+                            filter: 'drop-shadow(0 0 4px currentColor)'
+                        }}
                     />
                 </svg>
 
@@ -78,19 +83,19 @@ export function MarketSentimentGauge({ value, label }: MarketSentimentGaugeProps
                     className="absolute bottom-0 left-1/2 w-1 h-12 bg-white origin-bottom rounded-full transition-transform duration-1000 ease-out shadow-[0_0_10px_rgba(255,255,255,0.5)]"
                     style={{ transform: `translateX(-50%) rotate(${rotation}deg)` }}
                 ></div>
-                <div className="absolute bottom-0 left-1/2 w-3 h-3 bg-gray-900 border-2 border-white rounded-full -translate-x-1/2 translate-y-1/2 z-10"></div>
+                <div className="absolute bottom-0 left-1/2 w-3 h-3 bg-base border-2 border-white rounded-full -translate-x-1/2 translate-y-1/2 z-10 shadow-[0_0_8px_rgba(255,255,255,0.3)]"></div>
             </div>
 
-            <div className="mt-2 text-center">
-                <span className={`text-2xl font-black font-mono tracking-tighter ${color}`}>
+            <div className="mt-3 text-center">
+                <span className={`text-3xl font-black data-font tracking-tighter ${color}`}>
                     {value != null ? value.toFixed(0) : '--'}
                 </span>
-                <span className="text-gray-600 text-[10px] ml-1 uppercase font-bold tracking-widest">Index</span>
+                <span className="text-ink-tertiary text-[9px] ml-1.5 uppercase font-bold tracking-widest">Index</span>
             </div>
 
-            <div className="flex justify-between w-full mt-1 px-2">
-                <span className="text-[8px] text-red-500/50 font-black">PANIC</span>
-                <span className="text-[8px] text-green-500/50 font-black">GREED</span>
+            <div className="flex justify-between w-full mt-2 px-2">
+                <span className="text-[8px] text-negative/60 font-black uppercase tracking-wider">Panic</span>
+                <span className="text-[8px] text-positive/60 font-black uppercase tracking-wider">Greed</span>
             </div>
         </div>
     );

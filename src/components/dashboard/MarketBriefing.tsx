@@ -44,7 +44,7 @@ export function MarketBriefing() {
 
         // 2. Posicionamiento Institucional y Sesgo
         const bias = netInstitutionalDelta > 0 ? "ALCISTA" : "BAJISTA";
-        const biasColor = netInstitutionalDelta > 0 ? "text-green-400" : "text-red-400";
+        const biasColor = netInstitutionalDelta > 0 ? "text-positive" : "text-negative";
         paragraphs.push({
             icon: <Zap className="h-4 w-4 text-yellow-400" />,
             title: "Sesgo y Flujo Institucional",
@@ -101,16 +101,16 @@ export function MarketBriefing() {
     const displaySymbol = selectedSymbol || 'SPX';
 
     return (
-        <div className="bg-gray-900/40 border border-gray-800 rounded-2xl p-6 lg:p-8">
-            <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 pb-4 border-b border-gray-800/50 gap-4">
+        <div className="glass-surface rounded-2xl p-6 lg:p-8 border border-white/[0.08]">
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 pb-4 border-b border-white/[0.08] gap-4">
                 <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-blue-500/10 rounded-lg">
-                        <Quote className="h-5 w-5 text-blue-400" />
+                    <div className="p-2 bg-accent/10 rounded-lg">
+                        <Quote className="h-5 w-5 text-accent" />
                     </div>
                     <div>
-                        <h2 className="text-xl font-bold text-white tracking-tight">Daily Intelligence Briefing</h2>
+                        <h2 className="text-xl font-black text-white tracking-tight uppercase">Daily Intelligence Briefing</h2>
                         <div className="flex items-center space-x-2">
-                            <div className="px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 rounded text-[10px] font-bold text-blue-400 uppercase tracking-widest animate-pulse">
+                            <div className="px-3 py-1 bg-accent/10 border border-accent/20 rounded-lg text-[9px] font-black text-accent uppercase tracking-widest animate-pulse shadow-[0_0_10px_rgba(0,242,255,0.1)]">
                                 En Tiempo Real
                             </div>
                         </div>
@@ -118,12 +118,12 @@ export function MarketBriefing() {
                 </div>
 
                 {/* Selected Asset Display - Highlighted */}
-                <div className="flex items-center bg-gray-950 px-4 py-2 rounded-xl border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.1)]">
+                <div className="flex items-center bg-white/[0.02] px-4 py-2 rounded-xl border border-accent/30 shadow-[0_0_15px_rgba(0,242,255,0.1)]">
                     <div className="flex flex-col items-end mr-3">
-                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">Analizando Activo</span>
-                        <span className="text-xs text-blue-400 font-mono font-bold">Structural Micro-Data</span>
+                        <span className="text-[9px] text-ink-tertiary font-black uppercase tracking-wider">Analizando Activo</span>
+                        <span className="text-[10px] text-accent data-font font-bold">Structural Micro-Data</span>
                     </div>
-                    <div className="text-3xl font-black text-white px-3 border-l border-gray-800">
+                    <div className="text-3xl font-black text-white px-3 border-l border-white/10">
                         {displaySymbol}
                     </div>
                 </div>
@@ -136,22 +136,22 @@ export function MarketBriefing() {
                             {item.icon}
                         </div>
                         <div className="space-y-2">
-                            <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest group-hover:text-blue-400/80 transition-colors">
+                            <h3 className="text-[10px] font-black text-ink-tertiary uppercase tracking-widest group-hover:text-accent/80 transition-colors">
                                 {item.title}
                             </h3>
-                            <p className="text-gray-300 leading-relaxed font-medium">
+                            <p className="text-ink-secondary leading-relaxed font-medium text-sm">
                                 {item.text}
                             </p>
                         </div>
                         {index < briefing.length - 1 && (
-                            <div className="absolute left-[7px] top-7 bottom-[-20px] w-px bg-gradient-to-b from-gray-800 to-transparent" />
+                            <div className="absolute left-[7px] top-7 bottom-[-20px] w-px bg-gradient-to-b from-white/10 to-transparent" />
                         )}
                     </div>
                 ))}
             </div>
 
-            <div className="mt-10 pt-6 border-t border-gray-800/50">
-                <p className="text-[10px] text-gray-500 italic leading-tight">
+            <div className="mt-10 pt-6 border-t border-white/[0.08]">
+                <p className="text-[10px] text-gray-400 italic leading-tight">
                     * Este resumen se genera dinámicamente analizando la microestructura del mercado, el posicionamiento de los proveedores de liquidez y los vectores de cobertura de segundo orden (Vanna/Charm). No constituye asesoría financiera.
                 </p>
             </div>

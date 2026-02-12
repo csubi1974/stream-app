@@ -45,44 +45,67 @@ export function Dashboard() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className="min-h-screen bg-base pb-12">
       <Header />
       <AlertContainer position="top-right" />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">
-            {t('TapeReading Platform')}
-          </h1>
-          <p className="text-gray-400">
-            {t('Real-time analysis')}
-          </p>
-        </div>
+      <main className="max-w-[1600px] mx-auto px-6 py-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 pb-6 border-b border-white/[0.05]">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-black text-white tracking-tight uppercase italic flex items-center space-x-3">
+              <span className="w-1 h-6 bg-accent rounded-full inline-block"></span>
+              <span>{t('TapeReading Platform')}</span>
+            </h1>
+            <p className="text-[10px] text-ink-tertiary uppercase tracking-[0.2em] font-bold">
+              {t('Real-time analysis')} • <span className="text-accent">INSTITUTIONAL FLOW MONITOR</span>
+            </p>
+          </div>
 
-        {/* Connection Status */}
-        <div className="mb-6">
-          <div className={`inline-flex items-center space-x-2 px-3 py-1 rounded-full text-sm ${isConnected
-            ? 'bg-green-900 text-green-300'
-            : 'bg-red-900 text-red-300'
-            }`}>
-            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
-              }`}></div>
-            <span>{isConnected ? t('Connected to market data') : t('Disconnected from market data')}</span>
+          {/* Connection Status */}
+          <div className="mt-4 md:mt-0">
+            <div className={`inline-flex items-center space-x-3 px-4 py-1.5 rounded-full border shadow-sm transition-all ${isConnected
+              ? 'bg-positive/5 border-positive/20 text-positive'
+              : 'bg-negative/5 border-negative/20 text-negative'
+              }`}>
+              <div className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-positive shadow-[0_0_8px_rgba(0,255,163,0.5)] animate-pulse' : 'bg-negative shadow-[0_0_8px_rgba(255,0,85,0.5)]'
+                }`}></div>
+              <span className="text-[10px] font-black uppercase tracking-widest">{isConnected ? t('Connected to market data') : t('Disconnected from market data')}</span>
+            </div>
           </div>
         </div>
 
         {/* Market Stats Cards */}
-        <QuickStatsCards />
-
-        {/* GEX Metrics HUD */}
-        <div className="mb-6">
-          <GEXMetricsHUD />
+        <div className="grid grid-cols-1 gap-6 mb-8">
+          <QuickStatsCards />
         </div>
 
-        {/* Main Content Grid */}
+        {/* HUD & Main Scanner */}
         <div className="space-y-6">
-          <ZeroDTEScanner />
-          <VolumeScanner />
+          <div className="glass-surface rounded-2xl overflow-hidden border border-white/[0.05] shadow-2xl">
+            <div className="bg-white/[0.02] border-b border-white/[0.05] px-6 py-4">
+              <h2 className="text-[10px] font-black text-ink-tertiary uppercase tracking-widest leading-none">Global GEX Overview</h2>
+            </div>
+            <div className="p-6">
+              <GEXMetricsHUD />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="lg:col-span-12">
+              <ZeroDTEScanner />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6">
+            <div className="glass-surface rounded-2xl overflow-hidden border border-white/[0.05] shadow-xl">
+              <div className="bg-white/[0.02] border-b border-white/[0.05] px-6 py-3">
+                <h2 className="text-[10px] font-black text-ink-tertiary uppercase tracking-widest leading-none">Market Volume Heatmap</h2>
+              </div>
+              <div className="p-4">
+                <VolumeScanner />
+              </div>
+            </div>
+          </div>
         </div>
       </main>
     </div>

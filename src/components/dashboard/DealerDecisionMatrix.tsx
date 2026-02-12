@@ -106,48 +106,50 @@ export function DealerDecisionMatrix({ netDex, netGex, netVex }: DealerDecisionM
     const activeScenario = SCENARIOS.find(s => s.id === currentScenarioId) || SCENARIOS[3];
 
     return (
-        <div className="bg-gray-900/40 border border-gray-800 rounded-xl overflow-hidden shadow-2xl backdrop-blur-md">
-            <div className="px-5 py-3 border-b border-gray-800 bg-gray-900/60 flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                    <Shield className="w-4 h-4 text-blue-500" />
-                    <span className="text-xs font-black text-white uppercase tracking-widest">Estado del Dealer & Matriz de Decisión</span>
+        <div className="glass-surface rounded-xl overflow-hidden border border-white/[0.08]">
+            <div className="px-5 py-3 border-b border-white/[0.08] bg-white/[0.02] flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                    <div className="p-1.5 bg-accent/10 rounded-lg">
+                        <Shield className="w-4 h-4 text-accent" />
+                    </div>
+                    <span className="text-[10px] font-black text-white uppercase tracking-widest">Estado del Dealer & Matriz de Decisión</span>
                 </div>
-                <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-1.5">
-                        <div className={`w-1.5 h-1.5 rounded-full ${netDex >= 0 ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                        <span className="text-[10px] font-bold text-gray-500">DEX</span>
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5 bg-white/[0.02] px-2 py-1 rounded-lg border border-white/5">
+                        <div className={`w-2 h-2 rounded-full ${netDex >= 0 ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]'}`}></div>
+                        <span className="text-[9px] font-black text-ink-tertiary uppercase tracking-wider">DEX</span>
                     </div>
-                    <div className="flex items-center space-x-1.5">
-                        <div className={`w-1.5 h-1.5 rounded-full ${netGex >= 0 ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                        <span className="text-[10px] font-bold text-gray-500">GEX</span>
+                    <div className="flex items-center gap-1.5 bg-white/[0.02] px-2 py-1 rounded-lg border border-white/5">
+                        <div className={`w-2 h-2 rounded-full ${netGex >= 0 ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]'}`}></div>
+                        <span className="text-[9px] font-black text-ink-tertiary uppercase tracking-wider">GEX</span>
                     </div>
-                    <div className="flex items-center space-x-1.5">
-                        <div className={`w-1.5 h-1.5 rounded-full ${netVex >= 0 ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                        <span className="text-[10px] font-bold text-gray-500">VEX</span>
+                    <div className="flex items-center gap-1.5 bg-white/[0.02] px-2 py-1 rounded-lg border border-white/5">
+                        <div className={`w-2 h-2 rounded-full ${netVex >= 0 ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]'}`}></div>
+                        <span className="text-[9px] font-black text-ink-tertiary uppercase tracking-wider">VEX</span>
                     </div>
                 </div>
             </div>
 
             <div className="p-5">
                 {/* Active Scenario Highlight */}
-                <div className={`flex items-start space-x-4 p-4 rounded-lg bg-gray-800/40 border-l-4 border-${activeScenario.color.split('-')[1]}-500 mb-6 shadow-inner`}>
-                    <div className={`p-2 rounded-lg bg-gray-900/60 ${activeScenario.color}`}>
+                <div className="flex items-start gap-4 p-5 rounded-xl bg-white/[0.02] border-l-4 border-accent mb-6 shadow-inner">
+                    <div className={`p-3 rounded-xl bg-white/5 ${activeScenario.color}`}>
                         <activeScenario.icon className="w-6 h-6" />
                     </div>
                     <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                            <h3 className={`text-lg font-black uppercase tracking-tighter ${activeScenario.color}`}>
+                        <div className="flex items-center justify-between mb-2">
+                            <h3 className={`text-lg font-black uppercase tracking-tight ${activeScenario.color}`}>
                                 {activeScenario.name}
                             </h3>
-                            <span className="text-[10px] font-black bg-gray-900 px-2 py-0.5 rounded text-gray-400 uppercase tracking-widest border border-gray-800">
+                            <span className="text-[9px] font-black bg-accent/10 px-3 py-1 rounded-lg text-accent uppercase tracking-widest border border-accent/20">
                                 Escenario Actual
                             </span>
                         </div>
-                        <p className="text-gray-300 text-sm font-medium leading-relaxed italic mb-3">
+                        <p className="text-ink-secondary text-sm font-medium leading-relaxed italic mb-3">
                             {activeScenario.description}
                         </p>
-                        <div className="flex items-center space-x-2 bg-black/30 p-2 rounded border border-white/5">
-                            <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Acción Recomendada:</span>
+                        <div className="flex items-center gap-3 bg-white/[0.02] p-3 rounded-lg border border-white/5">
+                            <span className="text-[9px] font-black text-ink-tertiary uppercase tracking-widest">Acción Recomendada:</span>
                             <span className="text-sm font-black text-white">{activeScenario.action}</span>
                         </div>
                     </div>
@@ -158,22 +160,28 @@ export function DealerDecisionMatrix({ netDex, netGex, netVex }: DealerDecisionM
                     {SCENARIOS.map((s) => (
                         <div
                             key={s.id}
-                            className={`flex items-center justify-between px-3 py-2 rounded text-[11px] transition-all ${s.id === currentScenarioId
-                                ? 'bg-blue-500/10 border border-blue-500/20'
-                                : 'opacity-40 grayscale hover:grayscale-0 hover:opacity-100 border border-transparent'
+                            className={`flex items-center justify-between px-4 py-2.5 rounded-lg text-[11px] transition-all ${s.id === currentScenarioId
+                                ? 'bg-accent/10 border border-accent/20 shadow-[0_0_12px_rgba(0,242,255,0.1)]'
+                                : 'opacity-40 grayscale hover:grayscale-0 hover:opacity-100 border border-white/5 hover:border-white/10'
                                 }`}
                         >
-                            <div className="flex items-center space-x-3 w-40">
-                                <div className={`w-2 h-2 rounded-full ${s.dex === 'pos' ? 'bg-green-500' : s.dex === 'neg' ? 'bg-red-500' : 'bg-gray-500'
+                            <div className="flex items-center gap-3 w-44">
+                                <div className={`w-2 h-2 rounded-full ${s.dex === 'pos' ? 'bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.4)]' :
+                                    s.dex === 'neg' ? 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.4)]' :
+                                        'bg-gray-600'
                                     }`}></div>
-                                <div className={`w-2 h-2 rounded-full ${s.gex === 'pos' ? 'bg-green-500' : s.gex === 'neg' ? 'bg-red-500' : 'bg-gray-500'
+                                <div className={`w-2 h-2 rounded-full ${s.gex === 'pos' ? 'bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.4)]' :
+                                    s.gex === 'neg' ? 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.4)]' :
+                                        'bg-gray-600'
                                     }`}></div>
-                                <div className={`w-2 h-2 rounded-full ${s.vex === 'pos' ? 'bg-green-500' : s.vex === 'neg' ? 'bg-red-500' : 'bg-gray-500'
+                                <div className={`w-2 h-2 rounded-full ${s.vex === 'pos' ? 'bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.4)]' :
+                                    s.vex === 'neg' ? 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.4)]' :
+                                        'bg-gray-600'
                                     }`}></div>
-                                <span className="font-bold uppercase tracking-tighter text-gray-300">{s.name}</span>
+                                <span className="font-black uppercase tracking-tight text-white text-[10px]">{s.name}</span>
                             </div>
-                            <span className="text-gray-500 font-medium truncate ml-4 flex-1">{s.description}</span>
-                            <span className="font-black text-white ml-2 text-right">{s.action.split('.')[0]}</span>
+                            <span className="text-ink-tertiary font-medium truncate ml-4 flex-1 text-[10px]">{s.description}</span>
+                            <span className="font-black text-white ml-2 text-right text-[10px]">{s.action.split('.')[0]}</span>
                         </div>
                     ))}
                 </div>

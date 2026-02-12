@@ -229,144 +229,91 @@ export function ZeroDTEScanner() {
   };
 
   return (
-    <div className="bg-gray-800 rounded-lg overflow-hidden shadow-2xl border border-gray-700">
+    <div className="glass-surface rounded-2xl overflow-hidden border border-white/[0.05] shadow-2xl">
       {/* Live Trading Tape Ticker */}
-      <LiveFlowTicker />
+      <div className="bg-base/30 backdrop-blur-sm border-b border-white/[0.05]">
+        <LiveFlowTicker />
+      </div>
 
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center">
-            <Clock className="h-5 w-5 mr-3 text-blue-500" />
-
-            <div className="ml-6 flex items-center bg-gray-900 border border-gray-700 rounded-lg p-0.5 relative">
-              <div className="px-4 py-1.5 text-sm font-black text-blue-400 uppercase tracking-[0.2em] border-r border-gray-800 bg-blue-500/5 rounded-l-md">
-                {selectedSymbol || 'SPX'}
+      <div className="p-1">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between p-6 gap-6">
+          <div className="flex items-center space-x-6">
+            <div className="flex items-center bg-base/50 border border-white/10 rounded-xl p-1 shadow-inner backdrop-blur-md">
+              <div className="px-5 py-2 text-sm font-black text-accent uppercase tracking-widest border-r border-white/5 bg-accent/5 rounded-l-lg">
+                <span className="opacity-50 mr-2 text-[10px]">$</span>{selectedSymbol || 'SPX'}
               </div>
 
-              <div className="w-[1px] h-4 bg-gray-700 mx-1"></div>
-
-              <button
-                onClick={() => setChartMode('DEX')}
-                className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${chartMode === 'DEX'
-                  ? 'bg-amber-600 text-white shadow-lg'
-                  : 'text-gray-400 hover:bg-gray-700'
-                  }`}
-              >
-                DEX
-              </button>
-              <button
-                onClick={() => setChartMode('GEX')}
-                className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${chartMode === 'GEX'
-                  ? 'bg-blue-600 text-white shadow-lg'
-                  : 'text-gray-400 hover:bg-gray-700'
-                  }`}
-              >
-                GEX
-              </button>
-              <button
-                onClick={() => setChartMode('VEX')}
-                className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${chartMode === 'VEX'
-                  ? 'bg-purple-600/80 text-white shadow-lg'
-                  : 'text-gray-400 hover:bg-gray-700'
-                  }`}
-              >
-                VEX
-              </button>
+              <div className="flex p-1 gap-1">
+                {[
+                  { mode: 'DEX', color: 'text-amber-400', bg: 'bg-amber-400/10', border: 'border-amber-400/20' },
+                  { mode: 'GEX', color: 'text-accent', bg: 'bg-accent/10', border: 'border-accent/20' },
+                  { mode: 'VEX', color: 'text-purple-400', bg: 'bg-purple-400/10', border: 'border-purple-400/20' }
+                ].map((item) => (
+                  <button
+                    key={item.mode}
+                    onClick={() => setChartMode(item.mode as any)}
+                    className={`px-4 py-1.5 text-[10px] font-black rounded-lg transition-all uppercase tracking-widest ${chartMode === item.mode
+                      ? `${item.bg} ${item.color} ${item.border} shadow-lg shadow-black/20 scale-105`
+                      : 'text-ink-tertiary hover:text-ink-secondary hover:bg-white/5'
+                      }`}
+                  >
+                    {item.mode}
+                  </button>
+                ))}
+              </div>
             </div>
 
-
-
             {stats && (stats as any).targetDate && (
-              <span className="ml-3 px-2 py-0.5 bg-blue-900/30 border border-blue-500/30 text-blue-400 text-[10px] rounded font-mono uppercase font-bold">
-                Exp: {(stats as any).targetDate}
-              </span>
+              <div className="flex flex-col">
+                <span className="text-[10px] text-ink-tertiary uppercase font-black tracking-widest leading-none mb-1.5 ml-1">Expiration</span>
+                <span className="px-3 py-1.5 bg-white/5 border border-white/10 text-white text-[11px] rounded-lg data-font font-bold tracking-tight">
+                  {(stats as any).targetDate}
+                </span>
+              </div>
             )}
           </div>
 
           {stats && (
-            <div className="flex space-x-6 items-center">
-              <div className="flex space-x-4 bg-gray-900/80 px-4 py-1.5 rounded-lg border border-gray-700 shadow-inner">
-                {/* Wall Labels */}
-                <div className="text-center group cursor-help min-w-[70px]">
-                  <span className="block text-[8px] text-red-400 uppercase font-black tracking-tighter line-clamp-1 leading-none mb-1">
-                    {t('RESIS / PARED CALL')}
-                  </span>
-                  <span className="text-white font-mono text-sm font-bold">{formatStrike(stats.callWall)}</span>
-                </div>
-
-                <div className="w-[1px] bg-gray-800"></div>
-
-                <div className="text-center group cursor-help min-w-[70px]">
-                  <span className="block text-[8px] text-green-400 uppercase font-black tracking-tighter line-clamp-1 leading-none mb-1">
-                    {t('SOP / PARED PUT')}
-                  </span>
-                  <span className="text-white font-mono text-sm font-bold">{formatStrike(stats.putWall)}</span>
-                </div>
-
-                {stats.pinningTarget != null && (
-                  <>
-                    <div className="w-[1px] bg-gray-800"></div>
-                    <div className="text-center min-w-[70px] bg-yellow-400/10 px-2 rounded border border-yellow-400/20">
-                      <span className="block text-[8px] text-yellow-500 uppercase font-black tracking-tighter leading-none mb-1">PINNING</span>
-                      <span className="text-white font-mono text-sm font-bold">{formatStrike(stats.pinningTarget)}</span>
-                    </div>
-                  </>
-                )}
-
-                {stats.currentPrice != null && (
-                  <>
-                    <div className="w-[1px] bg-gray-800"></div>
-                    <div className="text-center min-w-[80px]">
-                      <span className="block text-[8px] text-blue-400 uppercase font-black tracking-tighter leading-none mb-1">SPOT</span>
-                      <span className="text-white font-mono text-sm font-bold">${stats.currentPrice.toFixed(2)}</span>
-                    </div>
-                  </>
-                )}
-
-                {stats.deltaTarget != null && (
-                  <>
-                    <div className="w-[1px] bg-gray-800"></div>
-                    <div className="text-center min-w-[60px]">
-                      <span className="block text-[8px] text-purple-400 uppercase font-black tracking-tighter leading-none mb-1">TARGET Δ</span>
-                      <span className="text-white font-mono text-sm font-bold">{stats.deltaTarget.toFixed(2)}</span>
-                    </div>
-                  </>
-                )}
-
-                {stats.volatilityImplied !== undefined && (
-                  <>
-                    <div className="w-[1px] bg-gray-800"></div>
-                    <div className="text-center min-w-[60px]">
-                      <span className="block text-[8px] text-amber-400 uppercase font-black tracking-tighter leading-none mb-1">IV</span>
-                      <span className="text-white font-mono text-sm font-bold">{(stats.volatilityImplied).toFixed(1)}%</span>
-                    </div>
-                  </>
-                )}
-
-                {stats.maxPain != null && (
-                  <>
-                    <div className="w-[1px] bg-gray-800"></div>
-                    <div className="text-center min-w-[70px]">
-                      <span className="block text-[8px] text-pink-400 uppercase font-black tracking-tighter leading-none mb-1">MAX PAIN</span>
-                      <span className="text-white font-mono text-sm font-bold">${stats.maxPain.toFixed(0)}</span>
-                    </div>
-                  </>
-                )}
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Institution Levels */}
+              <div className="flex bg-base/40 rounded-xl border border-white/5 p-1 shadow-inner">
+                {[
+                  { label: 'CALL WALL', value: stats.callWall, color: 'text-negative', glow: 'glow-crimson' },
+                  { label: 'PUT WALL', value: stats.putWall, color: 'text-positive', glow: 'glow-cyan' },
+                  { label: 'PINNING', value: stats.pinningTarget, color: 'text-warning' },
+                  { label: 'MAX PAIN', value: stats.maxPain, color: 'text-pink-400' }
+                ].filter(item => item.value != null).map((item, idx) => (
+                  <div key={item.label} className={`flex flex-col items-center justify-center min-w-[90px] px-4 py-2 ${idx !== 0 ? 'border-l border-white/5' : ''}`}>
+                    <span className={`text-[8px] font-black uppercase tracking-widest mb-1.5 ${item.color} opacity-80`}>{item.label}</span>
+                    <span className={`text-white data-font text-sm font-bold tracking-tighter ${item.glow ? 'relative inline-block' : ''}`}>
+                      {formatStrike(item.value!)}
+                      {item.glow && <span className={`absolute -inset-1 blur-sm bg-current opacity-20 rounded-full ${item.glow}`}></span>}
+                    </span>
+                  </div>
+                ))}
               </div>
+
+              {/* Spot Price */}
+              {stats.currentPrice != null && (
+                <div className="bg-accent/5 border border-accent/20 rounded-xl px-5 py-2.5 shadow-[0_0_20px_rgba(0,242,255,0.05)]">
+                  <span className="block text-[8px] text-accent uppercase font-black tracking-[0.2em] mb-1">Spot Price</span>
+                  <span className="text-white data-font text-lg font-black leading-none">${stats.currentPrice.toFixed(2)}</span>
+                </div>
+              )}
             </div>
           )}
         </div>
 
-        <div className="px-6">
-          {/* 1. Sentiment Analysis Gauges - Row Layout */}
-          <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 mb-6">
-            <div className="flex-1">
+        <div className="px-6 pb-6 mt-2">
+          {/* Sentiment Layer */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-6">
               <MarketSentimentGauge
                 value={stats?.volatilityImplied ? Math.max(0, Math.min(100, 100 - ((stats.volatilityImplied - 12) / (40 - 12)) * 100)) : 52}
                 label="Fear & Greed (VIX)"
               />
             </div>
-            <div className="flex-1">
+            <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-6">
               <MarketSentimentGauge
                 value={stats?.drift !== undefined ? 50 + (stats.drift * 10) : 48}
                 label="Price Drift Momentum"
@@ -374,9 +321,9 @@ export function ZeroDTEScanner() {
             </div>
           </div>
 
-          {/* 2. Gamma/Vanna Chart - Full Width */}
+          {/* Core Visualizer */}
           {stats && stats.strikes && stats.strikes.length > 0 && (
-            <div className="w-full mb-8">
+            <div className="w-full mb-10 bg-base/20 rounded-3xl p-4 border border-white/[0.02]">
               <GammaProfileChart
                 data={stats.strikes}
                 currentPrice={stats.currentPrice}
@@ -388,14 +335,27 @@ export function ZeroDTEScanner() {
             </div>
           )}
 
-          {/* 3. Dealer Decision Matrix (Estado del Dealer) */}
+          {/* Dealer Execution Intelligence */}
           {stats && stats.strikes && (
-            <div className="mb-6">
-              <DealerDecisionMatrix
-                netDex={stats.strikes.reduce((acc, s) => acc + (s.callDex || 0) + (s.putDex || 0), 0)}
-                netGex={stats.strikes.reduce((acc, s) => acc + (s.callGex || 0) + (s.putGex || 0), 0)}
-                netVex={stats.strikes.reduce((acc, s) => acc + (s.callVanna || 0) + (s.putVanna || 0), 0)}
-              />
+            <div className="bg-white/[0.02] border border-white/5 rounded-2xl overflow-hidden shadow-inner">
+              <div className="px-6 py-3 bg-white/[0.03] border-b border-white/5 flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Layers className="h-3.5 w-3.5 text-accent" />
+                  <h3 className="text-[10px] font-black text-white uppercase tracking-widest italic">Dealer Execution Matrix</h3>
+                </div>
+                <div className="flex items-center space-x-3 text-[9px] font-bold text-ink-tertiary uppercase tracking-tighter">
+                  <span>Delta Hedging</span>
+                  <span className="w-1 h-1 rounded-full bg-ink-muted"></span>
+                  <span>Gamma Sensitivity</span>
+                </div>
+              </div>
+              <div className="p-4">
+                <DealerDecisionMatrix
+                  netDex={stats.strikes.reduce((acc, s) => acc + (s.callDex || 0) + (s.putDex || 0), 0)}
+                  netGex={stats.strikes.reduce((acc, s) => acc + (s.callGex || 0) + (s.putGex || 0), 0)}
+                  netVex={stats.strikes.reduce((acc, s) => acc + (s.callVanna || 0) + (s.putVanna || 0), 0)}
+                />
+              </div>
             </div>
           )}
         </div>

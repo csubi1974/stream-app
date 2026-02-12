@@ -102,8 +102,8 @@ export class MarketDataService {
           price: lastPrice,
           changePercent: change,
           action,
-          bidHits: 50, // Real-time streaming aggr needed for this, keeping static for now
-          askHits: 50
+          bidHits: Math.max(10, Math.min(90, Math.floor(50 - (change * 5)))), // Estimate flow based on price direction
+          askHits: Math.max(10, Math.min(90, Math.ceil(50 + (change * 5))))
         });
       }
 
