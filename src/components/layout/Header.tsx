@@ -125,7 +125,7 @@ export function Header() {
             </button>
 
             <div className="flex items-center border-l border-white/10 pl-4 h-6">
-              <span className="text-[9px] text-ink-muted data-font font-bold uppercase tracking-tighter tabular-nums">v1.16.9</span>
+              <span className="text-xs text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded-full border border-blue-400/20">v1.16.10</span>
             </div>
           </div>
         </div>
