@@ -89,9 +89,9 @@ export function Signals() {
     const [filterRisk, setFilterRisk] = useState<string>('ALL');
     const [minProbability, setMinProbability] = useState<number>(70);
 
-    const fetchAlerts = async () => {
+    const fetchAlerts = async (forceLoading = false) => {
         try {
-            // setLoading(true); // Don't reset full loading on refresh
+            if (forceLoading) setLoading(true);
             const endpoint = viewMode === 'LIVE'
                 ? `/api/alerts/strategies?symbol=SPX&_t=${Date.now()}`
                 : `/api/alerts/history?symbol=SPX&date=${selectedDate}&_t=${Date.now()}`;
@@ -114,12 +114,14 @@ export function Signals() {
     };
 
     useEffect(() => {
-        fetchAlerts();
+        // Clear alerts and show loading when mode or date changes to avoid showing stale data
+        setAlerts([]);
+        fetchAlerts(true);
 
         // Only auto-refresh in LIVE mode
         let interval: NodeJS.Timeout | null = null;
         if (viewMode === 'LIVE') {
-            interval = setInterval(fetchAlerts, 5 * 60 * 1000);
+            interval = setInterval(() => fetchAlerts(false), 5 * 60 * 1000);
         }
 
         return () => {
@@ -184,6 +186,13 @@ export function Signals() {
                     <span className="inline-flex items-center px-3 py-1 bg-red-900/30 text-red-300 text-xs rounded-full font-medium border border-red-500/30">
                         <XCircle className="h-3 w-3 mr-1" />
                         {t('Cancelada')}
+                    </span>
+                );
+            case 'EXPIRED':
+                return (
+                    <span className="inline-flex items-center px-3 py-1 bg-gray-900/50 text-gray-400 text-xs rounded-full font-medium border border-gray-700">
+                        <Clock className="h-3 w-3 mr-1" />
+                        {t('Cerrada')}
                     </span>
                 );
             default:
@@ -369,7 +378,7 @@ export function Signals() {
                                 <div className="text-sm font-medium text-white">{lastUpdate || '--:--'}</div>
                             </div>
                             <button
-                                onClick={fetchAlerts}
+                                onClick={() => fetchAlerts(false)}
                                 disabled={loading}
                                 className="p-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
                             >
@@ -446,6 +455,7 @@ export function Signals() {
                                 <option value="ALL">{t('Todos')}</option>
                                 <option value="ACTIVE">{t('Activas')}</option>
                                 <option value="WATCH">{t('Vigilar')}</option>
+                                <option value="EXPIRED">{t('Cerradas/Expiradas')}</option>
                                 <option value="CANCELLED">{t('Canceladas')}</option>
                             </select>
                         </div>

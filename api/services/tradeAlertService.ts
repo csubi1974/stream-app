@@ -104,7 +104,7 @@ export class TradeAlertService {
         try {
             console.log(`📜 getAlertHistory called for ${symbol} date=${date}`);
 
-            let query = 'SELECT alert_data FROM trade_alerts WHERE underlying = ?';
+            let query = 'SELECT * FROM trade_alerts WHERE underlying = ?';
             const params: any[] = [symbol];
 
             if (date) {
@@ -488,7 +488,10 @@ export class TradeAlertService {
             const gexMetrics = await this.gexService.calculateGEXMetrics(symbol);
             if (!gexMetrics || gexMetrics.currentPrice === 0) {
                 console.warn('⚠️ No GEX metrics available for alert generation');
-                return [];
+                // Even if we can't generate new ones, return existing active ones
+                return this.getAlertHistory(undefined, symbol).then(history =>
+                    history.filter(a => a.status === 'ACTIVE' || a.status === 'WATCH')
+                );
             }
 
             // 3. Get options chain
@@ -507,7 +510,17 @@ export class TradeAlertService {
                 return [];
             }
 
-            return this.generateAlertsFromData(symbol, gexMetrics, chain);
+            const newAlerts = await this.generateAlertsFromData(symbol, gexMetrics, chain);
+
+            // 5. Merge with existing active/watch alerts from today to ensure persistence
+            const history = await this.getAlertHistory(new Date().toISOString().split('T')[0], symbol);
+            const existingActive = history.filter(h =>
+                (h.status === 'ACTIVE' || h.status === 'WATCH') &&
+                !newAlerts.find(n => n.id === h.id)
+            );
+
+            // Return new ones first, then existing active ones
+            return [...newAlerts, ...existingActive];
         } catch (error) {
             console.error('❌ Error in generateAlerts:', error);
             return [];
