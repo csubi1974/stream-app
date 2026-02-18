@@ -1,0 +1,37 @@
+{
+  "summary": {
+    "symbol": "$SPX",
+    "totalSnapshots": 1,
+    "totalTrades": 0,
+    "wins": 0,
+    "losses": 0,
+    "winRate": "0.0%",
+    "totalPnL": "$0.00"
+  },
+  "signals": [
+    {
+      "time": "2026-01-29T15:12:06.058Z",
+      "entryPrice": 6927.87,
+      "strategy": "Wall Reversion (Support)",
+      "shortStrike": 6910,
+      "credit": 1.5,
+      "result": "OPEN",
+      "exitPrice": 6927.87,
+      "exitTime": "2026-01-29T15:12:06.058Z",
+      "pnl": 0,
+      "quality": 83
+    },
+    {
+      "time": "2026-01-29T15:12:06.058Z",
+      "entryPrice": 6927.87,
+      "strategy": "Wall Reversion (Resistance)",
+      "shortStrike": 6950,
+      "credit": 1.6,
+      "result": "OPEN",
+      "exitPrice": 6927.87,
+      "exitTime": "2026-01-29T15:12:06.058Z",
+      "pnl": 0,
+      "quality": 75
+    }
+  ]
+}

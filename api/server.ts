@@ -13,6 +13,8 @@ import { setupDatabase } from './database/setup.js';
 import { initializeDb } from './database/sqlite.js';
 import { initializePostgres } from './database/postgres.js';
 import { DataRecorderService } from './services/dataRecorderService.js';
+import { TradeAlertService } from './services/tradeAlertService.js';
+import { SignalScheduler } from './services/signalScheduler.js';
 
 const app = express();
 const server = createServer(app);
@@ -30,7 +32,9 @@ const distPath = path.join(__dirname, '../dist');
 // Initialize services
 const schwabService = getSchwabService();
 const marketDataService = new MarketDataService(schwabService);
+const tradeAlertService = new TradeAlertService(schwabService);
 const wsHandler = new WebSocketHandler(wss, marketDataService, schwabService);
+const signalScheduler = new SignalScheduler(tradeAlertService);
 
 // Middleware: Intercept Schwab Auth Code BEFORE static files
 app.use(async (req, res, next) => {
@@ -118,6 +122,9 @@ async function startServer() {
 
     // WebSocket connection handling
     wsHandler.initialize();
+
+    // Start background signal generation
+    signalScheduler.start(5 * 60 * 1000); // 5 minutes
 
     const PORT = Number(process.env.PORT) || 3002;
     server.listen(PORT, '0.0.0.0', () => {

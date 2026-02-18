@@ -62,6 +62,8 @@ export class DataRecorderService {
 
                 if (activeOptions.length === 0) continue;
 
+                const underlyingPrice = chain.underlying?.last || chain.underlyingPrice || 0;
+
                 // Construct query
                 // Using a transaction is much faster
                 await db.exec('BEGIN TRANSACTION');
@@ -70,8 +72,8 @@ export class DataRecorderService {
           INSERT INTO options_chain_snapshots (
             symbol, snapshot_time, expiration_date, strike, type, 
             bid, ask, last, volume, open_interest, 
-            delta, gamma, theta, vega
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            delta, gamma, theta, vega, underlying_price
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
 
                 for (const opt of activeOptions) {
@@ -89,7 +91,8 @@ export class DataRecorderService {
                         opt.delta,
                         opt.gamma,
                         opt.theta,
-                        opt.vega
+                        opt.vega,
+                        underlyingPrice
                     );
                 }
 

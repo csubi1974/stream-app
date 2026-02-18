@@ -33,6 +33,44 @@ export class GEXService {
     }
 
     /**
+     * Calcula métricas GEX a partir de un objeto chain ya existente
+     * Útil para backtesting
+     */
+    public async calculateGEXMetricsFromData(symbol: string, chain: any): Promise<GEXMetrics> {
+        try {
+            const allOptionsRaw: any[] = [];
+
+            // Handle different chain formats (calls/puts vs callExpDateMap/putExpDateMap)
+            if (chain.callExpDateMap) {
+                allOptionsRaw.push(...this.flattenOptionsMap(chain.callExpDateMap));
+                allOptionsRaw.push(...this.flattenOptionsMap(chain.putExpDateMap));
+            } else {
+                allOptionsRaw.push(...(chain.calls || []));
+                allOptionsRaw.push(...(chain.puts || []));
+            }
+
+            const today = new Date();
+            const fiveDaysFromNow = new Date();
+            fiveDaysFromNow.setDate(today.getDate() + 5);
+
+            const allOptions = allOptionsRaw.filter(opt => {
+                if (!opt.expirationDate) return true;
+                const expDate = new Date(opt.expirationDate);
+                return expDate <= fiveDaysFromNow;
+            });
+
+            if (allOptions.length === 0 && allOptionsRaw.length > 0) {
+                return this.processGEXOptions(chain, allOptionsRaw);
+            }
+
+            return this.processGEXOptions(chain, allOptions);
+        } catch (error) {
+            console.error('❌ Failed to calculate GEX metrics from data:', error);
+            return this.getDefaultMetrics();
+        }
+    }
+
+    /**
      * Calcula todas las métricas GEX avanzadas para un símbolo
      */
     async calculateGEXMetrics(symbol: string = 'SPX'): Promise<GEXMetrics> {

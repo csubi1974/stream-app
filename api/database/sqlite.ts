@@ -64,6 +64,8 @@ class JsonFallbackDB {
 
   async all(query: string, params: any[]) {
     const lowerQuery = query.toLowerCase();
+
+    // Handle Alerts
     if (lowerQuery.includes('from trade_alerts')) {
       let results = [...this.data.alerts];
       const symbol = params[0];
@@ -78,6 +80,49 @@ class JsonFallbackDB {
 
       return results.sort((a, b) => b.generated_at.localeCompare(a.generated_at));
     }
+
+    // Handle Snapshots (for Backtesting)
+    if (lowerQuery.includes('from options_chain_snapshots')) {
+      const symbol = params[0];
+      let snapshots = this.data.snapshots || [];
+
+      if (symbol) {
+        snapshots = snapshots.filter((s: any) => s.symbol === symbol);
+      }
+
+      // Handle COUNT(DISTINCT snapshot_time)
+      if (lowerQuery.includes('count(distinct snapshot_time)')) {
+        const uniqueTimes = new Set(snapshots.map((s: any) => s.snapshot_time));
+        return [{ distinct_times: uniqueTimes.size }];
+      }
+
+      if (lowerQuery.includes('distinct snapshot_time')) {
+        const uniqueTimes = new Set<string>();
+        const results: any[] = [];
+
+        // Sort by time first to ensure order
+        const sorted = [...snapshots].sort((a, b) => a.snapshot_time.localeCompare(b.snapshot_time));
+
+        for (const s of sorted) {
+          if (!uniqueTimes.has(s.snapshot_time)) {
+            uniqueTimes.add(s.snapshot_time);
+            results.push({
+              snapshot_time: s.snapshot_time,
+              underlying_price: s.underlying_price
+            });
+          }
+        }
+        return results;
+      }
+
+      const time = params[1];
+      if (time) {
+        return snapshots.filter((s: any) => s.snapshot_time === time);
+      }
+
+      return snapshots;
+    }
+
     return [];
   }
 
@@ -87,6 +132,25 @@ class JsonFallbackDB {
       const id = params[0];
       const result = this.data.alerts.find((a: any) => a.id === id) || null;
       return result;
+    }
+
+    if (lowerQuery.includes('from options_chain_snapshots')) {
+      const symbol = params[0];
+      let snapshots = this.data.snapshots || [];
+      if (symbol) {
+        snapshots = snapshots.filter((s: any) => s.symbol === symbol);
+      }
+
+      if (lowerQuery.includes('count(*)') || lowerQuery.includes('min(snapshot_time)')) {
+        if (snapshots.length === 0) return { count: 0, first: null, last: null };
+
+        const times = snapshots.map((s: any) => s.snapshot_time).sort();
+        return {
+          count: snapshots.length,
+          first: times[0],
+          last: times[times.length - 1]
+        };
+      }
     }
     return null;
   }
@@ -116,7 +180,8 @@ export async function initializeDb() {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         symbol TEXT, snapshot_time TEXT, expiration_date TEXT, strike REAL, type TEXT,
         bid REAL, ask REAL, last REAL, volume INTEGER, open_interest INTEGER,
-        delta REAL, gamma REAL, theta REAL, vega REAL
+        delta REAL, gamma REAL, theta REAL, vega REAL,
+        underlying_price REAL
       );
       CREATE TABLE IF NOT EXISTS trade_alerts (
         id TEXT PRIMARY KEY, strategy TEXT, underlying TEXT, generated_at TEXT, 
@@ -130,6 +195,7 @@ export async function initializeDb() {
     `);
 
     // Migration for existing tables
+    try { await db.exec(`ALTER TABLE options_chain_snapshots ADD COLUMN underlying_price REAL;`); } catch (e) { }
     try { await db.exec(`ALTER TABLE trade_alerts ADD COLUMN quality_score INTEGER;`); } catch (e) { }
     try { await db.exec(`ALTER TABLE trade_alerts ADD COLUMN quality_level TEXT;`); } catch (e) { }
     try { await db.exec(`ALTER TABLE trade_alerts ADD COLUMN risk_level TEXT;`); } catch (e) { }

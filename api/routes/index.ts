@@ -6,6 +6,7 @@ import gexRouter from './gex.js';
 import alertsRouter from './alerts.js';
 import calendarRouter from './calendar.js';
 import testRouter from './test.js';
+import { createBacktestRouter } from './backtest.js';
 
 export function setupRoutes(
   app: express.Application,
@@ -20,6 +21,9 @@ export function setupRoutes(
 
   // Mount Trade Alerts Routes
   app.use('/api/alerts', alertsRouter);
+
+  // Mount Backtest Routes
+  app.use('/api/backtest', createBacktestRouter(schwabService));
 
   // Mount Calendar & News Routes
   app.use('/api/calendar', calendarRouter);

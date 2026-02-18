@@ -117,13 +117,29 @@ export class TradeAlertService {
             const rows = await db.all(query, params);
             // console.log(`📜 Found ${rows.length} alerts in DB`);
 
-            alerts = rows.map((row: any) => JSON.parse(row.alert_data));
+            alerts = rows.map((row: any) => {
+                const alert = JSON.parse(row.alert_data);
+                // Merge latest settlement data from DB columns if available
+                return {
+                    ...alert,
+                    result: row.result || alert.result,
+                    realizedPnL: row.realized_pnl != null ? row.realized_pnl : alert.realizedPnL,
+                    closedAtPrice: row.closed_at_price != null ? row.closed_at_price : alert.closedAtPrice,
+                    status: row.status || alert.status
+                };
+            });
 
             // Try to Enrich with Real-Time PnL
-            // If enrichment fails (e.g. timeout), return original alerts so UI doesn't flicker empty
+            // Only enrich if status is still active or watch
             try {
-                const enriched = await this.enrichAlertsWithPnL(alerts);
-                return enriched;
+                const activeAlerts = alerts.filter(a => a.status === 'ACTIVE' || a.status === 'WATCH');
+                const nonActive = alerts.filter(a => a.status !== 'ACTIVE' && a.status !== 'WATCH');
+
+                if (activeAlerts.length > 0) {
+                    const enriched = await this.enrichAlertsWithPnL(activeAlerts);
+                    return [...enriched, ...nonActive];
+                }
+                return alerts;
             } catch (pnlError) {
                 console.error('⚠️ PnL enrichment failed, returning base alerts:', pnlError);
                 return alerts;
@@ -366,7 +382,6 @@ export class TradeAlertService {
 
         // 6. Drift Alignment (10 = perfect alignment, 0 = against drift)
         let driftAlignment = 5;
-        const absDrift = Math.abs(netDrift);
 
         if (type === 'BULL_PUT') {
             // Bull Put wants positive drift (bullish bias)
@@ -406,7 +421,12 @@ export class TradeAlertService {
         };
 
         const qualityScore = Math.round(
-            driftAlignment * weights.driftAlignment * 10
+            (moveExhaustion * weights.moveExhaustion +
+                expectedMoveUsage * weights.expectedMoveUsage +
+                wallProximity * weights.wallProximity +
+                timeRemaining * weights.timeRemaining +
+                regimeStrength * weights.regimeStrength +
+                driftAlignment * weights.driftAlignment) * 10
         );
 
         // 7. Charm Bonus (Bonus for favorable time decay pressure)
@@ -450,17 +470,18 @@ export class TradeAlertService {
         };
     }
 
-
     /**
      * Generate trade alerts based on current market conditions
      */
-    async generateAlerts(symbol: string = 'SPX'): Promise<TradeAlert[]> {
+    async generateAlerts(symbol: string = 'SPX', skipWindowCheck: boolean = false): Promise<TradeAlert[]> {
         try {
             // 1. Check if market is in valid trading window
-            const tradingWindow = this.getTradingWindow();
-            if (!tradingWindow.isOpen) {
-                console.log(`⏰ Market closed. Window: ${tradingWindow.status}`);
-                return [];
+            if (!skipWindowCheck) {
+                const tradingWindow = this.getTradingWindow();
+                if (!tradingWindow.isOpen) {
+                    console.log(`⏰ Market closed. Window: ${tradingWindow.status}`);
+                    return [];
+                }
             }
 
             // 2. Get GEX metrics for context
@@ -486,8 +507,26 @@ export class TradeAlertService {
                 return [];
             }
 
+            return this.generateAlertsFromData(symbol, gexMetrics, chain);
+        } catch (error) {
+            console.error('❌ Error in generateAlerts:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Generate alerts from raw data objects
+     * Use this for backtesting
+     */
+    public async generateAlertsFromData(
+        symbol: string,
+        gexMetrics: GEXMetrics,
+        chain: any,
+        currentDay?: string
+    ): Promise<TradeAlert[]> {
+        try {
             // 4. Find today's/next expiration
-            const targetExpiration = this.findTargetExpiration(chain);
+            const targetExpiration = this.findTargetExpiration(chain, currentDay);
             if (!targetExpiration) {
                 console.warn('⚠️ No valid expiration found');
                 return [];
@@ -500,6 +539,29 @@ export class TradeAlertService {
                 return [];
             }
 
+            const alerts = await this.processAlertGeneration(symbol, gexMetrics, options, targetExpiration, chain);
+
+            // Save alerts to database for history
+            await this.saveAlertsToDb(alerts);
+
+            return alerts;
+        } catch (error) {
+            console.error('❌ Error in generateAlertsFromData:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Internal actual logic for signal generation
+     */
+    private async processAlertGeneration(
+        symbol: string,
+        gexMetrics: GEXMetrics,
+        options: any[],
+        targetExpiration: string,
+        chain: any
+    ): Promise<TradeAlert[]> {
+        try {
             // 6. Generate alerts based on regime
             const alerts: TradeAlert[] = [];
             const { regime, netDrift, callWall, putWall, gammaFlip, currentPrice, totalGEX, netCharm } = gexMetrics;
@@ -607,14 +669,10 @@ export class TradeAlertService {
                 });
             }
 
-            // Save alerts to database for history
-            await this.saveAlertsToDb(alerts);
-
             console.log(`✅ Generated ${alerts.length} trade alerts`);
             return alerts;
-
         } catch (error) {
-            console.error('❌ Error generating trade alerts:', error);
+            console.error('❌ Error in processAlertGeneration:', error);
             return [];
         }
     }
@@ -665,8 +723,8 @@ export class TradeAlertService {
             const shortStrike = parseFloat(shortPut.strikePrice || shortPut.strike);
             const longStrike = shortStrike - this.SPREAD_WIDTH;
 
-            // Generate unique deterministic ID
-            const alertId = `BPS-${expiration}-${shortStrike}-${trigger || 'drift'}`.replace(/:/g, '-');
+            // Generate unique deterministic ID with timestamp to allow multiple signals in backtest
+            const alertId = `BPS-${expiration}-${shortStrike}-${trigger || 'drift'}-${Date.now()}-${Math.floor(Math.random() * 1000)}`.replace(/:/g, '-');
 
             // Find long put
             const longPut = puts.find(p => {
@@ -794,8 +852,8 @@ export class TradeAlertService {
             const shortStrike = parseFloat(shortCall.strikePrice || shortCall.strike);
             const longStrike = shortStrike + this.SPREAD_WIDTH;
 
-            // Generate unique deterministic ID
-            const alertId = `BCS-${expiration}-${shortStrike}-${trigger || 'drift'}`.replace(/:/g, '-');
+            // Generate unique deterministic ID with timestamp to allow multiple signals in backtest
+            const alertId = `BCS-${expiration}-${shortStrike}-${trigger || 'drift'}-${Date.now()}-${Math.floor(Math.random() * 1000)}`.replace(/:/g, '-');
 
             // Find long call
             const longCall = calls.find(c => {
@@ -897,8 +955,8 @@ export class TradeAlertService {
             const totalCredit = bullPut.netCredit + bearCall.netCredit;
             const maxLoss = this.SPREAD_WIDTH - totalCredit;
 
-            // Generate unique deterministic ID
-            const alertId = `IC-${expiration}-${bullPut.legs[0].strike}-${bearCall.legs[0].strike}`.replace(/:/g, '-');
+            // Generate unique deterministic ID which includes timestamp
+            const alertId = `IC-${expiration}-${bullPut.legs[0].strike}-${bearCall.legs[0].strike}-${Date.now()}-${Math.floor(Math.random() * 1000)}`.replace(/:/g, '-');
 
             // Combined probability (both sides need to work)
             const probability = Math.min(bullPut.probability, bearCall.probability);
@@ -976,8 +1034,8 @@ export class TradeAlertService {
     /**
      * Find target expiration (today or next available)
      */
-    private findTargetExpiration(chain: any): string | null {
-        const today = new Date().toLocaleDateString('en-CA');
+    private findTargetExpiration(chain: any, currentDayOverride?: string): string | null {
+        const today = currentDayOverride || new Date().toLocaleDateString('en-CA');
         const allDates = new Set<string>();
 
         if (chain.callExpDateMap) {
@@ -985,6 +1043,18 @@ export class TradeAlertService {
         }
         if (chain.putExpDateMap) {
             Object.keys(chain.putExpDateMap).forEach(date => allDates.add(date.split(':')[0]));
+        }
+
+        // Support for flattened chain format (for backtesting)
+        if (chain.calls && Array.isArray(chain.calls)) {
+            chain.calls.forEach((c: any) => {
+                if (c.expirationDate) allDates.add(c.expirationDate.split('T')[0]);
+            });
+        }
+        if (chain.puts && Array.isArray(chain.puts)) {
+            chain.puts.forEach((p: any) => {
+                if (p.expirationDate) allDates.add(p.expirationDate.split('T')[0]);
+            });
         }
 
         const sorted = Array.from(allDates).sort();
@@ -1004,6 +1074,7 @@ export class TradeAlertService {
     private getOptionsForExpiration(chain: any, expiration: string): any[] {
         const options: any[] = [];
 
+        // Handle nested map format
         if (chain.callExpDateMap) {
             Object.entries(chain.callExpDateMap).forEach(([dateKey, strikes]: [string, any]) => {
                 if (dateKey.startsWith(expiration)) {
@@ -1013,7 +1084,6 @@ export class TradeAlertService {
                 }
             });
         }
-
         if (chain.putExpDateMap) {
             Object.entries(chain.putExpDateMap).forEach(([dateKey, strikes]: [string, any]) => {
                 if (dateKey.startsWith(expiration)) {
@@ -1022,6 +1092,14 @@ export class TradeAlertService {
                     });
                 }
             });
+        }
+
+        // Handle flattened array format
+        if (chain.calls && Array.isArray(chain.calls)) {
+            options.push(...chain.calls.filter((c: any) => c.expirationDate?.startsWith(expiration)));
+        }
+        if (chain.puts && Array.isArray(chain.puts)) {
+            options.push(...chain.puts.filter((p: any) => p.expirationDate?.startsWith(expiration)));
         }
 
         return options;
@@ -1121,12 +1199,29 @@ export class TradeAlertService {
         }
     }
 
-    /**
-     * Update the result of a closed trade (Settlement)
-     */
     async updateAlertResult(id: string, result: 'WIN' | 'LOSS', realizedPnl: number, closedAtPrice: number): Promise<boolean> {
-        return true;
-        // Note: Full implementation would require updating SQLite 'status' and 'result_data' columns.
-        // For now this is a placeholder to satisfy the interface.
+        try {
+            const db = getDb();
+            const status = result === 'WIN' ? 'EXPIRED' : 'CANCELLED'; // Mapping outcome to status
+
+            const query = `
+                UPDATE trade_alerts 
+                SET result = ?, realized_pnl = ?, closed_at_price = ?, status = ?
+                WHERE id = ?
+            `;
+
+            const res = await db.run(query, [result, realizedPnl, closedAtPrice, status, id]);
+
+            if (res && (res.changes > 0 || res.lastID)) {
+                console.log(`✅ Alert ${id} updated with result: ${result} ($${realizedPnl})`);
+                return true;
+            }
+
+            console.warn(`⚠️ Alert ${id} not found for update`);
+            return false;
+        } catch (error) {
+            console.error(`❌ Failed to update result for alert ${id}:`, error);
+            return false;
+        }
     }
 }
