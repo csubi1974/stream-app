@@ -737,7 +737,8 @@ export class TradeAlertService {
             const longStrike = shortStrike - this.SPREAD_WIDTH;
 
             // Generate unique deterministic ID with timestamp to allow multiple signals in backtest
-            const alertId = `BPS-${expiration}-${shortStrike}-${trigger || 'drift'}-${Date.now()}-${Math.floor(Math.random() * 1000)}`.replace(/:/g, '-');
+            // Deterministic ID (No Randomness for persistence consistency)
+            const alertId = `BPS-${expiration}-${shortStrike}-${trigger || 'drift'}`.replace(/:/g, '-');
 
             // Find long put
             const longPut = puts.find(p => {
@@ -866,7 +867,8 @@ export class TradeAlertService {
             const longStrike = shortStrike + this.SPREAD_WIDTH;
 
             // Generate unique deterministic ID with timestamp to allow multiple signals in backtest
-            const alertId = `BCS-${expiration}-${shortStrike}-${trigger || 'drift'}-${Date.now()}-${Math.floor(Math.random() * 1000)}`.replace(/:/g, '-');
+            // Deterministic ID (No Randomness for persistence consistency)
+            const alertId = `BCS-${expiration}-${shortStrike}-${trigger || 'drift'}`.replace(/:/g, '-');
 
             // Find long call
             const longCall = calls.find(c => {
@@ -969,7 +971,8 @@ export class TradeAlertService {
             const maxLoss = this.SPREAD_WIDTH - totalCredit;
 
             // Generate unique deterministic ID which includes timestamp
-            const alertId = `IC-${expiration}-${bullPut.legs[0].strike}-${bearCall.legs[0].strike}-${Date.now()}-${Math.floor(Math.random() * 1000)}`.replace(/:/g, '-');
+            // Deterministic ID (No Randomness for persistence consistency)
+            const alertId = `IC-${expiration}-${bullPut.legs[0].strike}-${bearCall.legs[0].strike}`.replace(/:/g, '-');
 
             // Combined probability (both sides need to work)
             const probability = Math.min(bullPut.probability, bearCall.probability);
@@ -1170,26 +1173,26 @@ export class TradeAlertService {
         }
     }
 
-    /**
-     * Save generated alerts to SQLite database
-     */
     private async saveAlertsToDb(alerts: TradeAlert[]) {
         try {
             const db = getDb();
-            const now = new Date().toISOString();
-
             for (const alert of alerts) {
-                // Ignore warning alerts for database storage if needed
                 if (alert.id.startsWith('warning')) continue;
 
                 try {
-                    // Use INSERT OR IGNORE to avoid errors on duplicate IDs (same strike/expiry)
                     await db.run(`
-                        INSERT OR IGNORE INTO trade_alerts (
+                        INSERT INTO trade_alerts (
                             id, strategy, underlying, generated_at, status, alert_data,
                             quality_score, quality_level, risk_level, quality_metadata,
                             exit_criteria
                         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(id) DO UPDATE SET
+                            alert_data = excluded.alert_data,
+                            quality_score = excluded.quality_score,
+                            quality_level = excluded.quality_level,
+                            risk_level = excluded.risk_level,
+                            quality_metadata = excluded.quality_metadata,
+                            exit_criteria = excluded.exit_criteria
                     `, [
                         alert.id,
                         alert.strategy,
@@ -1215,7 +1218,7 @@ export class TradeAlertService {
     async updateAlertResult(id: string, result: 'WIN' | 'LOSS', realizedPnl: number, closedAtPrice: number): Promise<boolean> {
         try {
             const db = getDb();
-            const status = result === 'WIN' ? 'EXPIRED' : 'CANCELLED'; // Mapping outcome to status
+            const status = result === 'WIN' ? 'EXPIRED' : 'CANCELLED';
 
             const query = `
                 UPDATE trade_alerts 
