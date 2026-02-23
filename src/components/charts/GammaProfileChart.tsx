@@ -95,9 +95,21 @@ export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX', ga
 
         if (prices.length === 0) return { xMin: 0, xMax: 100 };
 
-        const min = Math.min(...prices);
-        const max = Math.max(...prices);
-        const range = max - min;
+        let min = Math.min(...prices);
+        let max = Math.max(...prices);
+        let range = max - min;
+
+        // Ensure minimum reasonable domain range (e.g., at least 2% total range around spot)
+        // to prevent excessive zooming when strikes get filtered out near expiration
+        if (currentPrice) {
+            const minRange = currentPrice * 0.02; // 2% of spot
+            if (range < minRange) {
+                const center = (min + max) / 2;
+                min = center - minRange / 2;
+                max = center + minRange / 2;
+                range = max - min;
+            }
+        }
 
         // Add a small 2% padding to results
         const padding = range * 0.02;
