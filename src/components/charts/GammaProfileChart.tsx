@@ -144,6 +144,23 @@ export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX', ga
     const getOiY = (value: number) => graphHeight / 2 - (value / (oiMax || 1)) * (graphHeight / 2);
     const zeroY = getY(0);
 
+    // Calculate fixed bar width proportionally to the axis scale to prevent overlaps
+    const barWidth = useMemo(() => {
+        if (chartData.length === 0) return 2;
+        if (chartData.length === 1) return 16;
+
+        let minStrikeDiff = Infinity;
+        const strikes = chartData.map(d => d.strike).sort((a, b) => a - b);
+        for (let i = 1; i < strikes.length; i++) {
+            const diff = strikes[i] - strikes[i - 1];
+            if (diff > 0 && diff < minStrikeDiff) minStrikeDiff = diff;
+        }
+        if (minStrikeDiff === Infinity) minStrikeDiff = 5;
+
+        const stepPixels = (minStrikeDiff / Math.max(1, xMax - xMin)) * graphWidth;
+        return Math.min(20, Math.max(2, stepPixels * 0.45));
+    }, [chartData, xMax, xMin, graphWidth]);
+
     // Dynamic tick frequency for X axis to prevent overlap
     const xTicks = useMemo(() => {
         if (chartData.length === 0) return [];
@@ -341,8 +358,6 @@ export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX', ga
                         {/* Bars */}
                         {chartData.map((d) => {
                             const x = getX(d.strike);
-                            // Cap bar width to prevent "fat" bars when few strikes are shown
-                            const barWidth = Math.min(30, Math.max(2, (graphWidth / chartData.length) * 0.45));
 
                             let valCall, valPut;
                             if (hasActiveGreeks) {
