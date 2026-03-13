@@ -267,9 +267,23 @@ export const CandleChart = forwardRef<CandleChartHandle, ChartProps>(({
                         if (peak) calcTopStrike = parseFloat(peak.strike);
                     }
 
-                    const cw = parseFloat(data.callWall);
-                    const pw = parseFloat(data.putWall);
-                    const gf = parseFloat(data.gammaFlip);
+                    let cw = parseFloat(data.callWall);
+                    let pw = parseFloat(data.putWall);
+                    let gf = parseFloat(data.gammaFlip);
+
+                    try {
+                        const gexResponse = await fetch(`/api/gex/metrics?symbol=${symbol}`);
+                        if (gexResponse.ok) {
+                            const gexData = await gexResponse.json();
+                            if (gexData && !gexData.error) {
+                                cw = parseFloat(gexData.callWall) || cw;
+                                pw = parseFloat(gexData.putWall) || pw;
+                                gf = parseFloat(gexData.gammaFlip) || gf;
+                            }
+                        }
+                    } catch (e) {
+                         console.warn("Failed to fetch GEX metrics for chart, using 0DTE fallbacks");
+                    }
 
                     setWalls({ callWall: cw, putWall: pw, gammaFlip: gf, topStrike: calcTopStrike });
 

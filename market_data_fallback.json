@@ -64468,6 +64468,32 @@
       "risk_level": "MEDIUM",
       "quality_metadata": "{\"openPrice\":6669.94,\"moveFromOpen\":0,\"movePercent\":0,\"moveRatio\":0,\"wallDistance\":5,\"hoursRemaining\":5.066666666666666,\"generatedAtPrice\":6669.94}",
       "exit_criteria": "{\"profitTarget\":\"100% (Dejar Expirar)\",\"stopLoss\":\"Cerrar inmediatamente si el Call Wall ($6700) se rompe (Precio > 6705)\",\"timeExit\":\"Cerrar a las 3:45 PM si está en riesgo\"}"
+    },
+    {
+      "id": "BPS-2026-03-13-6650-wall",
+      "strategy": "BULL_PUT_SPREAD",
+      "underlying": "SPX",
+      "generated_at": "2026-03-13T15:23:24.642Z",
+      "status": "ACTIVE",
+      "alert_data": "{\"id\":\"BPS-2026-03-13-6650-wall\",\"strategy\":\"BULL_PUT_SPREAD\",\"strategyLabel\":\"Wall Reversion (Support)\",\"underlying\":\"SPX\",\"expiration\":\"2026-03-13\",\"legs\":[{\"action\":\"SELL\",\"type\":\"PUT\",\"strike\":6650,\"price\":11.3,\"delta\":-0.343},{\"action\":\"BUY\",\"type\":\"PUT\",\"strike\":6645,\"price\":9.850000000000001,\"delta\":-0.309}],\"netCredit\":1.45,\"maxLoss\":3.55,\"maxProfit\":1.45,\"probability\":65.7,\"riskReward\":\"1:2.4\",\"rationale\":\"ESTRATEGIA REVERSION: El precio está testeando un Put Wall SÓLIDO en $6650. El crédito es ALTO debido a la cercanía del muro. El riesgo es que si el muro se rompe, el soporte desaparece, por lo que el Stop Loss es estricto justo debajo del muro.\",\"status\":\"ACTIVE\",\"gexContext\":{\"regime\":\"volatile\",\"callWall\":6700,\"putWall\":6650,\"callWallStrength\":\"solid\",\"putWallStrength\":\"solid\",\"gammaFlip\":6794.564409843312,\"currentPrice\":6669.54,\"netDrift\":20.221776061776055,\"expectedMove\":38.05,\"totalGEX\":-24419607778.92957,\"openPrice\":6669.54,\"netCharm\":47873.11942170987,\"symbol\":\"SPX\"},\"generatedAt\":\"2026-03-13T15:23:24.642Z\",\"validUntil\":\"2026-03-13T17:23:24.642Z\",\"qualityScore\":95,\"qualityLevel\":\"PREMIUM\",\"riskLevel\":\"MEDIUM\",\"qualityFactors\":{\"moveExhaustion\":10,\"expectedMoveUsage\":10,\"wallProximity\":10,\"timeRemaining\":9,\"regimeStrength\":1,\"driftAlignment\":10},\"metadata\":{\"openPrice\":6669.54,\"moveFromOpen\":0,\"movePercent\":0,\"moveRatio\":0,\"wallDistance\":0,\"hoursRemaining\":4.616666666666666,\"generatedAtPrice\":6669.54},\"exitCriteria\":{\"profitTarget\":\"100% (Dejar Expirar)\",\"stopLoss\":\"Cerrar inmediatamente si el Put Wall ($6650) se rompe (Precio < 6645)\",\"timeExit\":\"Cerrar a las 3:45 PM si está en riesgo\"}}",
+      "quality_score": 95,
+      "quality_level": "PREMIUM",
+      "risk_level": "MEDIUM",
+      "quality_metadata": "{\"openPrice\":6669.54,\"moveFromOpen\":0,\"movePercent\":0,\"moveRatio\":0,\"wallDistance\":0,\"hoursRemaining\":4.616666666666666,\"generatedAtPrice\":6669.54}",
+      "exit_criteria": "{\"profitTarget\":\"100% (Dejar Expirar)\",\"stopLoss\":\"Cerrar inmediatamente si el Put Wall ($6650) se rompe (Precio < 6645)\",\"timeExit\":\"Cerrar a las 3:45 PM si está en riesgo\"}"
+    },
+    {
+      "id": "BCS-2026-03-13-6690-wall",
+      "strategy": "BEAR_CALL_SPREAD",
+      "underlying": "SPX",
+      "generated_at": "2026-03-13T15:23:24.644Z",
+      "status": "ACTIVE",
+      "alert_data": "{\"id\":\"BCS-2026-03-13-6690-wall\",\"strategy\":\"BEAR_CALL_SPREAD\",\"strategyLabel\":\"Wall Reversion (Resistance)\",\"underlying\":\"SPX\",\"expiration\":\"2026-03-13\",\"legs\":[{\"action\":\"SELL\",\"type\":\"CALL\",\"strike\":6690,\"price\":10.25,\"delta\":0.333},{\"action\":\"BUY\",\"type\":\"CALL\",\"strike\":6695,\"price\":8.55,\"delta\":0.294}],\"netCredit\":1.7,\"maxLoss\":3.3,\"maxProfit\":1.7,\"probability\":66.7,\"riskReward\":\"1:1.9\",\"rationale\":\"ESTRATEGIA REVERSION: El precio se acerca al Call Wall SÓLIDO en $6700. Aprovechamos el crédito ALTO por la proximidad técnica. El riesgo es un breakout del muro, por lo que el Stop Loss se sitúa justo por encima de este nivel de liquidez.\",\"status\":\"ACTIVE\",\"gexContext\":{\"regime\":\"volatile\",\"callWall\":6700,\"putWall\":6650,\"callWallStrength\":\"solid\",\"putWallStrength\":\"solid\",\"gammaFlip\":6794.564409843312,\"currentPrice\":6669.54,\"netDrift\":20.221776061776055,\"expectedMove\":38.05,\"totalGEX\":-24419607778.92957,\"openPrice\":6669.54,\"netCharm\":47873.11942170987,\"symbol\":\"SPX\"},\"generatedAt\":\"2026-03-13T15:23:24.644Z\",\"validUntil\":\"2026-03-13T17:23:24.644Z\",\"qualityScore\":83,\"qualityLevel\":\"PREMIUM\",\"riskLevel\":\"MEDIUM\",\"qualityFactors\":{\"moveExhaustion\":10,\"expectedMoveUsage\":10,\"wallProximity\":10,\"timeRemaining\":9,\"regimeStrength\":1,\"driftAlignment\":3},\"metadata\":{\"openPrice\":6669.54,\"moveFromOpen\":0,\"movePercent\":0,\"moveRatio\":0,\"wallDistance\":10,\"hoursRemaining\":4.616666666666666,\"generatedAtPrice\":6669.54},\"exitCriteria\":{\"profitTarget\":\"100% (Dejar Expirar)\",\"stopLoss\":\"Cerrar inmediatamente si el Call Wall ($6700) se rompe (Precio > 6705)\",\"timeExit\":\"Cerrar a las 3:45 PM si está en riesgo\"}}",
+      "quality_score": 83,
+      "quality_level": "PREMIUM",
+      "risk_level": "MEDIUM",
+      "quality_metadata": "{\"openPrice\":6669.54,\"moveFromOpen\":0,\"movePercent\":0,\"moveRatio\":0,\"wallDistance\":10,\"hoursRemaining\":4.616666666666666,\"generatedAtPrice\":6669.54}",
+      "exit_criteria": "{\"profitTarget\":\"100% (Dejar Expirar)\",\"stopLoss\":\"Cerrar inmediatamente si el Call Wall ($6700) se rompe (Precio > 6705)\",\"timeExit\":\"Cerrar a las 3:45 PM si está en riesgo\"}"
     }
   ]
 }

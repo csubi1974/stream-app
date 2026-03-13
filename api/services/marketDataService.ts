@@ -255,6 +255,22 @@ export class MarketDataService {
         }
       });
 
+      // Validar si los strikes de los muros se calcularon bien, si no, buscar fallbacks razonables
+      if (globalCallWallStrike === 0 || globalPutWallStrike === 0) {
+          console.warn('⚠️ MarketDataService: Walls calculated as 0, applying fallback math');
+          let maxCallOi = 0;
+          let maxPutOi = 0;
+          allOptions.forEach((opt: any) => {
+              const strike = parseFloat(opt.strikePrice || opt.strike);
+              const oi = opt.openInterest || 0;
+              if (opt.putCall === 'CALL') {
+                  if (oi > maxCallOi) { maxCallOi = oi; globalCallWallStrike = strike; }
+              } else {
+                  if (oi > maxPutOi) { maxPutOi = oi; globalPutWallStrike = strike; }
+              }
+          });
+      }
+
       const strikes = new Map<number, {
         callOi: number; putOi: number; // INTERÉS ABIERTO TOTAL (Global)
         callGex: number; putGex: number; // MÉTRICAS 0DTE (Específicas)
