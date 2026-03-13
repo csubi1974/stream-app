@@ -45,6 +45,15 @@ export const CandleChart = forwardRef<CandleChartHandle, ChartProps>(({
     const gexLevelsRef = useRef<GEXLevels | null>(null);
     const breadthRef = useRef<BreadthData | null>(null);
     const historyLoadedRef = useRef(false);
+    
+    // React refs to track latest symbol and timeframe for closures
+    const currentSymbolRef = useRef(symbol);
+    const currentTimeframeRef = useRef(timeframe);
+
+    useEffect(() => {
+        currentSymbolRef.current = symbol;
+        currentTimeframeRef.current = timeframe;
+    }, [symbol, timeframe]);
 
     // Store full OHLC data for indicator calculations
     const fullDataRef = useRef<OHLCBar[]>([]);
@@ -449,6 +458,34 @@ export const CandleChart = forwardRef<CandleChartHandle, ChartProps>(({
             fullDataRef.current = [...initialData];
         }
 
+        let timeoutId: any = null;
+        const debouncedHandleZoomPan = (logicalRange: any) => {
+            if (timeoutId) clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                if (!chartRef.current || fullDataRef.current.length === 0 || !logicalRange) return;
+                
+                const maxIndex = fullDataRef.current.length - 1;
+                const rightOffset = logicalRange.to - maxIndex;
+                const visibleBars = logicalRange.to - logicalRange.from;
+                
+                const startIdx = Math.max(0, Math.floor(logicalRange.from));
+                const endIdx = Math.min(maxIndex, Math.ceil(logicalRange.to));
+                
+                const state = {
+                    rightOffset,
+                    visibleBars,
+                    isTracking: rightOffset > -2, 
+                    timeFrom: fullDataRef.current[startIdx]?.time,
+                    timeTo: fullDataRef.current[endIdx]?.time
+                };
+                
+                const key = `chartZoomState_${currentSymbolRef.current}_${currentTimeframeRef.current}`;
+                localStorage.setItem(key, JSON.stringify(state));
+            }, 500);
+        };
+
+        chart.timeScale().subscribeVisibleLogicalRangeChange(debouncedHandleZoomPan);
+
         window.addEventListener('resize', handleResize);
 
         return () => {
@@ -716,7 +753,33 @@ export const CandleChart = forwardRef<CandleChartHandle, ChartProps>(({
                     seriesRef.current.setData(uniqueData as any);
                     historyLoadedRef.current = true;
                     fullDataRef.current = [...uniqueData];
-                    chartRef.current?.timeScale().fitContent();
+                    
+                    const savedStateStr = localStorage.getItem(`chartZoomState_${symbol}_${timeframe}`);
+                    if (savedStateStr) {
+                        try {
+                            const state = JSON.parse(savedStateStr);
+                            setTimeout(() => {
+                                if (chartRef.current) {
+                                    if (state.isTracking) {
+                                        const maxIndex = uniqueData.length - 1;
+                                        const logicalTo = maxIndex + state.rightOffset;
+                                        const logicalFrom = logicalTo - state.visibleBars;
+                                        chartRef.current.timeScale().setVisibleLogicalRange({ from: logicalFrom, to: logicalTo });
+                                    } else {
+                                        let newFromIndex = uniqueData.findIndex((d: any) => d.time >= state.timeFrom);
+                                        let newToIndex = uniqueData.findIndex((d: any) => d.time >= state.timeTo);
+                                        if (newFromIndex === -1) newFromIndex = 0;
+                                        if (newToIndex === -1) newToIndex = uniqueData.length - 1;
+                                        chartRef.current.timeScale().setVisibleLogicalRange({ from: newFromIndex, to: newToIndex });
+                                    }
+                                }
+                            }, 50);
+                        } catch(e) {
+                            chartRef.current?.timeScale().fitContent();
+                        }
+                    } else {
+                        chartRef.current?.timeScale().fitContent();
+                    }
 
                     // Recalculate indicators with new data
                     recalculateIndicators(uniqueData);

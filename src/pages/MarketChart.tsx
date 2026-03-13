@@ -10,17 +10,20 @@ import { useMarketStore } from '../stores/marketStore';
 
 export function MarketChart() {
     const { t } = useTranslation();
-    const { selectedSymbol, setSelectedSymbol } = useMarketStore();
+    const { 
+        selectedSymbol, 
+        setSelectedSymbol,
+        chartTimeframe,
+        setChartTimeframe,
+        activeIndicators,
+        setActiveIndicators
+    } = useMarketStore();
     const chartRef = useRef<CandleChartHandle>(null);
     const lastPriceRef = useRef<number>(0);
     const lastHistoryTimeRef = useRef<number>(0);
     const [levels, setLevels] = useState<{ callWall: number; putWall: number; gammaFlip: number; regime: string } | null>(null);
     const [livePrice, setLivePrice] = useState<number>(0);
     const [isSchwabConnected, setIsSchwabConnected] = useState<boolean>(true);
-    const [selectedTimeframe, setSelectedTimeframe] = useState('5M');
-    
-    // Indicators state
-    const [activeIndicators, setActiveIndicators] = useState<ActiveIndicator[]>([]);
     
     // Live candle aggregation
     const currentBarRef = useRef<{
@@ -68,7 +71,7 @@ export function MarketChart() {
         const epochSeconds = Math.floor(now / 1000);
         
         let intervalSec = 300; // 5M default
-        switch (selectedTimeframe) {
+        switch (chartTimeframe) {
             case '1M':  intervalSec = 60; break;
             case '5M':  intervalSec = 300; break;
             case '15M': intervalSec = 900; break;
@@ -105,7 +108,7 @@ export function MarketChart() {
         }
         
         lastPriceRef.current = price;
-    }, [lastMessage, selectedSymbol, selectedTimeframe]);
+    }, [lastMessage, selectedSymbol, chartTimeframe]);
 
     // ────────────────────────────────────────────
     // FETCH GEX LEVELS & HEALTH CHECK
@@ -294,8 +297,8 @@ export function MarketChart() {
                         <CandleChart 
                             ref={chartRef} 
                             symbol={(!selectedSymbol || selectedSymbol === 'SPX') ? '$SPX' : selectedSymbol}
-                            timeframe={selectedTimeframe}
-                            onTimeframeChange={setSelectedTimeframe}
+                            timeframe={chartTimeframe}
+                            onTimeframeChange={setChartTimeframe}
                             onDataLoaded={handleDataLoaded}
                             activeIndicators={activeIndicators}
                         />

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { ActiveIndicator } from '../components/charts/indicators/IndicatorPanel';
 
 export interface TradeData {
   symbol: string;
@@ -112,6 +113,8 @@ interface MarketStore {
   // UI state
   selectedSymbol: string | null;
   subscribedSymbols: string[];
+  chartTimeframe: string;
+  activeIndicators: ActiveIndicator[];
 
   // Actions
   setOptionsBook: (symbol: string, data: OptionsBookData) => void;
@@ -127,6 +130,8 @@ interface MarketStore {
   clearSweepAlerts: () => void;
   removeSweepAlert: (timestamp: string, symbol: string) => void;
   updateSettings: (settings: Partial<AppSettings>) => void;
+  setChartTimeframe: (timeframe: string) => void;
+  setActiveIndicators: (indicators: ActiveIndicator[] | ((prev: ActiveIndicator[]) => ActiveIndicator[])) => void;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -155,8 +160,19 @@ export const useMarketStore = create<MarketStore>((set, get) => ({
   volumeData: [],
   activeTrades: [],
   sweepAlerts: [],
-  selectedSymbol: null,
+  selectedSymbol: (() => {
+    try { return localStorage.getItem('chartSymbol') || null; }
+    catch { return null; }
+  })(),
   subscribedSymbols: [],
+  chartTimeframe: (() => {
+    try { return localStorage.getItem('chartTimeframe') || '5M'; }
+    catch { return '5M'; }
+  })(),
+  activeIndicators: (() => {
+    try { return JSON.parse(localStorage.getItem('chartIndicators') || '[]'); }
+    catch { return []; }
+  })(),
   settings: (() => {
     try {
       const saved = localStorage.getItem('tapeReaderSettings');
@@ -231,7 +247,20 @@ export const useMarketStore = create<MarketStore>((set, get) => ({
   setVolumeData: (data) => set({ volumeData: data }),
   setZeroDTEOptions: (data) => set({ zeroDTEOptions: data }),
   setGEXMetrics: (data) => set({ gexMetrics: data }),
-  setSelectedSymbol: (symbol) => set({ selectedSymbol: symbol }),
+  setSelectedSymbol: (symbol) => {
+    if (symbol) localStorage.setItem('chartSymbol', symbol);
+    else localStorage.removeItem('chartSymbol');
+    set({ selectedSymbol: symbol });
+  },
+  setChartTimeframe: (timeframe) => {
+    localStorage.setItem('chartTimeframe', timeframe);
+    set({ chartTimeframe: timeframe });
+  },
+  setActiveIndicators: (indicators) => set((state) => {
+    const next = typeof indicators === 'function' ? indicators(state.activeIndicators) : indicators;
+    localStorage.setItem('chartIndicators', JSON.stringify(next));
+    return { activeIndicators: next };
+  }),
 
   addSubscribedSymbol: (symbol) => set((state) => ({
     subscribedSymbols: [...new Set([...state.subscribedSymbols, symbol])]
