@@ -189,9 +189,9 @@ export function setupRoutes(
       const history = await schwabService.getPriceHistory(
         symbol,
         periodType as string,
-        Number(period || 1),
+        period ? Number(period) : undefined,
         frequencyType as string,
-        Number(frequency || 5)
+        frequency ? Number(frequency) : undefined
       );
       res.json(history);
     } catch (error) {

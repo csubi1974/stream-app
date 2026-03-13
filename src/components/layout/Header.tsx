@@ -52,6 +52,7 @@ export function Header() {
 
   const navItems = [
     { path: '/', label: t('Dashboard'), icon: BarChart3 },
+    { path: '/terminal', label: t('Terminal'), icon: Zap },
     { path: '/intelligence', label: t('Intelligence Hub'), icon: BookOpen },
     { path: '/signals', label: t('Signals'), icon: Target },
     { path: '/calendar', label: t('Calendar'), icon: Calendar },

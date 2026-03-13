@@ -135,11 +135,12 @@ export function SwingScanner() {
             </div>
 
             {/* Chart */}
-            <div className="mb-6 h-[400px]">
+            <div className="mb-6 h-[400px] border border-white/10 rounded-xl overflow-hidden">
               <CandleChart
                 key={selectedSymbol}
                 symbol={selectedSymbol}
-                currentPrice={volumeData.find(s => s.symbol === selectedSymbol)?.price}
+                timeframe="5M"
+                onTimeframeChange={() => {}}
               />
             </div>
 

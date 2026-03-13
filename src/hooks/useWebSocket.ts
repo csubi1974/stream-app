@@ -40,6 +40,15 @@ export function useWebSocket({
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const shouldReconnectRef = useRef(true);
 
+  // Use refs for callbacks to avoid stale closures
+  const onMessageRef = useRef(onMessage);
+  const onConnectRef = useRef(onConnect);
+  const onDisconnectRef = useRef(onDisconnect);
+
+  useEffect(() => { onMessageRef.current = onMessage; }, [onMessage]);
+  useEffect(() => { onConnectRef.current = onConnect; }, [onConnect]);
+  useEffect(() => { onDisconnectRef.current = onDisconnect; }, [onDisconnect]);
+
   const connect = () => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       return;
@@ -52,14 +61,14 @@ export function useWebSocket({
       ws.onopen = () => {
         console.log('🔌 WebSocket connected');
         setIsConnected(true);
-        onConnect?.();
+        onConnectRef.current?.();
       };
 
       ws.onmessage = (event) => {
         try {
           const message: WebSocketMessage = JSON.parse(event.data);
           setLastMessage(message);
-          onMessage?.(message);
+          onMessageRef.current?.(message);
         } catch (error) {
           console.error('❌ Failed to parse WebSocket message:', error);
         }
@@ -68,7 +77,7 @@ export function useWebSocket({
       ws.onclose = () => {
         console.log('👋 WebSocket disconnected');
         setIsConnected(false);
-        onDisconnect?.();
+        onDisconnectRef.current?.();
 
         // Attempt to reconnect if shouldReconnect is true
         if (shouldReconnectRef.current) {

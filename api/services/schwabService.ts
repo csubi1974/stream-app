@@ -402,7 +402,7 @@ export class SchwabService {
     }
   }
 
-  async getPriceHistory(symbol: string, periodType: string = 'day', period: number = 1, frequencyType: string = 'minute', frequency: number = 5): Promise<any[]> {
+  async getPriceHistory(symbol: string, periodType?: string, period?: number, frequencyType: string = 'minute', frequency: number = 5): Promise<any[]> {
     const endpoint = '/marketdata/v1/pricehistory';
 
     if (!this.accessToken) {
@@ -411,26 +411,59 @@ export class SchwabService {
     }
 
     try {
-      const params = {
-        symbol,
-        periodType,
-        period,
-        frequencyType,
-        frequency,
-        needExtendedHoursData: true
-      };
+      const isDaily = frequencyType === 'daily';
+      const finalFrequency = frequency || (isDaily ? 1 : 5);
+
+      let params: any;
+
+      if (isDaily) {
+        // For daily candles, use period-based (year)
+        params = {
+          symbol,
+          periodType: periodType || 'year',
+          period: period || 1,
+          frequencyType: 'daily',
+          frequency: 1,
+          needExtendedHoursData: false
+        };
+      } else {
+        // For intraday, use explicit startDate/endDate to GUARANTEE today's data is included
+        // Schwab sometimes excludes today's session when using periodType=day for indices
+        const now = new Date();
+        const endDate = now.getTime(); // Now in milliseconds
+        const daysBack = period || 10;
+        const startDate = endDate - (daysBack * 24 * 60 * 60 * 1000); // Go back N days
+
+        params = {
+          symbol,
+          startDate,
+          endDate,
+          frequencyType: 'minute',
+          frequency: finalFrequency,
+          needExtendedHoursData: false
+        };
+      }
+      
+      console.log(`📡 SchwabService.getPriceHistory: ${symbol} | freq=${frequencyType}/${finalFrequency} | params=`, JSON.stringify(params));
       const data = await this.apiGet(endpoint, params);
 
-      if (data && data.candles) {
-        return data.candles.map((c: any) => ({
-          time: Math.floor(c.datetime / 1000), // Epoch seconds
+      if (data && data.candles && data.candles.length > 0) {
+        const candles = data.candles;
+        const first = new Date(candles[0].datetime).toISOString();
+        const last = new Date(candles[candles.length - 1].datetime).toISOString();
+        console.log(`✅ SchwabService: ${candles.length} candles for ${symbol}. [${first} → ${last}]`);
+        
+        return candles.map((c: any) => ({
+          time: Math.floor(c.datetime / 1000),
           open: c.open,
           high: c.high,
           low: c.low,
           close: c.close,
           volume: c.volume
-        }));
+        })).slice(-2000);
       }
+      
+      console.warn(`⚠️ SchwabService: No candles returned for ${symbol}`);
     } catch (error) {
       console.error(`❌ Failed to fetch Price History for ${symbol}:`, error);
     }

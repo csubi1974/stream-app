@@ -8,11 +8,14 @@ import { IntelligenceHub } from './pages/IntelligenceHub';
 import { Signals } from './pages/Signals';
 import { Calendar } from './pages/Calendar';
 
+import { MarketChart } from './pages/MarketChart';
+
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<Dashboard />} />
+        <Route path="/terminal" element={<MarketChart />} />
         <Route path="/ladder/:symbol" element={<OptionsLadderPage />} />
         <Route path="/intelligence" element={<IntelligenceHub />} />
         <Route path="/academy" element={<IntelligenceHub />} />
