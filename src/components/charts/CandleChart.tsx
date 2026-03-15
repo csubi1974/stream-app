@@ -1,6 +1,6 @@
 import { createChart, ColorType, ISeriesApi, LineStyle, IPriceLine, Time } from 'lightweight-charts';
 import { useEffect, useRef, useState, useImperativeHandle, forwardRef, useCallback } from 'react';
-import { calculateSMA, calculateRSI, updateLastSMA, updateLastRSI, calculateReversionSignals, calculateTrendPullbackSignals, determineMacroBias, OHLCBar, MacroBias, GEXLevels, BreadthData } from './indicators/indicatorEngine';
+import { calculateSMA, calculateRSI, updateLastSMA, updateLastRSI, calculateReversionSignals, calculateTrendPullbackSignals, determineMacroBias, calculateSignalStats, OHLCBar, MacroBias, GEXLevels, BreadthData, SignalStats, ReversionSignal, TrendSignal } from './indicators/indicatorEngine';
 import { ActiveIndicator } from './indicators/IndicatorPanel';
 
 interface ChartProps {
@@ -42,6 +42,8 @@ export const CandleChart = forwardRef<CandleChartHandle, ChartProps>(({
     const [walls, setWalls] = useState<{ callWall: number; putWall: number; gammaFlip?: number; topStrike?: number } | null>(null);
     const [reversionDistances, setReversionDistances] = useState<{[key: string]: number}>({});
     const [macroBias, setMacroBias] = useState<MacroBias | null>(null);
+    const [signalStats, setSignalStats] = useState<SignalStats | null>(null);
+    const [showLegend, setShowLegend] = useState(false);
     const gexLevelsRef = useRef<GEXLevels | null>(null);
     const breadthRef = useRef<BreadthData | null>(null);
     const historyLoadedRef = useRef(false);
@@ -199,18 +201,26 @@ export const CandleChart = forwardRef<CandleChartHandle, ChartProps>(({
         
         let allMarkers: any[] = [];
         const hasSignals = activeReversions.length > 0 || activeTrend.length > 0;
+        let allReversionSigs: ReversionSignal[] = [];
+        let allTrendSigs: TrendSignal[] = [];
 
         // Reversion signals (contra-tendencia)
         if (activeReversions.length > 0) {
             activeReversions.forEach(ind => {
                 const { signals } = calculateReversionSignals(data, ind.period, 2.0, walls?.topStrike || walls?.gammaFlip);
+                allReversionSigs.push(...signals);
                 signals.forEach(sig => {
+                    // Outcome-based colors
+                    let color = '#eab308'; // PENDING = yellow
+                    if (sig.outcome === 'WIN') color = '#10b981'; // green
+                    else if (sig.outcome === 'LOSS') color = '#ef4444'; // red
+
                     allMarkers.push({
                         time: sig.time,
                         position: sig.type === 'buy' ? 'belowBar' : 'aboveBar',
-                        color: sig.type === 'buy' ? '#10b981' : '#ef4444',
+                        color,
                         shape: sig.type === 'buy' ? 'arrowUp' : 'arrowDown',
-                        text: sig.distance > 0 ? `+${sig.distance}%` : `${sig.distance}%`,
+                        text: `${sig.outcome === 'WIN' ? '✓' : sig.outcome === 'LOSS' ? '✗' : '⏳'}${sig.price.toFixed(0)}(${sig.distance > 0 ? '+' : ''}${sig.distance}%)`,
                         size: 1,
                     });
                 });
@@ -220,16 +230,30 @@ export const CandleChart = forwardRef<CandleChartHandle, ChartProps>(({
         // Trend Pullback signals (pro-tendencia)
         if (activeTrend.length > 0 && macroBias && macroBias.direction !== 'NEUTRAL') {
             const { signals: trendSigs } = calculateTrendPullbackSignals(data, macroBias, gexLevelsRef.current);
+            allTrendSigs.push(...trendSigs);
             trendSigs.forEach(sig => {
+                // Outcome-based colors
+                let color = sig.type === 'trend_long' ? '#06b6d4' : '#f97316'; // PENDING base (cyan/orange)
+                if (sig.outcome === 'WIN') color = '#10b981'; // green
+                else if (sig.outcome === 'LOSS') color = '#ef4444'; // red
+
                 allMarkers.push({
                     time: sig.time,
                     position: sig.type === 'trend_long' ? 'belowBar' : 'aboveBar',
-                    color: sig.type === 'trend_long' ? '#06b6d4' : '#f97316',
+                    color,
                     shape: sig.type === 'trend_long' ? 'arrowUp' : 'arrowDown',
-                    text: `${sig.levelType} ${sig.confidence}%`,
-                    size: 2,
+                    text: `${sig.outcome === 'WIN' ? '✓' : sig.outcome === 'LOSS' ? '✗' : '⏳'}${sig.level.toFixed(0)}|${sig.levelType} ${sig.confidence}%`,
+                    size: 1, // Reduced size from 2 to 1 for better spacing
                 });
             });
+        }
+
+        // Calculate and update signal stats
+        if (hasSignals) {
+            const stats = calculateSignalStats(allReversionSigs, allTrendSigs);
+            setSignalStats(stats);
+        } else {
+            setSignalStats(null);
         }
 
         if (hasSignals && allMarkers.length > 0) {
@@ -946,6 +970,34 @@ export const CandleChart = forwardRef<CandleChartHandle, ChartProps>(({
                         </div>
                     )}
 
+                    {/* Signal Win Rate Badge */}
+                    {signalStats && (signalStats.wins + signalStats.losses) > 0 && (
+                        <div className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg border ${
+                            signalStats.winRate >= 65 ? 'bg-green-500/10 border-green-500/30' :
+                            signalStats.winRate >= 50 ? 'bg-yellow-500/10 border-yellow-500/30' :
+                            'bg-red-500/10 border-red-500/30'
+                        }`}>
+                            <span className="text-[9px] font-black text-ink-muted uppercase tracking-wider">Señales</span>
+                            <span className={`text-[10px] font-black data-font ${
+                                signalStats.winRate >= 65 ? 'text-green-400' :
+                                signalStats.winRate >= 50 ? 'text-yellow-400' :
+                                'text-red-400'
+                            }`}>
+                                {signalStats.wins}/{signalStats.wins + signalStats.losses}
+                            </span>
+                            <span className={`text-[8px] font-bold px-1 py-0.5 rounded ${
+                                signalStats.winRate >= 65 ? 'bg-green-500/20 text-green-400' :
+                                signalStats.winRate >= 50 ? 'bg-yellow-500/20 text-yellow-400' :
+                                'bg-red-500/20 text-red-400'
+                            }`}>
+                                {signalStats.winRate}%
+                            </span>
+                            {signalStats.pending > 0 && (
+                                <span className="text-[8px] font-bold text-yellow-400/60">+{signalStats.pending}⏳</span>
+                            )}
+                        </div>
+                    )}
+
                     {activeRSIs.length > 0 && (
                         <div className="flex items-center space-x-1">
                             <div className="w-3 h-[2px] rounded-full" style={{ backgroundColor: activeRSIs[0].color }} />
@@ -965,11 +1017,60 @@ export const CandleChart = forwardRef<CandleChartHandle, ChartProps>(({
                             </div>
                         </div>
                     )}
+
+                    <button 
+                        onClick={() => setShowLegend(!showLegend)}
+                        className={`p-1.5 rounded-lg border transition-all ${
+                            showLegend ? 'bg-accent/20 border-accent/40 text-accent' : 'bg-white/5 border-white/10 text-ink-muted hover:text-white'
+                        }`}
+                        title="Ver Leyenda de Señales"
+                    >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </button>
                 </div>
             </div>
 
+            {/* Main Candlestick Chart Area */}
+            <div className="relative flex-grow min-h-[600px]">
+                <div ref={chartContainerRef} className="absolute inset-0 bg-[#0b0e11]" />
+                
+                {/* Floating Legend Overlay */}
+                {showLegend && (
+                    <div className="absolute top-4 right-4 z-20 w-48 bg-[#1e222d]/95 backdrop-blur-md border border-white/10 rounded-xl p-3 shadow-2xl animate-in fade-in zoom-in duration-200">
+                        <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/5">
+                            <span className="text-[10px] font-black text-white uppercase tracking-wider">Leyenda de Señales</span>
+                            <button onClick={() => setShowLegend(false)} className="text-ink-muted hover:text-white">
+                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <div className="space-y-2">
+                            <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+                                <div className="flex flex-col"><span className="text-[9px] font-black text-accent uppercase">G+B</span><span className="text-[8px] text-ink-muted leading-tight">GEX + Bounce</span></div>
+                                <div className="flex flex-col"><span className="text-[9px] font-black text-emerald-400 uppercase">P.W</span><span className="text-[8px] text-ink-muted leading-tight">Put Wall</span></div>
+                                <div className="flex flex-col"><span className="text-[9px] font-black text-red-400 uppercase">C.W</span><span className="text-[8px] text-ink-muted leading-tight">Call Wall</span></div>
+                                <div className="flex flex-col"><span className="text-[9px] font-black text-orange-400 uppercase">G.F</span><span className="text-[8px] text-ink-muted leading-tight">Gamma Flip</span></div>
+                                <div className="flex flex-col"><span className="text-[9px] font-black text-purple-400 uppercase">T.G</span><span className="text-[8px] text-ink-muted leading-tight">Top GEX</span></div>
+                                <div className="flex flex-col"><span className="text-[9px] font-black text-cyan-400 uppercase">S/R</span><span className="text-[8px] text-ink-muted leading-tight">Sop/Resist</span></div>
+                            </div>
+                            
+                            <div className="pt-2 border-t border-white/5 space-y-1">
+                                <div className="flex items-center space-x-2"><span className="text-emerald-400 text-xs font-bold">✓</span><span className="text-[8px] text-ink-muted">Éxito (Objetivo Tocado)</span></div>
+                                <div className="flex items-center space-x-2"><span className="text-red-400 text-xs font-bold">✗</span><span className="text-[8px] text-ink-muted">Fallo (Nivel Roto)</span></div>
+                                <div className="flex items-center space-x-2"><span className="text-yellow-400 text-xs font-bold">⏳</span><span className="text-[8px] text-ink-muted">Pendiente (En Curso)</span></div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
             {/* Main Candlestick Chart */}
-            <div ref={chartContainerRef} className="w-full flex-grow bg-[#0b0e11]" style={{ minHeight: hasRSI ? '460px' : '600px' }} />
+            {/* The ref is now used above in the absolute positioned div */}
+            {/* <div ref={chartContainerRef} className="w-full flex-grow bg-[#0b0e11]" style={{ minHeight: hasRSI ? '460px' : '600px' }} /> */}
 
             {/* RSI Panel */}
             {hasRSI && (

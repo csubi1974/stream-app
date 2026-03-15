@@ -16,6 +16,22 @@ export interface IndicatorPoint {
 }
 
 /**
+ * Average True Range (ATR)
+ */
+export function calculateATR(data: OHLCBar[], period: number = 14): number {
+    if (!data || data.length < period + 1) return 0;
+    let trSum = 0;
+    for (let i = data.length - period; i < data.length; i++) {
+        const h = data[i].high;
+        const l = data[i].low;
+        const pc = data[i-1].close;
+        const tr = Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc));
+        trSum += tr;
+    }
+    return trSum / period;
+}
+
+/**
  * Simple Moving Average (SMA)
  * Returns N - period + 1 data points, each being the average of the last `period` closes.
  */
@@ -140,6 +156,14 @@ export interface ReversionSignal {
     probability: number;
     distance: number;
     zScore: number;
+    outcome: 'WIN' | 'LOSS' | 'PENDING';
+}
+
+export interface SignalStats {
+    wins: number;
+    losses: number;
+    pending: number;
+    winRate: number;
 }
 
 export function calculateReversionSignals(
@@ -225,14 +249,31 @@ export function calculateReversionSignals(
         if (triggered) {
             events++;
             let touchedSMA = false;
+            let extendedFurther = false;
             const maxLookForward = Math.min(i + 15, data.length);
+            const isLastCandles = i >= data.length - 3; // Last 3 candles = PENDING
             
             for (let f = i + 1; f < maxLookForward; f++) {
                 if (isBuy && data[f].high >= stats[f]?.sma) { touchedSMA = true; break; }
                 if (!isBuy && data[f].low <= stats[f]?.sma) { touchedSMA = true; break; }
+                // Check if price extended 50% further away (invalidation)
+                if (stats[f]) {
+                    const newDist = Math.abs(stats[f].dist);
+                    if (newDist > stat.absDist * 1.5) { extendedFurther = true; break; }
+                }
             }
 
             if (touchedSMA) successes++;
+
+            // Determine outcome
+            let outcome: 'WIN' | 'LOSS' | 'PENDING' = 'PENDING';
+            if (isLastCandles) {
+                outcome = 'PENDING';
+            } else if (touchedSMA) {
+                outcome = 'WIN';
+            } else if (extendedFurther || (i + 15 < data.length && !touchedSMA)) {
+                outcome = 'LOSS';
+            }
 
             signals.push({
                 time: bar.time,
@@ -240,7 +281,8 @@ export function calculateReversionSignals(
                 type: isBuy ? 'buy' : 'sell',
                 probability: 0,
                 distance: parseFloat((stat.dist * 100).toFixed(2)),
-                zScore: 0
+                zScore: 0,
+                outcome
             });
             
             i += 2; 
@@ -248,7 +290,7 @@ export function calculateReversionSignals(
     }
 
     const finalWinRate = events > 0 ? (successes / events) * 100 : 75.0;
-    signals.forEach(s => { s.probability = parseFloat(finalWinRate.toFixed(1)); });
+    signals.forEach(s => { if (s.probability === 0) s.probability = parseFloat(finalWinRate.toFixed(1)); });
 
     return { signals, winRate: parseFloat(finalWinRate.toFixed(1)), totalEvents: events };
 }
@@ -264,6 +306,7 @@ export interface TrendSignal {
     level: number;        // The S/R level that triggered the signal
     levelType: string;    // 'GEX_PUT_WALL' | 'GEX_GFLIP' | 'BOUNCE_ZONE' | 'GEX+BOUNCE'
     confidence: number;   // 0-100 based on confluences
+    outcome: 'WIN' | 'LOSS' | 'PENDING';
 }
 
 export interface MacroBias {
@@ -322,11 +365,20 @@ export function determineMacroBias(
         }
     }
 
-    // 3. GEX Regime: Price position relative to Gamma Flip
+    // 3. GEX Regime: Price position relative to Gamma Flip with Buffer (Dead Zone)
+    // We use a 0.25% buffer (approx. 15-18 points on SPX) to prevent flickering
+    // as the Flip level moves during the day.
     if (gexLevels?.gammaFlip && gexLevels?.currentPrice) {
         const distFromFlip = (gexLevels.currentPrice - gexLevels.gammaFlip) / gexLevels.gammaFlip;
-        if (distFromFlip > 0.001) gexBias = 'BULLISH';   // Above Gamma Flip → Stable/Bullish
-        else if (distFromFlip < -0.001) gexBias = 'BEARISH'; // Below → Unstable/Bearish
+        const buffer = 0.0025; // 0.25% Buffer Zone
+        
+        if (distFromFlip > buffer) {
+            gexBias = 'BULLISH';   // Clearly Above → Stable
+        } else if (distFromFlip < -buffer) {
+            gexBias = 'BEARISH';  // Clearly Below → Unstable
+        } else {
+            gexBias = 'NEUTRAL';  // Inside the "Dead Zone" or Flip Zone
+        }
     }
 
     // Count confluences
@@ -512,38 +564,88 @@ export function calculateTrendPullbackSignals(
             let confidence = 40 + (bias.confluences * 15) + (level.score * 5);
             confidence = Math.min(95, Math.max(50, confidence));
 
-            // Determine label
+            // Determine label (Abbreviated for space)
             let levelLabel = level.type;
-            if (level.type.includes('+BOUNCE')) levelLabel = 'GEX+BOUNCE';
-            else if (level.type.includes('PUT_WALL')) levelLabel = 'PUT WALL';
-            else if (level.type.includes('CALL_WALL')) levelLabel = 'CALL WALL';
-            else if (level.type.includes('GAMMA_FLIP')) levelLabel = 'Γ FLIP';
-            else if (level.type.includes('TOP_GEX')) levelLabel = 'TOP GEX';
-            else if (level.type.includes('BOUNCE')) levelLabel = 'S/R ZONE';
+            if (level.type.includes('+BOUNCE')) levelLabel = 'G+B';
+            else if (level.type.includes('PUT_WALL')) levelLabel = 'P.W';
+            else if (level.type.includes('CALL_WALL')) levelLabel = 'C.W';
+            else if (level.type.includes('GAMMA_FLIP')) levelLabel = 'G.F';
+            else if (level.type.includes('TOP_GEX')) levelLabel = 'T.G';
+            else if (level.type.includes('BOUNCE')) levelLabel = 'S/R';
 
-            signals.push({
-                time: bar.time,
-                price: bias.direction === 'BULLISH' ? bar.low : bar.high,
-                type: bias.direction === 'BULLISH' ? 'trend_long' : 'trend_short',
-                level: level.price,
-                levelType: levelLabel,
-                confidence
-            });
+            // Determine outcome: did it bounce and continue trend?
+            let outcome: 'WIN' | 'LOSS' | 'PENDING' = 'PENDING';
+            const isRecent = i >= data.length - 10; // More caution with recent signals
+            if (!isRecent) {
+                const atr = calculateATR(data.slice(0, i + 1), 14);
+                const targetMove = Math.max(currentPrice * 0.002, atr * 1.5); // Use ATR for dynamic target
+                let hitTarget = false;
+                let levelBroken = false;
+                const lookMax = Math.min(i + 25, data.length); // Allow more time (25 bars) for setup to play out
+                
+                for (let f = i + 1; f < lookMax; f++) {
+                    if (bias.direction === 'BULLISH') {
+                        if (data[f].high >= bar.close + targetMove) { hitTarget = true; break; }
+                        // Strict invalidation: close below level
+                        if (data[f].close < level.price - tolerance) { levelBroken = true; break; }
+                    } else {
+                        if (data[f].low <= bar.close - targetMove) { hitTarget = true; break; }
+                        if (data[f].close > level.price + tolerance) { levelBroken = true; break; }
+                    }
+                }
+                
+                if (hitTarget) outcome = 'WIN';
+                else if (levelBroken || (i + 25 < data.length && !hitTarget)) outcome = 'LOSS';
+            }
+
+            // Only include High Quality signals (Rigor filter)
+            if (confidence >= 75) {
+                signals.push({
+                    time: bar.time,
+                    price: bias.direction === 'BULLISH' ? bar.low : bar.high,
+                    type: bias.direction === 'BULLISH' ? 'trend_long' : 'trend_short',
+                    level: level.price,
+                    levelType: levelLabel,
+                    confidence,
+                    outcome
+                });
+            }
 
             break; // One signal per bar max
         }
     }
 
-    // Deduplicate: max 1 signal per 3 bars
+    // Deduplicate: max 1 signal per 15 bars (Extreme Rigor filter)
     const filtered: TrendSignal[] = [];
-    let lastSignalIdx = -10;
+    let lastSignalIdx = -30;
     for (let i = 0; i < signals.length; i++) {
         const barIdx = data.findIndex(d => d.time === signals[i].time);
-        if (barIdx - lastSignalIdx >= 3) {
+        if (barIdx - lastSignalIdx >= 15) {
             filtered.push(signals[i]);
             lastSignalIdx = barIdx;
         }
     }
 
     return { signals: filtered, activeLevels };
+}
+
+/**
+ * Calculate aggregate signal statistics from a mixed set of signals.
+ */
+export function calculateSignalStats(
+    reversionSignals: ReversionSignal[],
+    trendSignals: TrendSignal[]
+): SignalStats {
+    const all = [
+        ...reversionSignals.map(s => s.outcome),
+        ...trendSignals.map(s => s.outcome)
+    ];
+    
+    const wins = all.filter(o => o === 'WIN').length;
+    const losses = all.filter(o => o === 'LOSS').length;
+    const pending = all.filter(o => o === 'PENDING').length;
+    const resolved = wins + losses;
+    const winRate = resolved > 0 ? (wins / resolved) * 100 : 0;
+    
+    return { wins, losses, pending, winRate: parseFloat(winRate.toFixed(1)) };
 }
