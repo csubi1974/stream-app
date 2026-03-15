@@ -248,30 +248,59 @@ export function calculateReversionSignals(
 
         if (triggered) {
             events++;
+            const atrAtSignal = calculateATR(data.slice(0, i + 1), 14);
+            const volatilityTarget = atrAtSignal * 1.0; // Reduced from 1.5 for better sensitivity
+            let hitVolatilityTarget = false;
             let touchedSMA = false;
             let extendedFurther = false;
             const maxLookForward = Math.min(i + 15, data.length);
             const isLastCandles = i >= data.length - 3; // Last 3 candles = PENDING
-            
+
             for (let f = i + 1; f < maxLookForward; f++) {
-                if (isBuy && data[f].high >= stats[f]?.sma) { touchedSMA = true; break; }
-                if (!isBuy && data[f].low <= stats[f]?.sma) { touchedSMA = true; break; }
-                // Check if price extended 50% further away (invalidation)
+                const currentSMA = stats[f]?.sma;
+                if (!currentSMA) continue;
+
+                // Condition 1: Volatility Target (Quick Profit)
+                if (isBuy && data[f].high >= bar.close + volatilityTarget) {
+                    hitVolatilityTarget = true;
+                    break;
+                }
+                if (!isBuy && data[f].low <= bar.close - volatilityTarget) {
+                    hitVolatilityTarget = true;
+                    break;
+                }
+
+                // Condition 2: SMA Touch
+                if (isBuy) {
+                    if (data[f].high >= currentSMA) {
+                        if (currentSMA > bar.close) touchedSMA = true;
+                        else extendedFurther = true;
+                        break; 
+                    }
+                } else {
+                    if (data[f].low <= currentSMA) {
+                        if (currentSMA < bar.close) touchedSMA = true;
+                        else extendedFurther = true;
+                        break;
+                    }
+                }
+
                 if (stats[f]) {
                     const newDist = Math.abs(stats[f].dist);
-                    if (newDist > stat.absDist * 1.5) { extendedFurther = true; break; }
+                    // More breathing room: only invalidate if it doubles the distance (2.0)
+                    if (newDist > stat.absDist * 2.0) { extendedFurther = true; break; }
                 }
             }
 
-            if (touchedSMA) successes++;
+            if (touchedSMA || hitVolatilityTarget) successes++;
 
             // Determine outcome
             let outcome: 'WIN' | 'LOSS' | 'PENDING' = 'PENDING';
             if (isLastCandles) {
                 outcome = 'PENDING';
-            } else if (touchedSMA) {
+            } else if (touchedSMA || hitVolatilityTarget) {
                 outcome = 'WIN';
-            } else if (extendedFurther || (i + 15 < data.length && !touchedSMA)) {
+            } else {
                 outcome = 'LOSS';
             }
 

@@ -44,6 +44,17 @@ export const CandleChart = forwardRef<CandleChartHandle, ChartProps>(({
     const [macroBias, setMacroBias] = useState<MacroBias | null>(null);
     const [signalStats, setSignalStats] = useState<SignalStats | null>(null);
     const [showLegend, setShowLegend] = useState(false);
+    
+    // Ruler Tool State
+    const [isMeasuring, setIsMeasuring] = useState(false);
+    const [measureState, setMeasureState] = useState<{
+        startX: number; startY: number;
+        endX: number; endY: number;
+        startPrice: number; endPrice: number;
+        startLogical: number; endLogical: number;
+        isDragging: boolean;
+    } | null>(null);
+
     const gexLevelsRef = useRef<GEXLevels | null>(null);
     const breadthRef = useRef<BreadthData | null>(null);
     const historyLoadedRef = useRef(false);
@@ -220,7 +231,7 @@ export const CandleChart = forwardRef<CandleChartHandle, ChartProps>(({
                         position: sig.type === 'buy' ? 'belowBar' : 'aboveBar',
                         color,
                         shape: sig.type === 'buy' ? 'arrowUp' : 'arrowDown',
-                        text: `${sig.outcome === 'WIN' ? '✓' : sig.outcome === 'LOSS' ? '✗' : '⏳'}${sig.price.toFixed(0)}(${sig.distance > 0 ? '+' : ''}${sig.distance}%)`,
+                        text: `${sig.outcome === 'WIN' ? '✓' : sig.outcome === 'LOSS' ? '✗' : '⏳'}${sig.price.toFixed(2)}(${sig.distance > 0 ? '+' : ''}${sig.distance}%)`,
                         size: 1,
                     });
                 });
@@ -242,7 +253,7 @@ export const CandleChart = forwardRef<CandleChartHandle, ChartProps>(({
                     position: sig.type === 'trend_long' ? 'belowBar' : 'aboveBar',
                     color,
                     shape: sig.type === 'trend_long' ? 'arrowUp' : 'arrowDown',
-                    text: `${sig.outcome === 'WIN' ? '✓' : sig.outcome === 'LOSS' ? '✗' : '⏳'}${sig.level.toFixed(0)}|${sig.levelType} ${sig.confidence}%`,
+                    text: `${sig.outcome === 'WIN' ? '✓' : sig.outcome === 'LOSS' ? '✗' : '⏳'}${sig.level.toFixed(2)}|${sig.levelType} ${sig.confidence}%`,
                     size: 1, // Reduced size from 2 to 1 for better spacing
                 });
             });
@@ -264,6 +275,54 @@ export const CandleChart = forwardRef<CandleChartHandle, ChartProps>(({
             try { seriesRef.current.setMarkers([]); } catch (e) {}
         }
     }, [activeReversions, activeTrend, walls?.gammaFlip, walls?.topStrike, macroBias]);
+
+    // ────────────────────────────────────────────
+    // Ruler Tool Event Handlers
+    // ────────────────────────────────────────────
+    const handleMeasureStart = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (!chartRef.current || !seriesRef.current) return;
+        
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        const logical = chartRef.current.timeScale().coordinateToLogical(x as any);
+        const price = seriesRef.current.coordinateToPrice(y);
+
+        if (price === null) return;
+
+        setMeasureState({
+            startX: x, startY: y,
+            endX: x, endY: y,
+            startPrice: price, endPrice: price,
+            startLogical: logical || 0, endLogical: logical || 0,
+            isDragging: true
+        });
+    };
+
+    const handleMeasureMove = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (!measureState?.isDragging || !chartRef.current || !seriesRef.current) return;
+        
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        const logical = chartRef.current.timeScale().coordinateToLogical(x as any);
+        const price = seriesRef.current.coordinateToPrice(y);
+
+        if (price === null) return;
+
+        setMeasureState(prev => prev ? ({
+            ...prev,
+            endX: x, endY: y,
+            endPrice: price,
+            endLogical: logical || prev.startLogical
+        }) : null);
+    };
+
+    const handleMeasureEnd = () => {
+        setMeasureState(prev => prev ? { ...prev, isDragging: false } : null);
+    };
 
     // ────────────────────────────────────────────
     // Fetch Walls
@@ -1018,23 +1077,84 @@ export const CandleChart = forwardRef<CandleChartHandle, ChartProps>(({
                         </div>
                     )}
 
-                    <button 
-                        onClick={() => setShowLegend(!showLegend)}
-                        className={`p-1.5 rounded-lg border transition-all ${
-                            showLegend ? 'bg-accent/20 border-accent/40 text-accent' : 'bg-white/5 border-white/10 text-ink-muted hover:text-white'
-                        }`}
-                        title="Ver Leyenda de Señales"
-                    >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </button>
+                    <div className="flex bg-black/40 rounded-lg border border-white/5 overflow-hidden">
+                        <button 
+                            onClick={() => {
+                                setIsMeasuring(!isMeasuring);
+                                setMeasureState(null);
+                            }}
+                            className={`p-1.5 transition-all ${
+                                isMeasuring ? 'bg-accent/20 text-accent' : 'bg-transparent text-ink-muted hover:text-white hover:bg-white/5'
+                            }`}
+                            title="Herramienta de Medición (Regla)"
+                        >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                            </svg>
+                        </button>
+
+                        <button 
+                            onClick={() => setShowLegend(!showLegend)}
+                            className={`p-1.5 transition-all border-l border-white/5 ${
+                                showLegend ? 'bg-accent/20 text-accent' : 'bg-transparent text-ink-muted hover:text-white hover:bg-white/5'
+                            }`}
+                            title="Ver Leyenda de Señales"
+                        >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </div>
 
             {/* Main Candlestick Chart Area */}
-            <div className="relative flex-grow min-h-[600px]">
+            <div className="relative flex-grow min-h-[600px] select-none">
                 <div ref={chartContainerRef} className="absolute inset-0 bg-[#0b0e11]" />
+                
+                {/* Measurement Tool Overlay */}
+                {isMeasuring && (
+                    <div 
+                        className="absolute inset-0 z-30 cursor-crosshair"
+                        onMouseDown={handleMeasureStart}
+                        onMouseMove={handleMeasureMove}
+                        onMouseUp={handleMeasureEnd}
+                        onMouseLeave={handleMeasureEnd}
+                    >
+                        {measureState && (
+                            <>
+                                <div 
+                                    className={`absolute border border-dashed ${measureState.endPrice >= measureState.startPrice ? 'bg-emerald-500/10 border-emerald-500/50' : 'bg-red-500/10 border-red-500/50'}`}
+                                    style={{
+                                        left: Math.min(measureState.startX, measureState.endX),
+                                        top: Math.min(measureState.startY, measureState.endY),
+                                        width: Math.abs(measureState.endX - measureState.startX),
+                                        height: Math.abs(measureState.endY - measureState.startY),
+                                        pointerEvents: 'none'
+                                    }}
+                                />
+                                <div 
+                                    className="absolute bg-[#1e222d] border border-white/10 rounded px-2 py-1.5 shadow-xl text-xs font-mono pointer-events-none z-40"
+                                    style={{
+                                        left: measureState.endX + 15,
+                                        top: measureState.endY + 15,
+                                    }}
+                                >
+                                    <div className={`font-black tracking-tight ${measureState.endPrice >= measureState.startPrice ? 'text-emerald-400' : 'text-red-400'}`}>
+                                        {(measureState.endPrice - measureState.startPrice) > 0 ? '+' : ''}
+                                        {(measureState.endPrice - measureState.startPrice).toFixed(2)} 
+                                        <span className="ml-1 opacity-80 font-medium">
+                                            ({( ((measureState.endPrice - measureState.startPrice) / measureState.startPrice) * 100 ).toFixed(2)}%)
+                                        </span>
+                                    </div>
+                                    <div className="text-white/70 text-[10px] mt-0.5">
+                                        {Math.round(Math.abs(measureState.endLogical - measureState.startLogical))} barras
+                                    </div>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                )}
                 
                 {/* Floating Legend Overlay */}
                 {showLegend && (
