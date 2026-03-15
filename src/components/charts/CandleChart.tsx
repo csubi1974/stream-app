@@ -253,7 +253,7 @@ export const CandleChart = forwardRef<CandleChartHandle, ChartProps>(({
                     position: sig.type === 'trend_long' ? 'belowBar' : 'aboveBar',
                     color,
                     shape: sig.type === 'trend_long' ? 'arrowUp' : 'arrowDown',
-                    text: `${sig.outcome === 'WIN' ? '✓' : sig.outcome === 'LOSS' ? '✗' : '⏳'}${sig.level.toFixed(2)}|${sig.levelType} ${sig.confidence}%`,
+                    text: `${sig.outcome === 'WIN' ? '✓' : sig.outcome === 'LOSS' ? '✗' : '⏳'}${sig.price.toFixed(2)}|${sig.levelType} ${sig.confidence}%`,
                     size: 1, // Reduced size from 2 to 1 for better spacing
                 });
             });
