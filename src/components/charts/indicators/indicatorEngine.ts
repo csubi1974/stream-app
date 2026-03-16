@@ -325,6 +325,168 @@ export function calculateReversionSignals(
 }
 
 // ─────────────────────────────────────────────────────────
+// Pure Statistical Reversion Engine (No GEX, No Filters)
+// Only uses: SMA distance + ATR exit target
+// ─────────────────────────────────────────────────────────
+
+export interface PureReversionResult {
+    signals: ReversionSignal[];
+    optimalThreshold: number;   // Best distance % found
+    winRate: number;
+    totalEvents: number;
+    sampleSize: number;
+}
+
+export function calculatePureReversionSignals(
+    data: OHLCBar[],
+    smaPeriod: number = 20
+): PureReversionResult {
+    if (!data || data.length < smaPeriod + 30) {
+        return { signals: [], optimalThreshold: 0, winRate: 0, totalEvents: 0, sampleSize: 0 };
+    }
+
+    // ── Step 1: Build SMA stats for every bar ──
+    const stats: { dist: number; sma: number; absDist: number }[] = new Array(data.length).fill(null);
+    let sum = 0;
+    for (let i = 0; i < data.length; i++) {
+        sum += data[i].close;
+        if (i >= smaPeriod) sum -= data[i - smaPeriod].close;
+        if (i >= smaPeriod - 1) {
+            const sma = sum / smaPeriod;
+            const dist = (data[i].close - sma) / sma;
+            stats[i] = { dist, sma, absDist: Math.abs(dist) };
+        }
+    }
+
+    // ── Step 2: Scan all thresholds to find optimal (backtest) ──
+    const testThresholds: number[] = [];
+    for (let t = 0.002; t <= 0.05; t += 0.001) testThresholds.push(parseFloat(t.toFixed(3)));
+
+    let bestThreshold = 0.005;
+    let bestScore = 0;
+    let bestWinRate = 0;
+    let bestSampleSize = 0;
+
+    testThresholds.forEach(thresh => {
+        let hits = 0;
+        let wins = 0;
+        for (let i = smaPeriod; i < data.length - 15; i++) {
+            const stat = stats[i];
+            if (!stat || stat.absDist < thresh) continue;
+
+            // Only trigger at turning point (local extreme)
+            const isLocalPeak = !stats[i + 1] || stats[i + 1].absDist < stat.absDist;
+            if (!isLocalPeak) continue;
+
+            hits++;
+            const isBuy = stat.dist < 0;
+            const atr = calculateATR(data.slice(0, i + 1), 14);
+            const atrTarget = atr * 1.0;
+            let won = false;
+
+            for (let f = i + 1; f < Math.min(i + 15, data.length); f++) {
+                // Win condition 1: Hit 1 ATR in favorable direction (quick profit)
+                if (isBuy && data[f].high >= data[i].close + atrTarget) { won = true; break; }
+                if (!isBuy && data[f].low <= data[i].close - atrTarget) { won = true; break; }
+                // Win condition 2: Touched SMA
+                const futureSMA = stats[f]?.sma;
+                if (futureSMA) {
+                    if (isBuy && data[f].high >= futureSMA && futureSMA > data[i].close) { won = true; break; }
+                    if (!isBuy && data[f].low <= futureSMA && futureSMA < data[i].close) { won = true; break; }
+                }
+            }
+            if (won) wins++;
+            i += 3; // Avoid clustering
+        }
+
+        if (hits < 3) return; // Need minimum sample
+
+        const wr = (wins / hits) * 100;
+        // Score = winRate * log(sampleSize) — rewards both accuracy and frequency
+        const score = wr * Math.log10(hits + 1);
+        if (score > bestScore) {
+            bestScore = score;
+            bestThreshold = thresh;
+            bestWinRate = wr;
+            bestSampleSize = hits;
+        }
+    });
+
+    // ── Step 3: Generate signals using optimal threshold ──
+    let successes = 0;
+    let events = 0;
+    const signals: ReversionSignal[] = [];
+
+    for (let i = smaPeriod; i < data.length; i++) {
+        const bar = data[i];
+        const stat = stats[i];
+        if (!stat) continue;
+
+        const isExtreme = stat.absDist >= bestThreshold;
+        const isTurning = i === data.length - 1 || !stats[i + 1] || stats[i + 1].absDist < stat.absDist;
+
+        if (!isExtreme || !isTurning) continue;
+
+        events++;
+        const isBuy = stat.dist < 0;
+        const atrAtSignal = calculateATR(data.slice(0, i + 1), 14);
+        const volatilityTarget = atrAtSignal * 1.0;
+
+        let touchedSMA = false;
+        let hitATRTarget = false;
+        const maxLookForward = Math.min(i + 15, data.length);
+        const isRecent = i >= data.length - 3;
+
+        for (let f = i + 1; f < maxLookForward; f++) {
+            const futureSMA = stats[f]?.sma;
+
+            // Check 1: ATR Quick Profit
+            if (isBuy && data[f].high >= bar.close + volatilityTarget) { hitATRTarget = true; break; }
+            if (!isBuy && data[f].low <= bar.close - volatilityTarget) { hitATRTarget = true; break; }
+
+            // Check 2: SMA Touch (with profit check)
+            if (futureSMA) {
+                if (isBuy && data[f].high >= futureSMA && futureSMA > bar.close) { touchedSMA = true; break; }
+                if (!isBuy && data[f].low <= futureSMA && futureSMA < bar.close) { touchedSMA = true; break; }
+            }
+        }
+
+        if (touchedSMA || hitATRTarget) successes++;
+
+        let outcome: 'WIN' | 'LOSS' | 'PENDING' = 'PENDING';
+        if (isRecent) {
+            outcome = 'PENDING';
+        } else if (touchedSMA || hitATRTarget) {
+            outcome = 'WIN';
+        } else {
+            outcome = 'LOSS';
+        }
+
+        signals.push({
+            time: bar.time,
+            price: isBuy ? Math.min(bar.low, bar.close) : Math.max(bar.high, bar.close),
+            type: isBuy ? 'buy' : 'sell',
+            probability: parseFloat(bestWinRate.toFixed(1)),
+            distance: parseFloat((stat.dist * 100).toFixed(2)),
+            zScore: 0,
+            outcome
+        });
+
+        i += 2; // Skip ahead slightly to avoid signal clusters
+    }
+
+    const finalWinRate = events > 0 ? (successes / events) * 100 : bestWinRate;
+
+    return {
+        signals,
+        optimalThreshold: parseFloat((bestThreshold * 100).toFixed(2)),
+        winRate: parseFloat(finalWinRate.toFixed(1)),
+        totalEvents: events,
+        sampleSize: bestSampleSize
+    };
+}
+
+// ─────────────────────────────────────────────────────────
 // Trend Pullback Signal Engine (Pro-Trend Incorporation)
 // ─────────────────────────────────────────────────────────
 

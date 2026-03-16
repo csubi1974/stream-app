@@ -3,7 +3,7 @@ import { ChevronDown, X, TrendingUp, BarChart3, Plus, Minus, Target, Crosshair }
 
 export interface ActiveIndicator {
     id: string;
-    type: 'SMA' | 'RSI' | 'REVERSION' | 'TREND';
+    type: 'SMA' | 'RSI' | 'REVERSION' | 'TREND' | 'PURE_REVERSION';
     period: number;
     color: string;
     visible: boolean;
@@ -71,6 +71,19 @@ const INDICATOR_TEMPLATES = [
             { period: 1, color: '#f59e0b', label: 'Trend Pullback (Auto)' }
         ],
     },
+    {
+        type: 'PURE_REVERSION' as const,
+        label: 'Reversión Pura',
+        description: 'Solo SMA dist + ATR. Sin filtros GEX.',
+        category: 'Algorithm',
+        icon: Target,
+        defaultPeriod: 20,
+        defaultColor: '#a78bfa',
+        presets: [
+            { period: 8, color: '#a78bfa', label: 'Pura SMA 8 (Scalp)' },
+            { period: 20, color: '#a78bfa', label: 'Pura SMA 20 (Estadística)' }
+        ],
+    },
 ];
 
 const COLORS = ['#3b82f6', '#f59e0b', '#a855f7', '#ec4899', '#10b981', '#ef4444', '#06b6d4', '#f97316'];
@@ -93,7 +106,7 @@ export function IndicatorPanel({ activeIndicators, onAddIndicator, onRemoveIndic
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const handleAddPreset = (type: 'SMA' | 'RSI' | 'REVERSION' | 'TREND', period: number, color: string) => {
+    const handleAddPreset = (type: 'SMA' | 'RSI' | 'REVERSION' | 'TREND' | 'PURE_REVERSION', period: number, color: string) => {
         // Check if same type+period already exists
         const exists = activeIndicators.some(ind => ind.type === type && ind.period === period);
         if (exists) return;
@@ -107,7 +120,7 @@ export function IndicatorPanel({ activeIndicators, onAddIndicator, onRemoveIndic
         });
     };
 
-    const handleAddCustom = (type: 'SMA' | 'RSI' | 'REVERSION' | 'TREND') => {
+    const handleAddCustom = (type: 'SMA' | 'RSI' | 'REVERSION' | 'TREND' | 'PURE_REVERSION') => {
         const period = customPeriod[type] || INDICATOR_TEMPLATES.find(t => t.type === type)!.defaultPeriod;
         const usedColors = activeIndicators.map(i => i.color);
         const nextColor = COLORS.find(c => !usedColors.includes(c)) || COLORS[0];

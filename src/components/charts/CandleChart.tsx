@@ -1,6 +1,6 @@
 import { createChart, ColorType, ISeriesApi, LineStyle, IPriceLine, Time } from 'lightweight-charts';
 import { useEffect, useRef, useState, useImperativeHandle, forwardRef, useCallback } from 'react';
-import { calculateSMA, calculateRSI, updateLastSMA, updateLastRSI, calculateReversionSignals, calculateTrendPullbackSignals, determineMacroBias, calculateSignalStats, OHLCBar, MacroBias, GEXLevels, BreadthData, SignalStats, ReversionSignal, TrendSignal } from './indicators/indicatorEngine';
+import { calculateSMA, calculateRSI, updateLastSMA, updateLastRSI, calculateReversionSignals, calculatePureReversionSignals, calculateTrendPullbackSignals, determineMacroBias, calculateSignalStats, OHLCBar, MacroBias, GEXLevels, BreadthData, SignalStats, ReversionSignal, TrendSignal } from './indicators/indicatorEngine';
 import { ActiveIndicator } from './indicators/IndicatorPanel';
 
 interface ChartProps {
@@ -43,6 +43,7 @@ export const CandleChart = forwardRef<CandleChartHandle, ChartProps>(({
     const [reversionDistances, setReversionDistances] = useState<{[key: string]: number}>({});
     const [macroBias, setMacroBias] = useState<MacroBias | null>(null);
     const [signalStats, setSignalStats] = useState<SignalStats | null>(null);
+    const [pureThresholds, setPureThresholds] = useState<{[period: number]: number}>({});
     const [showLegend, setShowLegend] = useState(false);
     
     // Ruler Tool State
@@ -88,6 +89,7 @@ export const CandleChart = forwardRef<CandleChartHandle, ChartProps>(({
     const activeSMAs = activeIndicators.filter(i => i.type === 'SMA');
     const activeRSIs = activeIndicators.filter(i => i.type === 'RSI');
     const activeReversions = activeIndicators.filter(i => i.type === 'REVERSION');
+    const activePureReversions = activeIndicators.filter(i => i.type === 'PURE_REVERSION');
     const activeTrend = activeIndicators.filter(i => i.type === 'TREND');
 
     // ────────────────────────────────────────────
@@ -190,7 +192,7 @@ export const CandleChart = forwardRef<CandleChartHandle, ChartProps>(({
         
         // Initial distance calculation
         const initialDistances: {[key: string]: number} = {};
-        activeReversions.forEach(ind => {
+        [...activeReversions, ...activePureReversions].forEach(ind => {
             const entries = data.slice(-ind.period);
             if (entries.length === ind.period) {
                 const sma = entries.reduce((s, b) => s + b.close, 0) / ind.period;
@@ -211,11 +213,39 @@ export const CandleChart = forwardRef<CandleChartHandle, ChartProps>(({
         if (!seriesRef.current) return;
         
         let allMarkers: any[] = [];
-        const hasSignals = activeReversions.length > 0 || activeTrend.length > 0;
+        const hasSignals = activeReversions.length > 0 || activePureReversions.length > 0 || activeTrend.length > 0;
         let allReversionSigs: ReversionSignal[] = [];
         let allTrendSigs: TrendSignal[] = [];
 
-        // Reversion signals (contra-tendencia)
+        // Pure Statistical Reversion signals (no GEX filters)
+        if (activePureReversions.length > 0) {
+            const newThresholds: {[period: number]: number} = {};
+            activePureReversions.forEach(ind => {
+                const { signals, optimalThreshold } = calculatePureReversionSignals(data, ind.period);
+                newThresholds[ind.period] = optimalThreshold;
+                allReversionSigs.push(...signals);
+                signals.forEach(sig => {
+                    // Use Circle shape for Pure signals to distinguish from standard Arrows
+                    let color = '#a78bfa'; // Purple (Pending)
+                    if (sig.outcome === 'WIN') color = '#10b981'; // Green
+                    else if (sig.outcome === 'LOSS') color = '#ef4444'; // Red
+                    
+                    allMarkers.push({
+                        time: sig.time,
+                        position: sig.type === 'buy' ? 'belowBar' : 'aboveBar',
+                        color,
+                        shape: 'circle',
+                        text: `${sig.outcome === 'WIN' ? '✓' : sig.outcome === 'LOSS' ? '✗' : '⏳'}${sig.price.toFixed(2)}(${sig.distance > 0 ? '+' : ''}${sig.distance}%)`,
+                        size: 1,
+                    });
+                });
+            });
+            setPureThresholds(newThresholds);
+        } else {
+            if (Object.keys(pureThresholds).length > 0) setPureThresholds({});
+        }
+
+        // Reversion signals (contra-tendencia con filtros GEX)
         if (activeReversions.length > 0) {
             activeReversions.forEach(ind => {
                 const { signals } = calculateReversionSignals(data, ind.period, 2.0, walls?.topStrike || walls?.gammaFlip);
@@ -274,7 +304,7 @@ export const CandleChart = forwardRef<CandleChartHandle, ChartProps>(({
         } else {
             try { seriesRef.current.setMarkers([]); } catch (e) {}
         }
-    }, [activeReversions, activeTrend, walls?.gammaFlip, walls?.topStrike, macroBias]);
+    }, [activeReversions, activePureReversions, activeTrend, walls?.gammaFlip, walls?.topStrike, macroBias]);
 
     // ────────────────────────────────────────────
     // Ruler Tool Event Handlers
@@ -1001,6 +1031,21 @@ export const CandleChart = forwardRef<CandleChartHandle, ChartProps>(({
                             }`}>
                                 {reversionDistances[ind.id] > 0 ? '+' : ''}{reversionDistances[ind.id]?.toFixed(2) || '0.00'}%
                             </span>
+                        </div>
+                    ))}
+
+                    {activePureReversions.map(ind => (
+                        <div key={ind.id} className="flex items-center space-x-1 px-2 py-0.5 bg-black/40 rounded border border-white/5">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ind.color }} />
+                            <span className="text-[9px] font-bold text-ink-muted uppercase">PURA {ind.period}:</span>
+                            <span className={`text-[10px] font-black data-font ${
+                                Math.abs(reversionDistances[ind.id] || 0) >= (pureThresholds[ind.period] || 0.2) ? 'text-purple-400 animate-pulse' : 'text-emerald-400'
+                            }`}>
+                                {reversionDistances[ind.id] > 0 ? '+' : ''}{reversionDistances[ind.id]?.toFixed(2) || '0.00'}%
+                            </span>
+                            {pureThresholds[ind.period] && (
+                                <span className="text-[8px] font-bold text-ink-muted/50 ml-1">TR:{pureThresholds[ind.period]}%</span>
+                            )}
                         </div>
                     ))}
 
