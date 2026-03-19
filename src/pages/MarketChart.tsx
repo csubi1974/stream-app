@@ -73,6 +73,7 @@ export function MarketChart() {
         let intervalSec = 300; // 5M default
         switch (chartTimeframe) {
             case '1M':  intervalSec = 60; break;
+            case '2M':  intervalSec = 120; break;
             case '5M':  intervalSec = 300; break;
             case '15M': intervalSec = 900; break;
             case '30M': intervalSec = 1800; break;

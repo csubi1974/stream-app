@@ -818,9 +818,12 @@ export const CandleChart = forwardRef<CandleChartHandle, ChartProps>(({
         const fetchHistory = async () => {
             historyLoadedRef.current = false;
 
+            // NOTE: Schwab API only supports minute frequencies: 1, 5, 10, 15, 30.
+            // For 2M we fetch 1M data and aggregate client-side.
             let params = `?frequencyType=minute&frequency=5`;
             switch (timeframe) {
                 case '1M':  params = `?frequencyType=minute&frequency=1`; break;
+                case '2M':  params = `?frequencyType=minute&frequency=1`; break; // fetch 1M, aggregate to 2M below
                 case '5M':  params = `?frequencyType=minute&frequency=5`; break;
                 case '15M': params = `?frequencyType=minute&frequency=15`; break;
                 case '30M': params = `?frequencyType=minute&frequency=30`; break;
@@ -858,8 +861,26 @@ export const CandleChart = forwardRef<CandleChartHandle, ChartProps>(({
                 if (Array.isArray(historyData) && historyData.length > 0 && seriesRef.current) {
                     historyData.sort((a: any, b: any) => a.time - b.time);
 
-                    // Deduplicate by time to fix "data must be asc ordered" Lightweight Charts error
-                    const uniqueData = Array.from(new Map(historyData.map((item: any) => [item.time, item])).values());
+                    // Deduplicate by time
+                    let uniqueData = Array.from(new Map(historyData.map((item: any) => [item.time, item])).values());
+
+                    // If 2M timeframe: aggregate 1M candles into 2M candles client-side
+                    if (timeframe === '2M') {
+                        const buckets = new Map<number, any>();
+                        uniqueData.forEach((c: any) => {
+                            const bucket = Math.floor(c.time / 120) * 120;
+                            if (!buckets.has(bucket)) {
+                                buckets.set(bucket, { time: bucket, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume || 0 });
+                            } else {
+                                const b = buckets.get(bucket)!;
+                                b.high = Math.max(b.high, c.high);
+                                b.low = Math.min(b.low, c.low);
+                                b.close = c.close;
+                                b.volume = (b.volume || 0) + (c.volume || 0);
+                            }
+                        });
+                        uniqueData = Array.from(buckets.values()).sort((a, b) => a.time - b.time);
+                    }
 
                     console.log(`✅ CandleChart: Loaded ${uniqueData.length} candles. Range: ${new Date(uniqueData[0].time * 1000).toISOString()} -> ${new Date(uniqueData[uniqueData.length - 1].time * 1000).toISOString()}`);
 
@@ -994,7 +1015,7 @@ export const CandleChart = forwardRef<CandleChartHandle, ChartProps>(({
                 <div className="flex items-center space-x-4">
                     <span className="text-sm font-black text-white italic tracking-tighter uppercase">{symbol}</span>
                     <div className="flex bg-black/40 rounded-lg p-0.5 border border-white/5">
-                        {['1M', '5M', '15M', '30M', '1H', '1D'].map((tf) => (
+                        {['1M', '2M', '5M', '15M', '30M', '1H', '1D'].map((tf) => (
                             <button
                                 key={tf}
                                 onClick={() => onTimeframeChange(tf)}
