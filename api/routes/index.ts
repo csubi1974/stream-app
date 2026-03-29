@@ -114,7 +114,8 @@ export function setupRoutes(
   app.get('/api/scanner/0dte', async (req, res) => {
     try {
       const symbol = (req.query.symbol as string) || 'SPX';
-      const zeroDTEOptions = await marketDataService.getZeroDTEOptions(symbol);
+      const dte = req.query.dte ? parseInt(req.query.dte as string, 10) : undefined;
+      const zeroDTEOptions = await marketDataService.getZeroDTEOptions(symbol, dte);
       res.json(zeroDTEOptions);
     } catch (error) {
       console.error('❌ 0DTE scanner error:', error);

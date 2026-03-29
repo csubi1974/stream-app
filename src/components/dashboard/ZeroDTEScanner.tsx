@@ -32,8 +32,10 @@ export function ZeroDTEScanner() {
   const [sortBy, setSortBy] = useState<'volume' | 'oi' | 'gamma' | 'delta'>('volume');
   const [filterType, setFilterType] = useState<'ALL' | 'CALL' | 'PUT'>('ALL');
   const [chartMode, setChartMode] = useState<'GEX' | 'VEX' | 'DEX'>('GEX');
+  const [dte, setDte] = useState<number>(0);
   const [isSymbolMenuOpen, setIsSymbolMenuOpen] = useState(false);
   const commonSymbols = ['SPX', 'SPY', 'QQQ', 'IWM', 'NVDA', 'TSLA', 'AAPL', 'AMZN', 'AVGO', 'GOOGL', 'MSFT', 'META', 'XLF'];
+  const dteOptions = [0, 1, 2, 3, 7, 15, 30, 45];
 
   const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3002';
 
@@ -120,7 +122,7 @@ export function ZeroDTEScanner() {
         }
 
         // 1. Fetch via REST for initial load
-        const response = await fetch(`/api/scanner/0dte?symbol=${symbol}`);
+        const response = await fetch(`/api/scanner/0dte?symbol=${symbol}&dte=${dte}`);
         const data = await response.json();
 
         if (isMounted) {
@@ -136,7 +138,7 @@ export function ZeroDTEScanner() {
           setLoading(false);
         }
       } catch (error) {
-        console.error('❌ Failed to fetch 0DTE options:', error);
+        console.error('❌ Failed to fetch options:', error);
         if (isMounted) setLoading(false);
       }
     };
@@ -148,7 +150,7 @@ export function ZeroDTEScanner() {
       sendMessage({
         type: 'get_0dte_options',
         underlying: symbol === 'SPX' ? 'SPXW' : symbol,
-        date: '0'
+        date: dte.toString()
       });
 
       // Subscribe to real-time price for the ticker
@@ -171,7 +173,7 @@ export function ZeroDTEScanner() {
         });
       }
     };
-  }, [selectedSymbol, isConnected]);
+  }, [selectedSymbol, isConnected, dte]);
 
   const filteredOptions = zeroDTEOptions
     .filter(option => filterType === 'ALL' || option.type === filterType)
@@ -263,14 +265,27 @@ export function ZeroDTEScanner() {
               </div>
             </div>
 
-            {stats && (stats as any).targetDate && (
-              <div className="flex flex-col">
-                <span className="text-[10px] text-ink-tertiary uppercase font-black tracking-widest leading-none mb-1.5 ml-1">Expiration</span>
-                <span className="px-3 py-1.5 bg-white/5 border border-white/10 text-white text-[11px] rounded-lg data-font font-bold tracking-tight">
-                  {(stats as any).targetDate}
-                </span>
+            <div className="flex flex-col">
+              <span className="text-[10px] text-ink-tertiary uppercase font-black tracking-widest leading-none mb-1.5 ml-1">Expiration</span>
+              <div className="flex bg-white/5 border border-white/10 rounded-lg">
+                <select 
+                  value={dte} 
+                  onChange={(e) => setDte(Number(e.target.value))}
+                  className="bg-transparent border-none text-accent text-[11px] data-font font-black tracking-tight px-3 py-1.5 outline-none cursor-pointer"
+                >
+                  {dteOptions.map(opt => (
+                    <option key={opt} value={opt} className="bg-[#0b0e11] text-accent font-black">
+                      {opt} DTE
+                    </option>
+                  ))}
+                </select>
+                {stats && stats.targetDate && (
+                  <span className="px-3 py-1.5 text-[11px] data-font font-bold text-ink-secondary border-l border-white/10 bg-white/5 flex items-center">
+                    {stats.targetDate}
+                  </span>
+                )}
               </div>
-            )}
+            </div>
           </div>
 
           {stats && (

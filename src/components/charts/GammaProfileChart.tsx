@@ -46,37 +46,30 @@ export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX', ga
     const activeStrikes = useMemo(() => {
         if (data.length === 0) return [];
 
-        // 1. Limitar rango por precio actual (+/- 12% para tener contexto pero sin exagerar)
+        // 1. Limitar rango por precio actual (Adaptive zoom)
         let filtered = data;
         if (currentPrice) {
-            // Rango de +/- 3% para SPX/SPY es ideal para ver la zona de combate
-            const rangeLimit = currentPrice * 0.035;
+            // Índices (ej. SPX > 4000) tienen strikes cada 5 pts, con +/- 3.5% está bien.
+            // Acciones individuales (ej. NVDA ~ 150) necesitan un % mayor (15% - 20%) para ver suficientes barras.
+            const isIndex = currentPrice > 1000;
+            const rangeLimit = currentPrice * (isIndex ? 0.035 : 0.20);
             filtered = data.filter(d => Math.abs(d.strike - currentPrice) <= rangeLimit);
         }
 
-        // If filtering by range leaves too little data, fallback to full data
-        if (filtered.length < 5) filtered = data;
+        // If filtering by range leaves too little data, expand the fallback
+        if (filtered.length < 8 && currentPrice) {
+            filtered = data.filter(d => Math.abs(d.strike - currentPrice) <= (currentPrice * 0.40));
+        }
+        if (filtered.length < 8) filtered = data;
 
-        // 2. Filtrar strikes con valores insignificantes (ruido profundo OTM/ITM)
+        // 2. Filter strikes that literally have zero data to avoid completely empty ticks
         if (hasActiveGreeks) {
-            let maxGreek = 0;
             if (mode === 'GEX') {
-                maxGreek = Math.max(...filtered.map(d => Math.max(Math.abs(d.callGex), Math.abs(d.putGex))));
+                return filtered.filter(d => Math.abs(d.callGex) > 0 || Math.abs(d.putGex) > 0);
             } else if (mode === 'VEX') {
-                maxGreek = Math.max(...filtered.map(d => Math.max(Math.abs(d.callVanna || 0), Math.abs(d.putVanna || 0))));
+                return filtered.filter(d => Math.abs(d.callVanna || 0) > 0 || Math.abs(d.putVanna || 0) > 0);
             } else {
-                maxGreek = Math.max(...filtered.map(d => Math.max(Math.abs((d as any).callDex || 0), Math.abs((d as any).putDex || 0))));
-            }
-
-            // Umbral muy bajo para limpiar el ruido de los extremos
-            const threshold = maxGreek * 0.0005;
-
-            if (mode === 'GEX') {
-                return filtered.filter(d => Math.abs(d.callGex) > threshold || Math.abs(d.putGex) > threshold);
-            } else if (mode === 'VEX') {
-                return filtered.filter(d => Math.abs(d.callVanna || 0) > threshold || Math.abs(d.putVanna || 0) > threshold);
-            } else {
-                return filtered.filter(d => Math.abs((d as any).callDex || 0) > threshold || Math.abs((d as any).putDex || 0) > threshold);
+                return filtered.filter(d => Math.abs((d as any).callDex || 0) > 0 || Math.abs((d as any).putDex || 0) > 0);
             }
         }
         return filtered.filter(d => (d.callOi || 0) > 0 || (d.putOi || 0) > 0 || (currentPrice && Math.abs(d.strike - currentPrice) < (currentPrice * 0.01)));
@@ -99,10 +92,34 @@ export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX', ga
         let max = Math.max(...prices);
         let range = max - min;
 
-        // Ensure minimum reasonable domain range (e.g., at least 2% total range around spot)
-        // to prevent excessive zooming when strikes get filtered out near expiration
+        // Ensure minimum reasonable domain range to prevent excessive zooming
+        // when strikes get filtered out near expiration
         if (currentPrice) {
-            const minRange = currentPrice * 0.02; // 2% of spot
+            let minStrikeDiff = 0;
+            if (chartData.length >= 2) {
+                 const strikes = chartData.map(d => d.strike).sort((a,b)=>a-b);
+                 let diffs = [];
+                 for (let i=1; i<strikes.length; i++) {
+                     diffs.push(strikes[i]-strikes[i-1]);
+                 }
+                 const validDiffs = diffs.filter(d => d > 0);
+                 if (validDiffs.length > 0) {
+                     minStrikeDiff = Math.min(...validDiffs);
+                 }
+            }
+            
+            // Fallbacks if only 1 data point or no data
+            if (minStrikeDiff === 0) {
+                if (currentPrice > 1000) minStrikeDiff = 5;
+                else if (currentPrice > 100) minStrikeDiff = 1;
+                else minStrikeDiff = 0.5;
+            }
+
+            // A structurally robust chart layout should have enough graphical real estate 
+            // for about 15 standard strike gaps, regardless of spot price.
+            // Absolute fallback of 4% of spot price if the math gets weird.
+            const minRange = Math.max(minStrikeDiff * 15, currentPrice * 0.04);
+
             if (range < minRange) {
                 const center = (min + max) / 2;
                 min = center - minRange / 2;
@@ -165,29 +182,35 @@ export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX', ga
     const xTicks = useMemo(() => {
         if (chartData.length === 0) return [];
 
-        // Siempre incluir el strike más cercano al spot si existe
         let ticks: number[] = [];
-
-        if (chartData.length <= 12) {
-            ticks = chartData.map(d => d.strike);
+        
+        if (chartData.length <= 8 && xMax - xMin < (currentPrice ? currentPrice * 0.15 : 100)) {
+             // For very few bars, just show the exact strikes to avoid confusion
+             ticks = chartData.map(d => d.strike);
+             // Ensure Spot is part of the context
+             if (currentPrice && !ticks.includes(Math.round(currentPrice))) {
+                 ticks.push(Math.round(currentPrice));
+             }
         } else {
-            // Seleccionar ~10 ticks distribuidos uniformemente por valor de precio, no por índice
-            const minS = Math.min(...chartData.map(d => d.strike));
-            const maxS = Math.max(...chartData.map(d => d.strike));
-            const step = (maxS - minS) / 12;
+            // Generate evenly distributed grid bounds independent of actual options data
+            const step = (xMax - xMin) / 10;
+            // Round step to a somewhat "clean" number (e.g. 1, 5, 10, 50)
+            let cleanStep = 1;
+            if (step > 50) cleanStep = 50;
+            else if (step > 10) cleanStep = 10;
+            else if (step > 5) cleanStep = 5;
+            else if (step > 2) cleanStep = 2;
 
-            for (let i = 0; i <= 12; i++) {
-                const targetStrike = minS + i * step;
-                // Encontrar el strike real más cercano al target
-                const actual = chartData.reduce((prev, curr) =>
-                    Math.abs(curr.strike - targetStrike) < Math.abs(prev.strike - targetStrike) ? curr : prev
-                );
-                if (!ticks.includes(actual.strike)) ticks.push(actual.strike);
+            const startTick = Math.ceil(xMin / cleanStep) * cleanStep;
+            const endTick = Math.floor(xMax / cleanStep) * cleanStep;
+
+            for (let t = startTick; t <= endTick; t += cleanStep) {
+                ticks.push(t);
             }
         }
 
         return ticks.sort((a, b) => a - b);
-    }, [chartData]);
+    }, [chartData, xMin, xMax, currentPrice]);
 
     const yTicks = [limit, limit / 2, 0, -limit / 2, -limit];
 
@@ -250,7 +273,7 @@ export function GammaProfileChart({ data, currentPrice, symbol, mode = 'GEX', ga
             <div className="flex items-center justify-between px-8 py-5 border-b border-gray-800/50 bg-gray-900/20">
                 <div className="flex flex-col">
                     <span className="text-xs font-bold text-gray-500 uppercase tracking-[0.3em] mb-1">
-                        {mode === 'GEX' ? 'Gamma Exposure' : 'Vanna Exposure'} Profile
+                        {mode === 'GEX' ? 'Gamma Exposure' : mode === 'VEX' ? 'Vanna Exposure' : 'Delta Exposure'} Profile
                     </span>
                     <div className="flex items-center space-x-6">
                         {symbol && <span className="text-3xl font-black text-white font-mono tracking-tighter">{symbol}</span>}

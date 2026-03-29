@@ -118,19 +118,22 @@ export class MarketDataService {
     }
   }
 
-  async getZeroDTEOptions(symbol: string = 'SPX'): Promise<any> {
+  async getZeroDTEOptions(symbol: string = 'SPX', dte?: number): Promise<any> {
     try {
       let searchSymbol = symbol.toUpperCase();
 
       // Intentar obtener la cadena de opciones
       let chain = null;
 
+      // Ensure we request enough expirations if DTE is high
+      const requestedExpirations = dte !== undefined && dte > 30 ? 100 : 45;
+
       // Si el símbolo es SPX, intentamos con $SPX primero (formato estándar para índices)
       // Optimizamos para evitar errores 502 Bad Gateway
       if (searchSymbol === 'SPX') {
         console.log('📡 Scanner: Trying $SPX index symbol first (Optimized)...');
         try {
-          chain = await this.schwabService.getOptionsChain('$SPX', 30, 100);
+          chain = await this.schwabService.getOptionsChain('$SPX', requestedExpirations, 100);
           if (chain && (chain.callExpDateMap || chain.putExpDateMap)) {
             searchSymbol = '$SPX';
           }
@@ -141,7 +144,7 @@ export class MarketDataService {
 
       // Si no tenemos cadena aún, intentamos con el símbolo original
       if (!chain || (!chain.callExpDateMap && !chain.putExpDateMap)) {
-        chain = await this.schwabService.getOptionsChain(searchSymbol, 45);
+        chain = await this.schwabService.getOptionsChain(searchSymbol, requestedExpirations);
       }
 
       // Fallback for SPX to SPXW
@@ -196,7 +199,7 @@ export class MarketDataService {
         if (opt.expirationDate) availableDates.add(opt.expirationDate);
       });
 
-      // Determine target date: Today OR Next Available
+      // Determine target date
       let targetDate = today;
       const sortedDates = Array.from(availableDates).sort();
 
@@ -204,10 +207,33 @@ export class MarketDataService {
       // We want the EARLIEST expiration that is >= today
       const futureDates = sortedDates.filter(d => d.split('T')[0] >= today);
 
-      if (futureDates.length > 0) {
-        targetDate = futureDates[0].split('T')[0];
-      } else if (sortedDates.length > 0) {
-        targetDate = sortedDates[0].split('T')[0];
+      if (dte !== undefined && futureDates.length > 0) {
+          // Si se especifica un DTE, buscar la fecha correspondiente ("Hoy + DTE días")
+          const targetDteDate = new Date();
+          targetDteDate.setDate(targetDteDate.getDate() + dte);
+          
+          // Encontrar la fecha disponible más cercana a este target
+          // Using strict YYYY-MM-DD from en-CA for timezone consistency
+          const targetDateString = targetDteDate.toLocaleDateString('en-CA');
+          
+          let closestDate = futureDates[0];
+          let minDiff = Infinity;
+          
+          for (const date of futureDates) {
+              const diff = Math.abs(new Date(date.split('T')[0]).getTime() - new Date(targetDateString).getTime());
+              if (diff < minDiff) {
+                  minDiff = diff;
+                  closestDate = date;
+              }
+          }
+          targetDate = closestDate.split('T')[0];
+          console.log(`📅 DTE Filter: Requested DTE ${dte} (${targetDateString}), Selected nearest expiration: ${targetDate}`);
+      } else {
+          if (futureDates.length > 0) {
+            targetDate = futureDates[0].split('T')[0];
+          } else if (sortedDates.length > 0) {
+            targetDate = sortedDates[0].split('T')[0];
+          }
       }
 
       // Calculate TTE (Time to Expiration) based on the actual target expiration date
